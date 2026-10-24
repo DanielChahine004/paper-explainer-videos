@@ -8,7 +8,7 @@ from manim import *
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 from vlint.runtime import Checked, vlint_ok  # noqa: E402
 
-EXPECT = {"frame-clip": 1, "text-overlap": 1, "vanished-after-intro": 1, "bookmark-unfired": 2, "indicate-image": 1, "text-chain": 1, "arrow-over-label": 1, "layout-crowded": 1, "layout-balance": 1, "arrow-skew": 1, "title-margin": 1, "line-over-label": 1}
+EXPECT = {"frame-clip": 1, "text-overlap": 1, "vanished-after-intro": 1, "bookmark-unfired": 2, "indicate-image": 1, "text-chain": 1, "arrow-over-label": 1, "layout-crowded": 1, "layout-balance": 1, "arrow-skew": 1, "title-margin": 1, "line-over-label": 1, "redraw-jitter": 1}
 
 
 class Fixture(Checked, Scene):
@@ -59,6 +59,12 @@ class Fixture(Checked, Scene):
         box = SurroundingRectangle(off, buff=0.1)                                   # an outline around a label: fine
         self.play(Create(crv), FadeIn(on), FadeIn(off), Create(box), run_time=0.2)
         self.play(FadeOut(crv), FadeOut(on), FadeOut(off), FadeOut(box), run_time=0.2)
+        k = ValueTracker(0.0)
+        saw = always_redraw(lambda: VMobject().set_points_as_corners([[x, -1 + 0.4 * ((k.get_value() * 9) % 1), 0] for x in np.linspace(-3, 3, 30)]))
+        glide = always_redraw(lambda: VMobject().set_points_as_corners([[x, 1 + 0.3 * np.sin(x + k.get_value()), 0] for x in np.linspace(-3, 3, 30)]))
+        self.add(saw, glide)
+        self.play(k.animate.set_value(1.0), run_time=0.2)                          # redraw-jitter (saw only)
+        self.remove(saw, glide)
         with self.vlint_off("frame-clip"):
             self.play(FadeIn(Text("edge on purpose", font_size=30).move_to(LEFT * 7.2 + DOWN * 3)), run_time=0.2)
         self.play(*[FadeOut(m) for m in self.mobjects], run_time=0.2)

@@ -90,8 +90,10 @@ class Checked:
         self.vlint = Monitor(self)
 
     def play(self, *anims, **kw):
+        from manim import ValueTracker
+        trackers = [(a.mobject, a.mobject.get_value()) for a in anims if isinstance(getattr(a, "mobject", None), ValueTracker)]
         super().play(*anims, **kw)
-        self.vlint.event("play", anims=anims)
+        self.vlint.event("play", anims=anims, trackers=trackers)
 
     def vlint_off(self, *rule_ids):
         """`with self.vlint_off("frame-clip"):` switches runtime rules off for a block (all if none named)."""

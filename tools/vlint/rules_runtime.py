@@ -2,6 +2,8 @@
 (key, message); a key is reported once per scene. Events: "play" (after each play, payload anims), "vo_open"
 (text), "cue" (mark), "vo_close", "end". They read the real mobjects, so they catch what the script can't show:
 where things ended up and whether they can be seen."""
+import re
+
 from .core import opt, rule
 from .runtime import walk
 from .script import MARK
@@ -258,8 +260,64 @@ def title_margin(mon, ev, p):
         if not isinstance(m, TEXTS()) or "title-margin" in getattr(m, "_vlint_ok", ()) or visibility(m) < 0.05:
             continue
         b = bbox(m)
-        if b[3] - b[1] >= 0.2 and b[2] - b[0] >= 2.0 and Y1 - b[3] < gap - 1e-3:
+        if b[3] - b[1] >= 0.2 and b[2] - b[0] >= 2.0 and Y1 - b[3] < gap - 0.01:
             yield id(m), f"title {label(m)!r} top is {Y1 - b[3]:.2f} below the frame edge (< {gap})"
+
+
+@rule("redraw-jitter", "runtime", "warn", "A curve redrawn from a ValueTracker wobbles up and down while the tracker "
+      "moves steadily: it flickers. Usually the function is sampled on a grid that moves with the parameter (a peak "
+      "crossing grid points, a renormalisation by a sampled maximum).", "Part II, Motion",
+      "make the function smooth in the parameter: integrate singular parts over grid cells, sample on a fixed grid")
+def redraw_jitter(mon, ev, p):
+    if ev != "play" or not p.get("trackers"):
+        return
+    import numpy as np
+    n, frac = int(opt(mon, "jitter_steps", 40)), float(opt(mon, "jitter_share", 0.25))
+    curves = [m for m, ok in walk(mon.scene.mobjects) if m.updaters and isinstance(m, M.VMobject) and len(m.points) >= 16
+              and not ("redraw-jitter" in ok or "*" in ok) and visibility(m) >= 0.05]
+    if not curves:
+        return
+    for vt, v0 in p["trackers"]:
+        v1 = vt.get_value()
+        if abs(v1 - v0) < 1e-9:
+            continue
+        P = {id(c): [] for c in curves}
+        try:
+            for t in np.linspace(0, 1, n):
+                vt.set_value(v0 + (v1 - v0) * t)
+                for c in curves:
+                    c.update(0)
+                    P[id(c)].append(c.points[:, :2].copy())
+        finally:
+            vt.set_value(v1)
+            for c in curves:
+                c.update(0)
+        for c in curves:
+            fr = P[id(c)]
+            if any(len(f) < 16 or np.any(np.diff(f[:, 0]) < -1e-9) for f in fr):
+                continue                     # only curves that are functions of x
+            lo, hi = max(f[0, 0] for f in fr), min(f[-1, 0] for f in fr)
+            if hi - lo < 0.5:
+                continue
+            xs = np.linspace(lo, hi, 60)
+            Y = np.array([np.interp(xs, f[:, 0], f[:, 1]) for f in fr])          # (steps, 60): height at fixed x over time
+            d = np.diff(Y, axis=0)
+            span = max(np.ptp(Y), 1e-6)
+            sig = np.where(np.abs(d) > 2e-3 * span, np.sign(d), 0)
+            rev = []
+            for k in range(sig.shape[1]):
+                s_ = sig[:, k][sig[:, k] != 0]
+                rev.append(int(np.sum(s_[1:] != s_[:-1])))
+            share = np.mean(np.array(rev) >= 4)
+            if share > frac:
+                yield id(c), (f"a redrawn curve wobbles while a ValueTracker goes {v0:.3g} -> {v1:.3g}: at {share:.0%} of x "
+                              f"positions its height reverses direction 4+ times")
+
+
+def _holds(outer, inner, tol=0.15):
+    """Whether bbox outer contains the centre of bbox inner, with most of it inside (tol: slack at the edges)."""
+    cx, cy = (inner[0] + inner[2]) / 2, (inner[1] + inner[3]) / 2
+    return outer[0] - tol <= cx <= outer[2] + tol and outer[1] - tol <= cy <= outer[3] + tol and outer != inner
 
 
 def _content(mon, rule_id):
@@ -269,8 +327,8 @@ def _content(mon, rule_id):
     for m in mon.scene.mobjects:
         if rule_id in getattr(m, "_vlint_ok", ()) or not m.get_family() or visibility(m) < 0.05:
             continue
-        if isinstance(m, (M.Line, M.Arrow, M.CurvedArrow, M.DashedLine, M.DashedVMobject)):
-            continue
+        if isinstance(m, (M.Line, M.Arrow, M.CurvedArrow, M.DashedLine, M.DashedVMobject)) and not isinstance(m, M.NumberLine):
+            continue                         # a number line is a chart axis, it is content
         fam = m.family_members_with_points()
         if all(isinstance(x, (M.Line, M.ArrowTip)) for x in fam) and any(isinstance(x, (M.Arrow, M.ArrowTip)) for x in fam):
             continue                         # an arrow routed as several segments
@@ -305,7 +363,13 @@ def layout_crowded(mon, ev, p):
     free_w, free_h = 1 - (u[2] - u[0]) / (X1 - X0), 1 - (u[3] - u[1]) / (Y1 - Y0)
     if max(free_w, free_h) < float(opt(mon, "free_fraction", 0.2)):
         return
-    big = [(m, b) for m, b in items if (b[2] - b[0]) * (b[3] - b[1]) >= area_min and not isinstance(m, TEXTS())]
+    def wordy(m):                            # a text, or a group of nothing but texts (captions under a row of panels)
+        fam = m.family_members_with_points()
+        if isinstance(m, TEXTS()):
+            return True
+        inside = {id(y) for t in m.get_family() if isinstance(t, TEXTS()) for y in t.get_family()}
+        return bool(fam) and all(id(x) in inside for x in fam)
+    big = [(m, b) for m, b in items if (b[2] - b[0]) * (b[3] - b[1]) >= area_min and not wordy(m)]
     for i in range(len(big)):
         for j in range(i + 1, len(big)):
             a, b = big[i][1], big[j][1]
@@ -313,6 +377,8 @@ def layout_crowded(mon, ev, p):
             dy = max(a[1] - b[3], b[1] - a[3])
             if dx < 0 and dy < 0:
                 continue                     # overlapping or nested: a layer on purpose, or text-overlap's business
+            if any(c is not big[i][0] and c is not big[j][0] and _holds(cb, a) and _holds(cb, b) for c, cb in items):
+                continue                     # two marks inside one chart or frame: parts of it, not panels
             gap = max(dx, dy)
             if gap < gap_min:
                 where = lambda b_: f"({(b_[0] + b_[2]) / 2:+.1f}, {(b_[1] + b_[3]) / 2:+.1f})"
@@ -346,8 +412,10 @@ def _chain_nodes(scene):
             continue
         if isinstance(m, TEXTS()):
             text_ids |= {id(x) for x in m.get_family()}
-            if m.family_members_with_points() and visibility(m) >= 0.05:
-                texts.append(m)
+            raw = str(getattr(m, "tex_string", None) or getattr(m, "original_text", None) or getattr(m, "text", "") or "")
+            word = re.sub(r"\\[a-zA-Z]+|[^a-zA-Z0-9]", "", raw)
+            if m.family_members_with_points() and visibility(m) >= 0.05 and len(word) >= 2:
+                texts.append(m)              # a lone symbol (+, -, E) is part of a drawing, not a word
         elif isinstance(m, (M.Arrow, M.CurvedArrow, M.CurvedDoubleArrow)):
             if visibility(m) >= 0.05:
                 arrows.append(m)

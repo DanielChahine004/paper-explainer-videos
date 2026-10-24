@@ -245,6 +245,11 @@ labelled illustrative/schematic.
   any peak or edge. `ax.plot` at a fixed step samples a narrow peak at a different height each frame
   and its Bezier smoothing overshoots at the edge, so a sweeping Bragg peak flickers. (vlint:
   `redraw-plot`.)
+  The function itself must also be smooth in the parameter: a singular core sampled on a grid that
+  moves with it (a Bragg peak at z = R, renormalised by its sampled maximum) pumps the whole curve
+  as the peak crosses grid points. Average singular parts over each grid cell (integrate them
+  exactly). (vlint: `redraw-jitter` steps each animated ValueTracker through its range, redraws the
+  curves and flags heights that reverse direction again and again.)
 - Generated images need an alpha channel, otherwise they are opaque black squares
   (`shell_pet` Images).
 

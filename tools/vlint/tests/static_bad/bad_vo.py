@@ -49,6 +49,10 @@ class Flash(Narrated):  # expect: shadows-manim
         with self.voiceover(text="Loop <bookmark mark='m'/>one and <bookmark mark='n'/>two. Cues come from a loop here."):
             for m in "mn":
                 self.at(m)                              # computed marks: order and unused checks stand down
+        with self.voiceover(text="The beam <bookmark mark='s'/>arrives and after a long flight through the room its width has grown."):  # expect: property-cue
+            self.at("s", FadeIn(ok))
+        with self.voiceover(text="The beam arrives, and <bookmark mark='w'/>its width grows."):    # bookmarked: fine
+            self.at("w", Indicate(ok))
         line = Tex("\tau")  # vlint: ignore[tex-not-raw, control-char] suppression on the line works
         sig = MathTex("\sigma")  # expect: syntax-warning, tex-not-raw
         # vlint: ignore-next[long-text] and on the line before

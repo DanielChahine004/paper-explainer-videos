@@ -157,6 +157,108 @@ def indicate_image(mon, ev, p):
             yield id(m), f"Indicate({label(m)}) pulses an image"
 
 
+@rule("arrow-over-label", "runtime", "warn", "An arrow's shaft runs through a label or an image it doesn't point at, "
+      "so the label is struck through.", "Part II, Layout", "end the arrow at the label's side, or route it around")
+def arrow_over_label(mon, ev, p):
+    if ev != "play" or isinstance(mon.scene, M.ThreeDScene):
+        return
+    import numpy as np
+    skip = float(opt(mon, "arrow_end_clearance", 0.2))
+    arrows = [m for m, ok in walk(mon.scene.mobjects) if isinstance(m, (M.Arrow, M.CurvedArrow, M.CurvedDoubleArrow))
+              and not ("arrow-over-label" in ok or "*" in ok) and visibility(m) >= 0.05]
+    if not arrows:
+        return
+    targets = [m for m in leaves(mon.scene, "arrow-over-label") if visibility(m) >= 0.05]
+    for a in arrows:
+        if len(a.get_points()) < 2:
+            continue
+        s, e = a.get_start(), a.get_end()
+        shaft = [a.point_from_proportion(u) for u in np.linspace(0, 1, 60)]      # the tip is a submobject, not sampled
+        samp = [q for q in shaft if np.linalg.norm(q - s) > skip and np.linalg.norm(q - e) > skip]
+        for m in targets:
+            x0, y0, x1, y1 = bbox(m)
+            x0, y0, x1, y1 = x0 + 0.03, y0 + 0.03, x1 - 0.03, y1 - 0.03
+            if any(x0 < q[0] < x1 and y0 < q[1] < y1 for q in samp):
+                yield (id(a), id(m)), f"an arrow runs through {label(m)}"
+
+
+def _chain_nodes(scene):
+    """Visible arrows, and the boxes/labels at their ends: (arrows, nodes) where a node is (bbox, text_only)."""
+    arrows, texts, rects, other = [], [], [], []
+    text_ids = set()
+    for m, ok in walk(scene.mobjects):
+        if "text-chain" in ok or "*" in ok:
+            continue
+        if isinstance(m, TEXTS()):
+            text_ids |= {id(x) for x in m.get_family()}
+            if m.family_members_with_points() and visibility(m) >= 0.05:
+                texts.append(m)
+        elif isinstance(m, (M.Arrow, M.CurvedArrow, M.CurvedDoubleArrow)):
+            if visibility(m) >= 0.05:
+                arrows.append(m)
+    arrow_ids = {id(x) for a in arrows for x in a.get_family()}
+    for m, ok in walk(scene.mobjects):
+        if id(m) in text_ids or id(m) in arrow_ids or "text-chain" in ok or "*" in ok:
+            continue
+        if isinstance(m, M.AbstractImageMobject):
+            other.append(m)
+        elif isinstance(m, M.VMobject) and m.has_points() and visibility(m) >= 0.05:
+            (rects if isinstance(m, M.Rectangle) else other).append(m)
+    return arrows, texts, rects, other
+
+
+@rule("text-chain", "runtime", "warn", "Three or more text-only boxes joined by arrows: words pointing at words. "
+      "Each node should carry a picture of the thing (an image, a network, a detector), with the word as its label.",
+      "Part I §1, draw, don't write", "replace each box with an icon or image plus a one-word label")
+def text_chain(mon, ev, p):
+    if ev != "play" or isinstance(mon.scene, M.ThreeDScene):
+        return
+    need = int(opt(mon, "min_text_chain", 3))
+    arrows, texts, rects, other = _chain_nodes(mon.scene)
+    if len(arrows) < need - 1:
+        return
+    tol = 0.25
+
+    def near(b, q):
+        return b[0] - tol <= q[0] <= b[2] + tol and b[1] - tol <= q[1] <= b[3] + tol
+
+    def inside(b, m):
+        c = m.get_center()
+        return b[0] <= c[0] <= b[2] and b[1] <= c[1] <= b[3]
+
+    def node(q):
+        """The smallest box (or bare label) at point q, and whether it holds only words."""
+        cands = [bbox(r) for r in rects if near(bbox(r), q)]
+        cands = [b for b in cands if (b[2] - b[0]) * (b[3] - b[1]) < 6]
+        if cands:
+            b = min(cands, key=lambda b: (b[2] - b[0]) * (b[3] - b[1]))
+        else:
+            ts = [bbox(t) for t in texts if near(bbox(t), q)]
+            if not ts:
+                return None
+            b = ts[0]
+        has_text = any(inside(b, t) for t in texts)
+        drawn = any(inside(b, o) for o in other) or sum(inside(b, r) and bbox(r) != b for r in rects) > 0
+        return (tuple(round(x, 2) for x in b), has_text and not drawn)
+
+    parent = {}
+
+    def find(x):
+        while parent.setdefault(x, x) != x:
+            x = parent[x]
+        return x
+    for a in arrows:
+        n0, n1 = node(a.get_start()), node(a.get_end())
+        if n0 and n1 and n0[1] and n1[1] and n0[0] != n1[0]:
+            parent[find(n0[0])] = find(n1[0])
+    groups = {}
+    for x in list(parent):
+        groups.setdefault(find(x), set()).add(x)
+    big = max((len(g) for g in groups.values()), default=0)
+    if big >= need:
+        yield "chain", f"{big} text-only boxes joined by arrows (words pointing at words)"
+
+
 @rule("bookmark-unfired", "runtime", "error", "A bookmark was never waited for, or a cue named a bookmark the "
       "narration lacks; the picture and the words drift apart.", "Part II, Sync",
       "cue every bookmark once with self.at, in narration order")

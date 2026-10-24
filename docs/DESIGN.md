@@ -60,6 +60,17 @@ on: the object, the shape of the effect and the key number. Neither repeats the 
   becomes a row of icons, each with one word. A timeline carries pictograms. Specs that differ in
   kind become tiles, each an icon plus a number. Any `Tex` holding more than about 3 words is a
   candidate for a shape (vlint: `long-text` warns past 8 prose words; numbers and units don't count).
+- **No words pointing at words.** A flow diagram whose nodes are text boxes ("sinogram → OSEM → CNN →
+  image") explains nothing the narration doesn't. Each node is a picture of the thing with a one-word
+  label under it: the sinogram as a thumbnail, the reconstruction as a detector ring with lines, a network
+  as layers of nodes joined by edges, the image as the image. Keep a text box only where there is nothing
+  to draw (vlint: `text-chain` warns at 3 text-only boxes joined by arrows).
+- **Build on what is already on screen.** Once a thing is drawn, its properties are shown on it rather
+  than beside it: an edge is a band on the profile across the object, a blur is that profile going soft,
+  a width is a double arrow across the thing, contrast lost is a bar from the peak reached to the true
+  peak, a weight is the shading of the voxels a line crosses. A dashed line on the image shows where
+  the profile runs. The narration word that names the property carries the cue (vlint: `property-cue`
+  warns when "width", "edge", "contrast" and the like have no bookmark within 6 words before them).
 - **Appear as it is named; pulse it when it is named again.** Each thing arrives on the word that names it
   and not before. When the narration names something already on screen (a crystal, a detector pair, a
   number), it gets an `Indicate` or `Circumscribe` on that word, so the eye always knows where to look. When a
@@ -78,7 +89,8 @@ on: the object, the shape of the effect and the key number. Neither repeats the 
   - **a method with two readings** (sinogram and list mode, matrix and event by event): show both, the
     sinogram view and the individual lines being traced, so either intuition lands.
   - **feedback loops in a box diagram:** route the return arrow above or below the row as straight
-    segments, never a `CurvedArrow` across the boxes.
+    segments, never a `CurvedArrow` across the boxes. No arrow's shaft may cross a label: end it at the
+    label's side (vlint: `arrow-over-label`).
 
   While a part of the picture is being discussed, dim everything else to about 30% opacity, then
   restore it. Target at least one cue per sentence. A voiceover block with fewer bookmarks than

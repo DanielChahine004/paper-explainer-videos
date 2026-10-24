@@ -297,6 +297,35 @@ def cue_density(s):
             yield vo.node, f"{len(vo.cues)} cue(s) for {n} sentences (want >= {need:g} per sentence)"
 
 
+PROPERTY_WORDS = ["width", "wide", "widen", "narrow", "edge", "sharp", "blur", "smear", "resolution", "fwhm",
+                  "spread", "tail", "gap", "thick", "diameter", "radius", "distance", "contrast", "size", "depth",
+                  "slope", "peak", "angle", "offset", "length", "ratio"]
+_WORD = re.compile(r"<bookmark\s+mark\s*=\s*['\"][^'\"]+['\"]\s*/>|[A-Za-z][A-Za-z'-]*")
+
+
+@rule("property-cue", "static", "warn", "The narration names a property (a width, an edge, a contrast, a spread...) "
+      "with no bookmark just before it, so the property is said but not shown on the thing that has it.",
+      "Part I §1, steer the eye (a size)",
+      "bookmark the word and draw the property on the object: a width arrow, a pulsed edge, a profile")
+def property_cue(s):
+    words = [w.lower() for w in opt(s, "property_words", PROPERTY_WORDS)]
+    win = int(opt(s, "property_window", 6))
+    for vo in s.voiceovers:
+        if vo.text is None:
+            continue
+        since, missed = None, []
+        for tok in _WORD.findall(vo.text):
+            if tok.startswith("<"):
+                since = 0
+                continue
+            lw = tok.lower()
+            if any(lw.startswith(w) for w in words) and (since is None or since > win):
+                missed.append(tok)
+            since = None if since is None else since + 1
+        if missed:
+            yield vo.node, f"no bookmark within {win} words before: {', '.join(dict.fromkeys(missed))}"
+
+
 @rule("unresolved-narration", "static", "info", "A voiceover's text is computed, so the bookmark rules cannot read it.",
       "", "use a literal string (implicit concatenation is fine)")
 def unresolved_narration(s):

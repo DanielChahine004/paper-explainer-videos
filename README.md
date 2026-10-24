@@ -50,9 +50,11 @@ three points, and `render.sh` stops on any error:
 
 - **before rendering** (static, plain Python, ~1 s): non-raw LaTeX strings, an object faded in and pulsed in the
   same play (it ends invisible), images inside a `VGroup`, scene names that shadow manim, bookmark typos and
-  order, `SCENES` out of step with the script, anything above 1080p;
+  order, a narrated property (a width, an edge) with no cue on it, `SCENES` out of step with the script,
+  anything above 1080p;
 - **while each scene renders** (inside `common.Narrated`): labels cut off by the frame, overlapping labels,
-  introduced objects that end invisible, pulses that recolour an image, bookmarks never reached;
+  introduced objects that end invisible, pulses that recolour an image, arrows through labels, chains of
+  text boxes joined by arrows, bookmarks never reached;
 - **at the join**: missing or stale scenes, audio drift, length, resolution. Each scene's video carries a
   fingerprint of the code that made it, so `render.sh` re-renders exactly the scenes you changed.
 

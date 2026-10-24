@@ -2,10 +2,10 @@
 state-of-the-art techniques, challenges and opportunities', Phys. Med. Biol. (2026), accepted manuscript, CC BY 4.0.
 
 Every number is from the review's text. Its four figures are schematics (depth-dose curves, LWFA, TNSA, RPA), so
-they are redrawn as step-by-step animations (DESIGN.md §4: mechanisms are remade, not reused). Computed here and
+they are redrawn as step-by-step animations (docs/DESIGN.md §4: mechanisms are remade, not reused). Computed here and
 labelled: proton/carbon ranges from the Bragg-Kleeman rule (R = 0.0022 E^1.77 cm in water, carbon scaled by A/Z^2),
 dipole radii from r = p/(qB), the spread-out Bragg peak weights, and all depth-dose shapes (illustrative).
-Visuals are cued to the narration with <bookmark/> tags and self.at() (see ../DESIGN.md).
+Visuals are cued to the narration with <bookmark/> tags and self.at() (see docs/DESIGN.md).
 Render with render.sh, or one scene: manim -ql laser_vo.py TNSA
 """
 import sys

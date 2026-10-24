@@ -8,7 +8,7 @@ TTS=chatterbox (default): Resemble AI's Chatterbox on the GPU, a natural narrato
 TTS=espeak: robotic, needs only espeak-ng; for checking timing only, never for a finished video.
 
 Every service also returns word timings, so scenes can sync to <bookmark mark='x'/> tags placed
-in the narration text (see DESIGN.md). Bookmarks are stripped before synthesis and before the
+in the narration text (see docs/DESIGN.md). Bookmarks are stripped before synthesis and before the
 cache lookup, so adding or moving one never regenerates the audio.
 """
 import difflib

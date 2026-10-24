@@ -62,7 +62,7 @@ class Narrated(VoiceoverScene):
         self.set_speech_service(make_service())
 
     def at(self, mark, *anims, **kw):
-        """Cue: wait for <bookmark mark='mark'/> in the current voiceover, then play (DESIGN.md §1)."""
+        """Cue: wait for <bookmark mark='mark'/> in the current voiceover, then play (docs/DESIGN.md §1)."""
         self.wait_until_bookmark(mark)
         if anims:
             kw.setdefault("run_time", 0.7)
@@ -70,7 +70,7 @@ class Narrated(VoiceoverScene):
 
 
 def fit_frame(m, margin=0.3):
-    """Shrink and nudge m so it lies inside the frame with `margin` to spare (DESIGN.md §2)."""
+    """Shrink and nudge m so it lies inside the frame with `margin` to spare (docs/DESIGN.md §2)."""
     hw, hh = config.frame_width / 2 - margin, config.frame_height / 2 - margin
     if m.width > 2 * hw:
         m.scale_to_fit_width(2 * hw)

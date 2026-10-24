@@ -27,7 +27,7 @@ narration on the first draft render and caches it, and later renders reuse it.
 
 ## Writing narration that the voice reads well
 
-These rules are also in DESIGN.md (Part II, Narration):
+These rules are also in [DESIGN.md](DESIGN.md) (Part II, Narration):
 
 - **Spell out what must be said.** Write "one point eight two", "millimetres", "L S O" (acronyms
   letter by letter) and "caesium iodide", not "1.82", "mm", "LSO" or "CsI".

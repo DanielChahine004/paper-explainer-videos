@@ -1,5 +1,5 @@
 """Template: copy this folder to videos/<name>/, rename this file, and set SCRIPT, OUT and SCENES in
-render.sh. Read DESIGN.md first. Each scene is a Narrated class: write the narration with
+render.sh. Read docs/DESIGN.md first. Each scene is a Narrated class: write the narration with
 <bookmark mark='x'/> tags placed right before the word a visual belongs to, and cue the visual with
 self.at("x", animation).
 

@@ -8,7 +8,7 @@ pre-estimation, accelerated k-NN, per-voxel timing PDFs; CC BY 3.0, Figs 7 and 9
 2026 (DeepBreast rotating fan beam, normalisation phantom; CC BY 4.0, Figs 4 and 5a reused).
 The flood map, crystal lookup table, energy peaks, timing offsets, normalisation, k-NN and quantile-DOI panels are
 computed here from simple stated models and are illustrative.
-Visuals are cued to the narration with <bookmark/> tags and self.at() (see ../DESIGN.md).
+Visuals are cued to the narration with <bookmark/> tags and self.at() (see docs/DESIGN.md).
 Render with render.sh, or one scene: manim -ql calib_vo.py Flood
 """
 import sys
@@ -594,7 +594,7 @@ class Takeaway(Narrated):
         fade_all(self)
 
 
-# ---- demonstrations: the calibration as it happens on the bench (DESIGN.md §3) ---------------------------------
+# ---- demonstrations: the calibration as it happens on the bench (docs/DESIGN.md §3) ---------------------------------
 class FloodSetup(Narrated):
     def construct(self):
         title = Tex(r"a flood acquisition", font_size=34).to_edge(UP, buff=0.35)

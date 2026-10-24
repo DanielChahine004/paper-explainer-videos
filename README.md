@@ -8,7 +8,7 @@ The pipeline is [Manim Community](https://www.manim.community/) for the animatio
 transcribed back with Whisper and re-synthesised if the words don't match. Visuals appear on the word that
 names them, using `<bookmark/>` tags in the narration.
 
-What makes it work with an agent is [`DESIGN.md`](DESIGN.md): a set of design principles and hard-won
+What makes it work with an agent is [`docs/DESIGN.md`](docs/DESIGN.md): a set of design principles and hard-won
 rules, written and refined across a dozen videos. It covers what to show and what to say, how to
 explain a mechanism, how to keep every number honest, when to reuse a paper's figure, and a long list
 of pitfalls that broke earlier renders.
@@ -38,9 +38,9 @@ Open the repo in Claude Code (or any agent that reads `AGENTS.md`) and ask, for 
 
 > Make a narrated explainer video of `paper.pdf`, following AGENTS.md.
 
-The agent reads `DESIGN.md`, plans the scenes, writes `videos/<name>/<name>_vo.py`, renders a draft,
+The agent reads `docs/DESIGN.md`, plans the scenes, writes `videos/<name>/<name>_vo.py`, renders a draft,
 reviews contact sheets of every scene, fixes what it finds, and renders the final 1080p video. The
-workflow is in [`AGENTS.md`](AGENTS.md). Feedback you give on one video goes into `DESIGN.md`, so the
+workflow is in [`AGENTS.md`](AGENTS.md). Feedback you give on one video goes into `docs/DESIGN.md`, so the
 next video starts from it.
 
 ## Voice
@@ -48,18 +48,18 @@ next video starts from it.
 The narrator voice is generated automatically during the draft render and cached, so later renders
 reuse it. Each sentence is synthesised by Chatterbox, transcribed back by Whisper, and regenerated with
 a new seed if it doesn't match the script. Bookmarks are timed from Whisper's word timestamps. See
-[`VOICE.md`](VOICE.md) for how it works, how to write narration it reads well, how to check and fix
+[`docs/VOICE.md`](docs/VOICE.md) for how it works, how to write narration it reads well, how to check and fix
 failed sentences, how to clone a voice.
 
 ## Layout
 
 | Path | What it is |
 |---|---|
-| `DESIGN.md` | the design rules: principles, craft, workflow, pitfalls |
+| `docs/DESIGN.md` | the design rules: principles, craft, workflow, pitfalls |
 | `AGENTS.md`, `CLAUDE.md` | instructions for coding agents |
 | `common.py` | shared look, the `Narrated` scene base, `self.at()` cues, `fit_frame()` |
 | `voices.py` | the Chatterbox speech service (plus an espeak timing check) with Whisper word timings |
-| `VOICE.md` | how the narration voice is generated, checked and tuned |
+| `docs/VOICE.md` | how the narration voice is generated, checked and tuned |
 | `pixi.toml` | the environment |
 | `tools/sheet.sh` | 3×3 contact sheets for reviewing scenes |
 | `tools/wsl_render.sh` | renders from the WSL filesystem (much faster than `/mnt/c`) |

@@ -21,7 +21,7 @@ fi
 export PATH="$HOME/.local/bin:$PATH"
 pixi install
 
-export QUALITY="${QUALITY:--qh}"   # -qh = 1920x1080 at 60 fps; never render above 1080p (DESIGN.md)
+export QUALITY="${QUALITY:--qh}"   # -qh = 1920x1080 at 60 fps; never render above 1080p (docs/DESIGN.md)
 export SCRIPT
 case "$QUALITY" in -qh) RES=1080p60 ;; -qm) RES=720p30 ;; *) RES=480p15 ;; esac
 video() { echo "m_$1/videos/${SCRIPT%.py}/$RES/$1.mp4"; }

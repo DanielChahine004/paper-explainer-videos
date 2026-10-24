@@ -24,6 +24,28 @@ Each video should leave this file better than it found it, and this is part of f
 
 # Part I: Principles
 
+## Start here: why is this being watched?
+
+Before planning a single scene, infer what the viewer wants to leave with, and shape the whole video
+around that. The kind of resource is the first clue. If the request states a purpose ("for my
+literature review", "I need to reproduce this"), that purpose wins. Write the inferred intent as one
+sentence at the top of the scene plan. The opening scene promises it, every scene serves it, and the
+closing scene delivers it. If the intent is genuinely unclear and would change the video, ask.
+
+| Resource | What the viewer wants to leave with | Shape of the video |
+|---|---|---|
+| **Survey / review** | a map of the field: the taxonomy of approaches, how they relate, where each wins, the state of the results, and the open problems | build the map branch by branch, one scene per branch; keep a small map on screen as navigation; end on the full map with gaps marked (`laser_rt`: three mechanisms, then energy reached vs needed) |
+| **New method / architecture** | what is new compared with the baseline, how it works, which design choices matter, and what the results do and don't show | problem; why the baseline fails; the idea, mechanism step by step; training and implementation details; results against baselines and ablations; limits |
+| **Experiment / measurement** | what was measured, how, how well, and what it implies | question; setup drawn as the apparatus; method; results with uncertainty; implications and caveats |
+| **Thesis** | the arc of the argument and each chapter's contribution | the question; one movement per contribution; how they connect; what remains |
+| **Group or programme (several papers)** | the trajectory: what each system changed and what is still open | timeline of systems, each scene one step and why it was taken; the gap they leave |
+| **Topic / how-to** (how something is done) | the intuition for the procedure: why it is needed, how it is done, and what it costs | why (the failure it prevents); how (on the bench); how often and how long (`calib`) |
+| **Clinical / biological study** | the question, design, cohort, outcome, and how far to trust it | question; design and cohort; endpoints; results with confidence; bias and caveats |
+
+The same paper can call for different videos. A survey read to pick a method for a thesis should spend
+more time on the comparison between methods, while a survey read as an introduction should spend more
+time on the taxonomy.
+
 ## 1. The voice explains; the screen shows
 
 Narration carries the argument. The picture carries what the eye must hold while the voice moves
@@ -195,8 +217,9 @@ labelled illustrative/schematic.
 
 # Part III: Workflow
 
-1. Read the source and plan the scenes (5–8 min). For each scene, note the mechanism it explains
-   and whether each figure is reused or redrawn.
+1. Read the source, identify the kind of resource, and write the viewer's intent in one sentence
+   (Part I, "Start here"). Then plan the scenes to serve it (5–8 min by default). For each scene, note
+   the mechanism it explains and whether each figure is reused or redrawn.
 2. Copy `videos/_template/` to `videos/<name>/`, rename the script, and set `SCRIPT`, `OUT` and
    `SCENES` in its `render.sh`.
 3. Syntax-check: `python -W error -c "import ast, pathlib, sys; ast.parse(pathlib.Path(sys.argv[1]).read_text(encoding='utf-8'))" x_vo.py`

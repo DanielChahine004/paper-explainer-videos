@@ -36,7 +36,7 @@ def fingerprint(script, scene):
         h.update(ast.dump(classes[c]).encode())
         todo += [b.id for b in classes[c].bases if isinstance(b, ast.Name)]
     root = find_root(script.parent)
-    for name in ("common.py", "voices.py"):
+    for name in ("common.py", "common_ce.py", "common_gx.py", "voices.py"):
         p = root / name
         if p.exists():
             h.update(ast.dump(ast.Module(body=_strip_doc(ast.parse(p.read_text(encoding="utf-8")).body), type_ignores=[])).encode())

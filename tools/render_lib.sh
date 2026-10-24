@@ -7,6 +7,10 @@
 #   FRESH=1       re-render every scene; otherwise only missing scenes and scenes whose code changed
 #   TTS=espeak    timing check only;  TTS_VOICE=clip.wav  clone a voice with Chatterbox
 #   VLINT_ALLOW=1 report vlint errors without stopping
+#   ENGINE=gx     (default) ManimGX on the Windows GPU, called from WSL through interop (GX_EXE); in WSL itself it has
+#                 no GPU (no NVIDIA Vulkan driver). Each scene is first run by CE in skip mode for vlint's runtime
+#                 record (seconds), then rendered by ManimGX into the same file CE would write.
+#   ENGINE=ce     Manim CE (Cairo, one core per scene); older videos pin it in render.sh
 # Gates (tools/vlint): static checks before rendering, runtime and freshness checks before the join, and
 # resolution / sync / length checks after it. Any error stops the build.
 set -euo pipefail
@@ -21,9 +25,11 @@ fi
 export PATH="$HOME/.local/bin:$PATH"
 pixi install
 
-export QUALITY="${QUALITY:--qh}"
+export QUALITY="${QUALITY:--qh}" ENGINE="${ENGINE:-gx}"
+export GX_EXE="${GX_EXE:-/mnt/c/Users/h/manimgx_venv/Scripts/manimgx.exe}"
 case "$QUALITY" in
-  -qh) RES=1080p60 ;; -qm) RES=720p30 ;; -ql) RES=480p15 ;;
+  -qh) RES=1080p60; GX_RES="-r 1920x1080 --fps 60" ;; -qm) RES=720p30; GX_RES="-r 1280x720 --fps 30" ;;
+  -ql) RES=480p15; GX_RES="-r 854x480 --fps 15" ;;
   *) echo "QUALITY=$QUALITY is not allowed: 1080p (-qh) is the maximum"; exit 1 ;;
 esac
 STEM="${SCRIPT%.py}"
@@ -47,7 +53,9 @@ if [ -n "$todo" ]; then
   mem_gb=$(awk '/MemAvailable/ {print int($2 / 1048576)}' /proc/meminfo)
   jobs=$(( $(nproc) - 2 )); [ $(( mem_gb * 10 / 12 )) -lt $jobs ] && jobs=$(( mem_gb * 10 / 12 ))
   [ "$n_todo" -lt "$jobs" ] && jobs=$n_todo; [ "$jobs" -lt 1 ] && jobs=1
+  [ "$ENGINE" = gx ] && [ $jobs -gt 4 ] && jobs=4   # GPU renders: ~4 at once saturates the 2080 Ti
   jobs="${JOBS:-$jobs}"
+  export STEM GX_RES SCRIPT
   echo "== voicing and rendering ($jobs at once):" $todo
   pixi run python "$ROOT/tools/voice_prepass.py" "$SCRIPT" $todo > voice.log 2>&1 &
   export VPID=$!
@@ -55,8 +63,16 @@ if [ -n "$todo" ]; then
   echo $todo | tr ' ' '\n' | xargs -P "$jobs" -I{} sh -c \
     'while [ ! -f "m_{}/voiceovers/.ready" ] && kill -0 $VPID 2>/dev/null; do sleep 2; done
      [ -f "m_{}/voiceovers/.ready" ] || { echo "FAILED {}: no narration (see voice.log)"; exit 1; }
-     pixi run manim "$QUALITY" --disable_caching --progress_bar none --media_dir "m_{}" "'"$SCRIPT"'" "{}" > "m_{}.log" 2>&1 \
-     && echo "done {}" || { echo "FAILED {} (see m_{}.log)"; exit 1; }'
+     if [ "$ENGINE" = gx ]; then
+       d="m_{}/videos/$STEM/'"$RES"'"; mkdir -p "$d"
+       ENGINE=ce VLINT_OUT="$d" pixi run manim -ql -s --disable_caching --progress_bar none --media_dir "m_{}" "$SCRIPT" "{}" \
+         > "m_{}.check.log" 2>&1 || { echo "FAILED {}: CE skip-mode check (see m_{}.check.log)"; exit 1; }
+       "$GX_EXE" render "$(wslpath -w "$PWD/$SCRIPT")" "{}" -o "$(wslpath -w "$PWD/$d/{}.mp4")" $GX_RES --crf 14 --preset slow \
+         > "m_{}.log" 2>&1 && rm -f "$d/{}".storyboard*.png && echo "done {}" || { echo "FAILED {} (see m_{}.log)"; exit 1; }
+     else
+       pixi run manim "$QUALITY" --disable_caching --progress_bar none --media_dir "m_{}" "$SCRIPT" "{}" > "m_{}.log" 2>&1 \
+       && echo "done {}" || { echo "FAILED {} (see m_{}.log)"; exit 1; }
+     fi'
   wait $VPID || { echo "voice pre-pass FAILED (see voice.log)"; exit 1; }
   grep "^== narration" voice.log || true
 fi
@@ -67,7 +83,7 @@ recheck="$(pixi run $VLINT recheck . --script "$SCRIPT" --res "$RES" $SCENES)"
 if [ -n "$recheck" ]; then
   echo "== re-checking with the current rules:" $recheck
   echo $recheck | tr ' ' '\n' | xargs -P "$(nproc)" -I{} sh -c \
-    'VLINT_RECHECK=1 VLINT_OUT="m_{}/videos/'"$STEM/$RES"'" pixi run manim -ql -s --disable_caching --progress_bar none \
+    'ENGINE=ce VLINT_RECHECK=1 VLINT_OUT="m_{}/videos/'"$STEM/$RES"'" pixi run manim -ql -s --disable_caching --progress_bar none \
        --media_dir "m_{}" "'"$SCRIPT"'" "{}" > "m_{}.check.log" 2>&1 || echo "re-check FAILED {} (see m_{}.check.log)"'
 fi
 

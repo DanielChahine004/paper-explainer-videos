@@ -338,8 +338,15 @@ labelled illustrative/schematic.
    so only the edited ones re-render.
 7. Update this file (§0), then report.
 
-Tooling: stay on Manim Community, because manim-voiceover doesn't support ManimGL. The slow parts
-are writing the script and voice synthesis, not rendering.
+Tooling: **ManimGX renders, Manim CE checks.** `ENGINE=gx` (the default) renders each scene with
+[ManimGX](https://github.com/academa-labs/manimgx) on the GPU. Under WSL it calls a Windows install through
+interop (`GX_EXE`), because WSL has no NVIDIA Vulkan driver. `ENGINE=ce` renders with Manim CE and needs no
+ManimGX. `common.py` dispatches to `common_gx.py`, whose `Narrated` replays the voice pre-pass cache with
+`add_sound` and times `self.at()` from the word timings. vlint's runtime record still comes from CE in skip
+mode, so **every scene must run under both engines**: write the API they share. ManimGX typesets with Typst
+(LaTeX converted by mitex); common_gx patches `\'` accents, `\&` and `\ `, and a LaTeX package mitex lacks
+fails the render. A 10-minute, 15-scene video builds in under 2 minutes instead of 6, and 3D scenes render
+~50× faster. ManimGL was ruled out: different API, no voiceover.
 
 ---
 

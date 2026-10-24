@@ -7,9 +7,10 @@
 #   FRESH=1       re-render every scene; otherwise only missing scenes and scenes whose code changed
 #   TTS=espeak    timing check only;  TTS_VOICE=clip.wav  clone a voice with Chatterbox
 #   VLINT_ALLOW=1 report vlint errors without stopping
-#   ENGINE=gx     (default) ManimGX on the Windows GPU, called from WSL through interop (GX_EXE); in WSL itself it has
-#                 no GPU (no NVIDIA Vulkan driver). Each scene is first run by CE in skip mode for vlint's runtime
-#                 record (seconds), then rendered by ManimGX into the same file CE would write.
+#   ENGINE=gx     (default when ManimGX is found: GX_EXE, or manimgx on PATH) ManimGX on the GPU. From WSL, point
+#                 GX_EXE at a Windows install's manimgx.exe (WSL has no NVIDIA Vulkan driver, so a WSL install runs
+#                 on the CPU). Each scene's CE skip-mode check (vlint's runtime record) runs beside its ManimGX
+#                 render, which writes the file CE would.
 #   ENGINE=ce     Manim CE (Cairo, one core per scene); older videos pin it in render.sh
 # Gates (tools/vlint): static checks before rendering, runtime and freshness checks before the join, and
 # resolution / sync / length checks after it. Any error stops the build.
@@ -25,8 +26,13 @@ fi
 export PATH="$HOME/.local/bin:$PATH"
 pixi install
 
-export QUALITY="${QUALITY:--qh}" ENGINE="${ENGINE:-gx}"
-export GX_EXE="${GX_EXE:-/mnt/c/Users/h/manimgx_venv/Scripts/manimgx.exe}"
+export QUALITY="${QUALITY:--qh}"
+# ManimGX when it is installed (GX_EXE, or manimgx on PATH; a Windows manimgx.exe works from WSL), else Manim CE
+GX_EXE="${GX_EXE:-$(command -v manimgx || true)}"
+if [ -z "${ENGINE:-}" ]; then [ -n "$GX_EXE" ] && ENGINE=gx || ENGINE=ce; fi
+if [ "$ENGINE" = gx ] && [ ! -x "$GX_EXE" ]; then echo "ENGINE=gx needs ManimGX: set GX_EXE (README)"; exit 1; fi
+export ENGINE GX_EXE
+echo "== engine: $ENGINE"
 case "$QUALITY" in
   -qh) RES=1080p60; GX_RES="-r 1920x1080 --fps 60" ;; -qm) RES=720p30; GX_RES="-r 1280x720 --fps 30" ;;
   -ql) RES=480p15; GX_RES="-r 854x480 --fps 15" ;;
@@ -77,7 +83,8 @@ if [ -n "$todo" ]; then
        d="m_{}/videos/$STEM/'"$RES"'"; mkdir -p "$d"
        ENGINE=ce VLINT_RECHECK=1 VLINT_OUT="$d" pixi run manim -ql -s --disable_caching --progress_bar none \
          --media_dir "m_{}" "$SCRIPT" "{}" > "m_{}.check.log" 2>&1 & ck=$!
-       "$GX_EXE" render "$(wslpath -w "$PWD/$SCRIPT")" "{}" -o "$(wslpath -w "$PWD/$d/{}.mp4")" $GX_RES --crf 14 --preset slow \
+       p() { case "$GX_EXE" in *.exe) wslpath -w "$1" ;; *) echo "$1" ;; esac; }   # a Windows .exe takes Windows paths
+       "$GX_EXE" render "$(p "$PWD/$SCRIPT")" "{}" -o "$(p "$PWD/$d/{}.mp4")" $GX_RES --crf 14 --preset slow \
          > "m_{}.log" 2>&1 || { echo "FAILED {} (see m_{}.log)"; kill $ck 2>/dev/null; exit 1; }
        wait $ck || { echo "FAILED {}: CE skip-mode check (see m_{}.check.log)"; exit 1; }
        rm -f "$d/{}".storyboard*.png; echo "done {}"

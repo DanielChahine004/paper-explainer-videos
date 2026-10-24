@@ -2,9 +2,10 @@
 
 Turn a research paper into a narrated, animated explainer video, with a coding agent doing the work.
 
-The pipeline is [Manim Community](https://www.manim.community/) for the animation,
-[manim-voiceover](https://github.com/ManimCommunity/manim-voiceover) for word-level sync, and
-[Chatterbox](https://github.com/resemble-ai/chatterbox) for the narrator voice. Each sentence is
+The pipeline is [ManimGX](https://github.com/academa-labs/manimgx) for rendering the animation on the GPU, with
+[Manim Community](https://www.manim.community/) and
+[manim-voiceover](https://github.com/ManimCommunity/manim-voiceover) for the checks and as the fallback
+renderer, and [Chatterbox](https://github.com/resemble-ai/chatterbox) for the narrator voice. Each sentence is
 transcribed back with Whisper and re-synthesised if the words don't match. Visuals appear on the word that
 names them, using `<bookmark/>` tags in the narration.
 
@@ -21,7 +22,7 @@ detectors are calibrated (12 min).
 ## Quick start
 
 Requirements: Linux or WSL2, an NVIDIA GPU with CUDA 12 (about 4 GB per narration job), and
-[pixi](https://pixi.sh).
+[pixi](https://pixi.sh). Optional, for GPU rendering: ManimGX (see [Rendering engines](#rendering-engines)).
 
 ```bash
 git clone https://github.com/DanielChahine004/paper-explainer-videos
@@ -31,6 +32,25 @@ cd videos/_template && QUALITY=-ql bash render.sh   # a 2-scene smoke test at 48
 ```
 
 The first run downloads the Chatterbox and Whisper weights and installs TinyTeX into `~/.TinyTeX`.
+
+## Rendering engines
+
+The same scene file renders under two engines; `render.sh` says which one it used (`== engine:`).
+
+- **ManimGX** (`ENGINE=gx`, the default whenever it's found): a Rust/GPU engine with Manim Community's API.
+  It renders a 10-minute, 15-scene video in about 1.5 minutes, including the checks and contact sheets. Manim
+  Community takes about 6 minutes for the same video, and 3D scenes render about 50 times faster under ManimGX.
+  Install it in its own environment (Python 3.13+, `pip install manimgx`). Then put `manimgx` on your PATH, or
+  set `GX_EXE` to the executable. Under WSL2, install it on the Windows side and set
+  `GX_EXE=/mnt/c/.../Scripts/manimgx.exe`: WSL has no NVIDIA Vulkan driver, so a Linux install there runs on
+  the CPU, while the Windows build reached from WSL uses the GPU. `common_gx.py` replays the narration
+  cached by the voice pre-pass and times each `self.at()` cue from the word timings, as manim-voiceover does.
+- **Manim Community** (`ENGINE=ce`, or when ManimGX is missing): CPU rendering with Cairo, one core per scene,
+  through `common_ce.py`.
+
+vlint's runtime checks always run under Manim Community, in skip mode beside each ManimGX render. So write
+scenes in the API both engines share. ManimGX typesets LaTeX through Typst (converted by mitex):
+`common_gx.py` patches accents (`\'a`), `\&` and `\ `, and a LaTeX package mitex lacks fails the render.
 
 ## Making a video with a coding agent
 
@@ -52,7 +72,7 @@ three points, and `render.sh` stops on any error:
   same play (it ends invisible), images inside a `VGroup`, scene names that shadow manim, bookmark typos and
   order, a narrated property (a width, an edge) with no cue on it, `SCENES` out of step with the script,
   anything above 1080p;
-- **while each scene renders** (inside `common.Narrated`): labels cut off by the frame, overlapping labels,
+- **while each scene runs** (inside `common_ce.Narrated`, in Manim Community's skip mode): labels cut off by the frame, overlapping labels,
   introduced objects that end invisible, pulses that recolour an image, arrows through labels, chains of
   text boxes joined by arrows, panels crammed together or off-centre while space is free, bookmarks never
   reached;
@@ -82,11 +102,14 @@ failed sentences, how to clone a voice.
 |---|---|
 | `docs/DESIGN.md` | the design rules: principles, craft, workflow, pitfalls |
 | `AGENTS.md`, `CLAUDE.md` | instructions for coding agents |
-| `common.py` | shared look, the `Narrated` scene base (with the runtime checks), `self.at()` cues, `fit_frame()` |
+| `common.py` | picks the engine (`ENGINE`) and imports one of the two below |
+| `common_ce.py` | Manim Community side: shared look, the `Narrated` scene base (with the runtime checks), `self.at()` cues, `fit_frame()` |
+| `common_gx.py` | ManimGX side: the same helpers, and a `Narrated` that replays the cached narration |
 | `voices.py` | the Chatterbox speech service (plus an espeak timing check) with Whisper word timings |
 | `docs/VOICE.md` | how the narration voice is generated, checked and tuned |
 | `pixi.toml` | the environment |
-| `tools/render_lib.sh` | the render pipeline every `render.sh` sources, gated by vlint |
+| `tools/render_lib.sh` | the render pipeline every `render.sh` sources, gated by vlint: narration first, then every scene at once (slowest first), the join and a small copy |
+| `tools/voice_prepass.py` | voices all narration before rendering, two model copies sharing the GPU |
 | `tools/vlint/` | the checks: rules, planted-bug tests, how to add a rule |
 | `tools/sheet.sh` | 3×3 contact sheets for reviewing scenes |
 | `tools/wsl_render.sh` | renders from the WSL filesystem (much faster than `/mnt/c`) |
@@ -109,5 +132,5 @@ remain under their original licences. Figures from papers that don't allow reuse
 
 ## Licence
 
-Code and documentation: MIT (see `LICENSE`). Third-party tools and model weights (Manim, Chatterbox,
-Whisper, TinyTeX) are under their own licences.
+Code and documentation: MIT (see `LICENSE`). Third-party tools and model weights (Manim, ManimGX (GPL),
+Chatterbox, Whisper, TinyTeX) are under their own licences; ManimGX is installed separately, not bundled.

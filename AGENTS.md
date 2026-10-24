@@ -1,8 +1,9 @@
 # Instructions for coding agents
 
 This repo turns a research paper (or a topic, or a set of papers) into a narrated, animated explainer
-video: Manim Community scenes, a Chatterbox voice with a Whisper check, and visuals synced to the
-narration word by word. When asked to make a video, follow this file and `docs/DESIGN.md`.
+video: Manim scenes rendered on the GPU by ManimGX (or by Manim Community where ManimGX isn't installed), a
+Chatterbox voice with a Whisper check, and visuals synced to the narration word by word. Write scenes in the
+API both engines share, because vlint's runtime checks always run under Manim Community. When asked to make a video, follow this file and `docs/DESIGN.md`.
 
 ## Before anything else
 
@@ -27,15 +28,16 @@ narration word by word. When asked to make a video, follow this file and `docs/D
 4. **Write the scenes.** Every number must come from the source text (grep for it) or be computed in the
    scene and labelled as computed. Then run `python tools/vlint check videos/<name>` and fix every error;
    read the warnings as questions (docs/DESIGN.md Part III, step 3; rules in `tools/vlint/README.md`).
-5. **Draft:** `cd videos/<name> && QUALITY=-ql JOBS=2 bash render.sh` (Linux, or WSL with
-   `bash tools/wsl_render.sh <name>`). This generates and caches all narration; at most 2 jobs while
-   voice is being generated. Then check the voice log as described in `docs/VOICE.md`.
+5. **Draft:** `cd videos/<name> && QUALITY=-ql bash render.sh` (Linux, or WSL with
+   `bash tools/wsl_render.sh <name>`). Narration is voiced first by `tools/voice_prepass.py` and cached;
+   each scene renders as soon as its own narration is ready. Then check the voice log as described in
+   `docs/VOICE.md`.
 6. **Review every scene** with `bash tools/sheet.sh videos/<name> 480p15 <outdir> <Scene>...` and look at
    the sheets: things drawn that the narration doesn't say, and the reverse, and labels over shapes. The
    `[vlint]` lines in the render output already list clipped or overlapping labels, objects that
    vanished and bookmarks never reached. Fix and run `render.sh` again: it re-renders only the scenes
    whose code, helpers or assets changed.
-7. **Final:** `QUALITY=-qh JOBS=<number of scenes> bash render.sh`. It refuses anything above 1080p,
+7. **Final:** `QUALITY=-qh bash render.sh` (all scenes at once by default; `JOBS=n` caps it). It refuses anything above 1080p,
    refuses to join a missing, stale or broken scene, checks the joined file for length and audio drift,
    and writes a `_small.mp4` copy for upload limits. `VLINT_ALLOW=1` reports errors without stopping.
 8. **Learn:** if anything went wrong or worked unusually well, sharpen or add a rule in `docs/DESIGN.md`
@@ -46,7 +48,8 @@ narration word by word. When asked to make a video, follow this file and `docs/D
 
 Linux or WSL2, an NVIDIA GPU with CUDA 12 (about 4 GB per narration job), and
 [pixi](https://pixi.sh). Everything else (manim, ffmpeg, Chatterbox, Whisper, TinyTeX) is installed
-by `pixi install` and the first run of `render.sh`.
+by `pixi install` and the first run of `render.sh`. Optional: [ManimGX](https://github.com/academa-labs/manimgx)
+for GPU rendering (Python 3.13+, its own environment); see the README's "Rendering engines" section.
 
 ## Voice
 

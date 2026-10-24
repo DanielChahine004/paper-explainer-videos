@@ -12,8 +12,8 @@ that already reached a render.
 | runtime | inside every scene while it renders (`common.Narrated`) | the real mobjects after each `play` | labels cut by the frame edge, overlapping labels, an introduced object that ends invisible, bookmarks never reached |
 | output | before and after the join | scene videos, their `.vlint.json` records, the joined mp4 | missing or stale scenes, A/V drift, wrong length, >1080p |
 
-Each scene's record stores a **fingerprint**: a hash of its class, the script's shared code, `common.py`,
-`voices.py` and `assets/`, ignoring comments and whitespace. `render.sh` re-renders exactly the scenes whose
+Each scene's record stores a **fingerprint**: a hash of its class, the script's shared code, `common.py`
+(and `common_ce.py`, `common_gx.py`), `voices.py` and `assets/`, ignoring comments and whitespace. `render.sh` re-renders exactly the scenes whose
 fingerprint changed, so nothing needs deleting by hand and an old scene can't slip into the join.
 
 ## Commands

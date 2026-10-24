@@ -64,21 +64,17 @@ failed sentences, how to clone a voice, and the lighter alternatives.
 | `tools/sheet.sh` | 3×3 contact sheets for reviewing scenes |
 | `tools/wsl_render.sh` | renders from the WSL filesystem (much faster than `/mnt/c`) |
 | `videos/_template/` | a two-scene starting point |
-| `videos/*/` | worked examples (scripts only; rendered videos are not in git) |
+| `videos/laser_rt/`, `videos/calib/` | two worked examples (scripts only; videos are on the release) |
 
 ## Examples
 
-| Folder | Source |
-|---|---|
-| `laser_rt` | R. Alabd & D. R. Franklin, laser-driven particle accelerators for cancer therapy, Phys. Med. Biol. 2026 (review, CC BY 4.0) |
-| `calib` | topic video: how PET detectors are calibrated, pixelated vs (semi-)monolithic (Casey & Nutt 1986; Maas 2009; Borghi 2016; Cucarella 2026; Freire 2026) |
-| `i3m_pet` | the i3M Valencia monolithic PET programme (MAMMI, single-crystal tube, DeepBreast) |
-| `brain_swin` | Sun et al., voxel-level brain state prediction with a Swin transformer, IEEE JBHI 2025 (CC BY 4.0) |
-| `liquid_tc` | Hasani et al., Liquid Time-constant Networks, AAAI 2021 |
-| `wt_pet` | the Ghent walk-through / flat-panel PET programme |
-| `mouse_pet` | the University of Sydney open-field mouse brain PET programme |
-| `prism_pet` | the Prism-PET programme |
-| `shell_pet` | K. Wilson, continuous cylindrical shell PET, PhD thesis, UTS 2020 |
+Two worked examples, both made after the design rules were consolidated, so they follow them most
+closely. Their rendered videos are on the [examples release](https://github.com/DanielChahine004/paper-explainer-videos/releases/tag/examples-v1).
+
+| Folder | Kind | Source | Shows |
+|---|---|---|---|
+| `laser_rt` | single paper (review), 16 scenes, 11 min | R. Alabd & D. R. Franklin, laser-driven particle accelerators for cancer therapy, Phys. Med. Biol. 2026 (CC BY 4.0) | mechanisms redrawn as animations; computed ranges and magnet radii; a spread-out Bragg peak solved in the scene |
+| `calib` | topic across papers, 21 scenes, 12 min | how PET detectors are calibrated, pixelated vs (semi-)monolithic: Casey & Nutt 1986, Maas 2009, Borghi 2016, Cucarella 2026, Freire 2026 | bench demonstrations (flood, pencil beam, fan beam); "why before how" scenes; reused CC BY figures with credits |
 
 The example narrations summarise third-party work, and every number in them comes from the cited
 sources. Figure crops in `assets/` come only from CC BY papers, are shown with an on-screen credit, and

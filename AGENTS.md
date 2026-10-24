@@ -8,8 +8,8 @@ narration word by word. When asked to make a video, follow this file and `DESIGN
 
 1. Read `DESIGN.md` in full. Part I (principles) decides what goes on screen; Parts II–IV are craft,
    workflow and known pitfalls. Most mistakes a new video can make are already written down there.
-2. Look at one finished example of a similar kind in `videos/` (`laser_rt` and `calib` follow the
-   current rules most closely).
+2. Look at the worked example closest to the task: `videos/laser_rt/` for a single paper,
+   `videos/calib/` for a topic drawn from several papers.
 
 ## Making a video
 

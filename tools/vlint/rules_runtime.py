@@ -178,6 +178,8 @@ def arrow_over_label(mon, ev, p):
         for m in targets:
             x0, y0, x1, y1 = bbox(m)
             x0, y0, x1, y1 = x0 + 0.03, y0 + 0.03, x1 - 0.03, y1 - 0.03
+            if any(x0 < q[0] < x1 and y0 < q[1] < y1 for q in (s, e)):
+                continue                     # it points into this one (an arrow landing on an image)
             if any(x0 < q[0] < x1 and y0 < q[1] < y1 for q in samp):
                 yield (id(a), id(m)), f"an arrow runs through {label(m)}"
 

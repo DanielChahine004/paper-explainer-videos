@@ -145,12 +145,20 @@ class ChatterboxService(_FileService):
     @classmethod
     def _load(cls):
         if cls._model is None:
-            from chatterbox.tts import ChatterboxTTS
             from faster_whisper import WhisperModel
 
-            cls._model = ChatterboxTTS.from_pretrained(device="cuda")
+            cls._model = cls._model_class().from_pretrained(device="cuda")
             cls._asr = WhisperModel("small.en", device="cuda", compute_type="float16")
         return cls._model, cls._asr
+
+    @staticmethod
+    def _model_class():
+        from chatterbox.tts import ChatterboxTTS
+        return ChatterboxTTS
+
+    def _generate(self, model, sent):
+        return model.generate(sent, audio_prompt_path=self.voice or None, exaggeration=self.exaggeration,
+                              cfg_weight=self.cfg_weight)
 
     def _match(self, wav, sr, text):
         import numpy as np
@@ -171,8 +179,7 @@ class ChatterboxService(_FileService):
             best, best_score = None, -1.0
             for attempt in range(self.tries):
                 torch.manual_seed(1000 * k + attempt + len(sent))
-                wav = model.generate(sent, audio_prompt_path=self.voice or None,
-                                     exaggeration=self.exaggeration, cfg_weight=self.cfg_weight)
+                wav = self._generate(model, sent)
                 score = self._match(wav, model.sr, sent)
                 if score > best_score:
                     best, best_score = wav, score
@@ -184,9 +191,26 @@ class ChatterboxService(_FileService):
         torchaudio.save(str(wav_path), torch.cat(parts[:-1], dim=1), model.sr)
 
 
+class ChatterboxTurboService(ChatterboxService):
+    """Chatterbox Turbo (350M, same package): same Whisper check; no exaggeration or CFG settings."""
+    name = "chatterbox-turbo"
+    _model = None
+    _asr = None
+
+    @staticmethod
+    def _model_class():
+        from chatterbox.tts_turbo import ChatterboxTurboTTS
+        return ChatterboxTurboTTS
+
+    def _generate(self, model, sent):
+        return model.generate(sent, audio_prompt_path=self.voice or None)
+
+
 def make_service(**kw):
     choice = os.environ.get("TTS", "chatterbox")
     voice = os.environ.get("TTS_VOICE", "")
     if choice == "chatterbox":
         return ChatterboxService(voice=voice, **kw)
+    if choice == "chatterbox-turbo":
+        return ChatterboxTurboService(voice=voice, **kw)
     return EspeakService(**kw)

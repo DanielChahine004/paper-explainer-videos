@@ -44,5 +44,5 @@ by `pixi install` and the first run of `render.sh`.
 Narration is generated automatically during the draft render. Read [`VOICE.md`](VOICE.md) before writing
 narration: it explains the Chatterbox + Whisper check, how to write text the voice reads well, how
 to find and fix sentences that failed the check (`grep "\[tts\] best take only" m_*.log`), and the
-alternatives (`TTS=kokoro`, `TTS=espeak` without a GPU, `TTS_VOICE=clip.wav` to clone a voice you have
+alternatives (`TTS=espeak`, a robotic voice for checking timing without a GPU, `TTS_VOICE=clip.wav` to clone a voice you have
 permission to use).

@@ -54,8 +54,7 @@ to the draft as well: the check catches wrong words, not odd intonation.
 |---|---|
 | `TTS=chatterbox` (default) | Chatterbox on CUDA, with the Whisper check above |
 | `TTS_VOICE=/path/clip.wav` | clone a voice from 10–20 s of clean speech; only use a voice you have permission to use |
-| `TTS=kokoro` | Kokoro-82M, lighter and flatter; needs `pixi add --pypi kokoro` first. `TTS_VOICE` picks a voice such as `af_heart` or `bm_george` |
-| `TTS=espeak` | robotic, but good for checking timing without a GPU; needs `espeak-ng` installed on the system |
+| `TTS=espeak` | robotic; only for checking timing without a GPU, never for a finished video; needs `espeak-ng` installed on the system |
 
 To change Chatterbox's delivery, edit `make_service()` in `voices.py`: `exaggeration` (expressiveness),
 `cfg_weight` (pacing), `min_match` (the 0.95 threshold) and `tries`.

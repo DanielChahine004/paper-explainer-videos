@@ -49,7 +49,7 @@ The narrator voice is generated automatically during the draft render and cached
 reuse it. Each sentence is synthesised by Chatterbox, transcribed back by Whisper, and regenerated with
 a new seed if it doesn't match the script. Bookmarks are timed from Whisper's word timestamps. See
 [`VOICE.md`](VOICE.md) for how it works, how to write narration it reads well, how to check and fix
-failed sentences, how to clone a voice, and the lighter alternatives.
+failed sentences, how to clone a voice.
 
 ## Layout
 
@@ -58,7 +58,7 @@ failed sentences, how to clone a voice, and the lighter alternatives.
 | `DESIGN.md` | the design rules: principles, craft, workflow, pitfalls |
 | `AGENTS.md`, `CLAUDE.md` | instructions for coding agents |
 | `common.py` | shared look, the `Narrated` scene base, `self.at()` cues, `fit_frame()` |
-| `voices.py` | Chatterbox / Kokoro / espeak speech services with Whisper word timings |
+| `voices.py` | the Chatterbox speech service (plus an espeak timing check) with Whisper word timings |
 | `VOICE.md` | how the narration voice is generated, checked and tuned |
 | `pixi.toml` | the environment |
 | `tools/sheet.sh` | 3×3 contact sheets for reviewing scenes |
@@ -83,4 +83,4 @@ remain under their original licences. Figures from papers that don't allow reuse
 ## Licence
 
 Code and documentation: MIT (see `LICENSE`). Third-party tools and model weights (Manim, Chatterbox,
-Whisper, Kokoro, TinyTeX) are under their own licences.
+Whisper, TinyTeX) are under their own licences.

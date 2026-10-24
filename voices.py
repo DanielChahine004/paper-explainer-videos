@@ -5,8 +5,7 @@ TTS=chatterbox (default): Resemble AI's Chatterbox on the GPU, a natural narrato
     re-synthesised with another seed if the words do not match, so a mumbled or
     truncated take never reaches the video. TTS_VOICE=/path/to/clip.wav clones that
     voice (10-20 s of clean speech); unset uses Chatterbox's built-in voice.
-TTS=kokoro: Kokoro-82M (TTS_VOICE e.g. af_heart, bm_george). Lighter, flatter.
-TTS=espeak: robotic, needs only espeak-ng; good for checking timing.
+TTS=espeak: robotic, needs only espeak-ng; for checking timing only, never for a finished video.
 
 Every service also returns word timings, so scenes can sync to <bookmark mark='x'/> tags placed
 in the narration text (see DESIGN.md). Bookmarks are stripped before synthesis and before the
@@ -108,25 +107,6 @@ class EspeakService(_FileService):
         subprocess.run(["espeak-ng", "-v", self.voice, "-s", str(self.speed), "-w", str(wav_path), text], check=True)
 
 
-class KokoroService(_FileService):
-    name = "kokoro"
-    _pipeline = None
-
-    def __init__(self, voice="af_heart", speed=1.0, **kwargs):
-        self.voice, self.speed = voice, speed
-        super().__init__(**kwargs)
-
-    def synth_wav(self, text, wav_path):
-        import numpy as np
-        import soundfile as sf
-        from kokoro import KPipeline
-
-        if KokoroService._pipeline is None:
-            KokoroService._pipeline = KPipeline(lang_code="a")
-        audio = [a for _, _, a in KokoroService._pipeline(text, voice=self.voice, speed=self.speed)]
-        sf.write(str(wav_path), np.concatenate(audio), 24000)
-
-
 def _letters(s):
     """Script or transcript reduced to bare letters, normalised the same way on both sides so that
     Whisper's '8x8', '1,600', '6mm', 'idealized', 'photo peak' and 'L' match the script's
@@ -209,6 +189,4 @@ def make_service():
     voice = os.environ.get("TTS_VOICE", "")
     if choice == "chatterbox":
         return ChatterboxService(voice=voice)
-    if choice == "kokoro":
-        return KokoroService(voice=voice or "af_heart")
     return EspeakService()

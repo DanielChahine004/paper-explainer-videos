@@ -2,7 +2,7 @@
 # Render the laser-driven accelerators for therapy laser accelerator review explainer at 1080p60 with the Chatterbox voice.
 # Linux / WSL with an NVIDIA GPU; needs pixi. First run downloads Chatterbox and Whisper
 # weights from huggingface.co and installs TinyTeX into ~/.TinyTeX (no sudo needed).
-#   TTS=kokoro|espeak  other voices;  TTS_VOICE=clip.wav  clone a voice with Chatterbox
+#   TTS=espeak         robotic timing check only;  TTS_VOICE=clip.wav  clone a voice with Chatterbox
 #   QUALITY=-ql        480p draft (generates and caches all narration)
 #   JOBS=2             scenes rendered at once while voice is generated (~4 GB GPU each; 3 overflows
 #                      an 11 GB card and crawls). Once narration is cached, use JOBS=<number of scenes>

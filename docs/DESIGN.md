@@ -186,9 +186,9 @@ labelled illustrative/schematic.
 
 ## 5. Clarity before spectacle
 
-- **2D by default.** Use 3D only when depth itself is the point (a whole system's geometry,
-  hardware moving in 3D), and only in one or two scenes per video. 3D costs render time and
-  draw-order bugs (§III-3D).
+- **Reach for 3D.** When something has a shape, show it in 3D: detectors, geometry, surfaces,
+  fields, a function of two variables. A slow camera move gives depth for free, and ManimGX makes
+  it cheap. Stay flat only when the idea is a 1D plot or a diagram. Check draw order (§III-3D).
 - **Readable at 1080p.** Keep everything 0.3 units inside the frame, with text at least 24 pt and
   labels in empty space. Nothing overlaps; check every frame of the contact sheet.
 - **One look across videos.** Dark background, one accent colour per concept used consistently,

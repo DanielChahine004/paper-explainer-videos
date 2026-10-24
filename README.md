@@ -27,7 +27,7 @@ Requirements: Linux or WSL2, an NVIDIA GPU with CUDA 12 (about 4 GB per narratio
 git clone https://github.com/DanielChahine004/paper-explainer-videos
 cd paper-explainer-videos
 pixi install
-cd videos/_template && QUALITY=-ql JOBS=1 bash render.sh   # a 2-scene smoke test at 480p
+cd videos/_template && QUALITY=-ql bash render.sh   # a 2-scene smoke test at 480p
 ```
 
 The first run downloads the Chatterbox and Whisper weights and installs TinyTeX into `~/.TinyTeX`.

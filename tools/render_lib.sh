@@ -2,8 +2,8 @@
 # Linux / WSL with an NVIDIA GPU; needs pixi. First run downloads Chatterbox and Whisper weights from
 # huggingface.co and installs TinyTeX into ~/.TinyTeX (no sudo needed).
 #   QUALITY=-ql   480p draft (generates and caches all narration); default -qh = 1080p60, the maximum allowed
-#   JOBS=2        scenes rendered at once while voice is generated (~4 GB GPU each); once narration is cached,
-#                 use JOBS=<number of scenes>
+#   JOBS=6        scenes rendered at once (CPU only: narration is generated first, in one process, by
+#                 tools/voice_prepass.py, so no scene loads the voice model)
 #   FRESH=1       re-render every scene; otherwise only missing scenes and scenes whose code changed
 #   TTS=espeak    timing check only;  TTS_VOICE=clip.wav  clone a voice with Chatterbox
 #   VLINT_ALLOW=1 report vlint errors without stopping
@@ -34,13 +34,22 @@ pixi run $VLINT check -q "$SCRIPT"
 if [ -n "${FRESH:-}" ]; then todo="$SCENES"; else
   todo="$(pixi run $VLINT stale . --script "$SCRIPT" --res "$RES" $SCENES)"
 fi
-# Each scene is its own manim process (cairo draws on one core), so they run side by side.
+# Each scene is its own manim process (cairo draws on one core), so they run side by side (JOBS).
 # --disable_caching skips manim's frame cache only; narration stays cached in m_<Scene>/voiceovers.
+# Narration is voiced first on the GPU (tools/voice_prepass.py, in the background); each scene renders on the CPU
+# as soon as its own narration is cached (m_<Scene>/voiceovers/.ready), so voicing and rendering overlap.
 if [ -n "$todo" ]; then
-  echo "== rendering:" $todo
-  echo $todo | tr ' ' '\n' | xargs -P "${JOBS:-2}" -I{} sh -c \
-    'pixi run manim "$QUALITY" --disable_caching --progress_bar none --media_dir "m_{}" "'"$SCRIPT"'" "{}" > "m_{}.log" 2>&1 \
+  echo "== voicing and rendering:" $todo
+  pixi run python "$ROOT/tools/voice_prepass.py" "$SCRIPT" $todo > voice.log 2>&1 &
+  export VPID=$!
+  trap 'kill $VPID 2>/dev/null || true' EXIT
+  echo $todo | tr ' ' '\n' | xargs -P "${JOBS:-6}" -I{} sh -c \
+    'while [ ! -f "m_{}/voiceovers/.ready" ] && kill -0 $VPID 2>/dev/null; do sleep 2; done
+     [ -f "m_{}/voiceovers/.ready" ] || { echo "FAILED {}: no narration (see voice.log)"; exit 1; }
+     pixi run manim "$QUALITY" --disable_caching --progress_bar none --media_dir "m_{}" "'"$SCRIPT"'" "{}" > "m_{}.log" 2>&1 \
      && echo "done {}" || { echo "FAILED {} (see m_{}.log)"; exit 1; }'
+  wait $VPID || { echo "voice pre-pass FAILED (see voice.log)"; exit 1; }
+  grep "^== narration" voice.log || true
 fi
 
 # Scenes whose video is current but whose findings predate a rule change: re-check them in skip mode

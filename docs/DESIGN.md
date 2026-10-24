@@ -319,9 +319,11 @@ labelled illustrative/schematic.
    on errors, then checks every scene while it renders and the joined file after. When the rules
    change, it re-checks in skip mode the scenes it would not re-render (the rule set is part of each
    record), so old findings never pass for current ones.
-4. Draft: `QUALITY=-ql JOBS=2 bash render.sh` inside the video folder (Linux or WSL). This
-   synthesises and caches the voice. Use **at most 2 jobs while voice is generated**: each
-   Chatterbox process needs about 4 GB of GPU memory, and 3 jobs on an 11 GB card crawl.
+4. Draft: `QUALITY=-ql bash render.sh` inside the video folder (Linux or WSL). Narration is
+   generated before any scene renders, by `tools/voice_prepass.py`: two Chatterbox copies
+   (`VOICE_WORKERS`, ~4.6 GB of GPU each; use 1 on a smaller card) share out whole scenes and fill each
+   scene's cache, so the scenes only read audio and render CPU-only (`JOBS`, default 6); a scene starts rendering as soon as its own narration is cached, while the rest is still being voiced. Never let
+   scenes generate their own voice side by side: one model per scene overflows the card and crawls.
    On WSL, rendering from the Linux filesystem is much faster than from `/mnt/c`
    (`tools/wsl_render.sh` copies the repo there and renders).
 5. Review with `bash tools/sheet.sh videos/<name> <res> <outdir> <scenes...>` (a 3×3 sheet per scene),

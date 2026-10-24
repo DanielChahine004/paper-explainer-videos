@@ -184,9 +184,9 @@ class ChatterboxService(_FileService):
         torchaudio.save(str(wav_path), torch.cat(parts[:-1], dim=1), model.sr)
 
 
-def make_service():
+def make_service(**kw):
     choice = os.environ.get("TTS", "chatterbox")
     voice = os.environ.get("TTS_VOICE", "")
     if choice == "chatterbox":
-        return ChatterboxService(voice=voice)
-    return EspeakService()
+        return ChatterboxService(voice=voice, **kw)
+    return EspeakService(**kw)

@@ -193,7 +193,8 @@ def _content(mon, rule_id):
             continue
         if isinstance(m, (M.Line, M.Arrow, M.CurvedArrow, M.DashedLine, M.DashedVMobject)):
             continue
-        if all(isinstance(x, (M.TipableVMobject, M.ArrowTip)) for x in m.family_members_with_points()):
+        fam = m.family_members_with_points()
+        if all(isinstance(x, (M.Line, M.ArrowTip)) for x in fam) and any(isinstance(x, (M.Arrow, M.ArrowTip)) for x in fam):
             continue                         # an arrow routed as several segments
         b = bbox(m)
         if b[2] - b[0] < 1e-3 and b[3] - b[1] < 1e-3:
@@ -236,7 +237,8 @@ def layout_crowded(mon, ev, p):
                 continue                     # overlapping or nested: a layer on purpose, or text-overlap's business
             gap = max(dx, dy)
             if gap < gap_min:
-                yield (id(big[i][0]), id(big[j][0])), (f"{label(big[i][0])} and {label(big[j][0])} are {gap:.2f} apart while "
+                where = lambda b_: f"({(b_[0] + b_[2]) / 2:+.1f}, {(b_[1] + b_[3]) / 2:+.1f})"
+                yield (id(big[i][0]), id(big[j][0])), (f"{label(big[i][0])} at {where(a)} and {label(big[j][0])} at {where(b)} are {gap:.2f} apart while "
                                                        f"{100 * max(free_w, free_h):.0f}% of the {'width' if free_w >= free_h else 'height'} is empty")
 
 

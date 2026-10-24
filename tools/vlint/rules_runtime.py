@@ -371,6 +371,37 @@ def redraw_jitter(mon, ev, p):
                               f"positions its height reverses direction 4+ times")
 
 
+@rule("title-gap", "runtime", "warn", "A shape, image or diagram comes up to the title's baseline: the title has "
+      "no air below it (often after the title was lowered and the content was not).", "Part II, Layout (title)",
+      "move the content down, or start it lower; keep ~0.2 below the title")
+def title_gap(mon, ev, p):
+    if ev != "play" or isinstance(mon.scene, M.ThreeDScene):
+        return
+    gap_min = float(opt(mon, "title_gap_below", 0.18))
+    Y1 = frame_box(mon.scene)[3]
+    tops = [m for m in mon.scene.mobjects if isinstance(m, TEXTS()) and visibility(m) >= 0.05]
+    titles = [(m, bbox(m)) for m in tops if bbox(m)[2] - bbox(m)[0] >= 2.0 and bbox(m)[3] - bbox(m)[1] >= 0.2 and Y1 - bbox(m)[3] < 1.3]
+    if not titles:
+        return
+    for t, tb in titles:
+        tcy = (tb[1] + tb[3]) / 2
+        for m in mon.scene.mobjects:
+            if m is t or isinstance(m, TEXTS()) or "title-gap" in getattr(m, "_vlint_ok", ()) or visibility(m) < 0.05:
+                continue
+            fam = m.family_members_with_points() if isinstance(m, M.VMobject) else [m]
+            inside = {id(y) for x in m.get_family() if isinstance(x, TEXTS()) for y in x.get_family()}
+            shapes = [x for x in fam if id(x) not in inside]
+            if not shapes:
+                continue                     # a text-only group (a subtitle) may sit close
+            for x in shapes:
+                b = bbox(x)
+                if (b[1] + b[3]) / 2 >= tcy or b[2] < tb[0] - 0.3 or b[0] > tb[2] + 0.3:
+                    continue                 # above the title's middle (the nav), or beside it
+                if tb[1] - b[3] < gap_min:
+                    yield (id(t), id(m)), f"{type(x).__name__} top at {b[3]:+.2f} is {tb[1] - b[3]:.2f} below the title {label(t)} (< {gap_min})"
+                    break
+
+
 def _holds(outer, inner, tol=0.15):
     """Whether bbox outer contains the centre of bbox inner, with most of it inside (tol: slack at the edges)."""
     cx, cy = (inner[0] + inner[2]) / 2, (inner[1] + inner[3]) / 2

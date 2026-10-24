@@ -8,7 +8,7 @@ from manim import *
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 from vlint.runtime import Checked, vlint_ok  # noqa: E402
 
-EXPECT = {"frame-clip": 1, "text-overlap": 1, "vanished-after-intro": 1, "bookmark-unfired": 2, "indicate-image": 1, "text-chain": 1, "arrow-over-label": 1, "layout-crowded": 1, "layout-balance": 1, "arrow-skew": 1, "title-margin": 1, "line-over-label": 1, "redraw-jitter": 1, "shape-overlap": 1}
+EXPECT = {"frame-clip": 1, "text-overlap": 1, "vanished-after-intro": 1, "bookmark-unfired": 2, "indicate-image": 1, "text-chain": 1, "arrow-over-label": 1, "layout-crowded": 1, "layout-balance": 1, "arrow-skew": 1, "title-margin": 1, "line-over-label": 1, "redraw-jitter": 1, "shape-overlap": 1, "title-gap": 1}
 
 
 class Fixture(Checked, Scene):
@@ -51,7 +51,11 @@ class Fixture(Checked, Scene):
         self.play(FadeOut(sk), FadeOut(ok1), FadeOut(ok2), run_time=0.2)
         hi = Text("a title set too high", font_size=32).to_edge(UP, buff=0.3)        # title-margin
         lo = Text("a title set right", font_size=32).to_edge(UP, buff=0.8).shift(RIGHT * 3)
-        self.play(FadeIn(hi), FadeIn(lo), run_time=0.2)
+        bar = Rectangle(width=1.5, height=0.3).next_to(lo, DOWN, buff=0.05)                  # title-gap
+        sub = Text("a subtitle", font_size=24).next_to(lo, DOWN, buff=0.08)                     # text may sit close: fine
+        sub.shift(LEFT * 2.5)
+        self.play(FadeIn(hi), FadeIn(lo), FadeIn(bar), FadeIn(sub), run_time=0.2)
+        self.remove(bar, sub)
         self.play(FadeOut(hi), FadeOut(lo), run_time=0.2)
         crv = Line(LEFT * 3 + DOWN * 2.6, RIGHT * 3 + DOWN * 2.6)
         on = Text("on the line", font_size=30).move_to(LEFT * 1.8 + DOWN * 2.6)                 # line-over-label

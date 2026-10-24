@@ -235,6 +235,9 @@ labelled illustrative/schematic.
   clearly diagonal (> ~12 degrees). Titles sit at `to_edge(UP, buff=0.85)`, clear of the nav chips.
   (vlint: `arrow-skew` warns at 0.6-12 degrees off axis, `title-margin` when a title's top is
   within 0.75 of the frame edge.)
+- **Air under the title**. When the title moves, the content below moves with it: keep
+  ~0.2 between the title's baseline and any shape, image or diagram (a subtitle may sit closer).
+  (vlint: `title-gap`.)
 - **Label curves beside them, never on them**. A curve label goes next to one data point on
   the open side (left of a rising stretch, below-right of the last points), not centred on the peak
   where the line runs through it. A comparison arrow between two captions runs straight between

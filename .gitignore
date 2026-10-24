@@ -1,0 +1,13 @@
+# renders and caches
+m_*/
+*.mp4
+*.log
+list.txt
+media/
+sheets*/
+# environment
+.pixi/
+__pycache__/
+# source material: keep papers and their text out of git
+*.pdf
+src/

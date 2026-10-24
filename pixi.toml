@@ -1,0 +1,31 @@
+[workspace]
+authors = ["Daniel Chahine"]
+channels = ["conda-forge"]
+name = "paper-explainer-videos"
+platforms = ["linux-64"]
+version = "0.1.0"
+# Linux only (run it from WSL on Windows): Chatterbox needs CUDA torch, and manim's
+# LaTeX comes from TinyTeX (render.sh installs it in ~/.TinyTeX). Shared by every video
+# folder here; each folder's render.sh drives its build, and voices.py is the shared narrator.
+
+[system-requirements]
+cuda = "12"
+
+[dependencies]
+python = "3.13.*"  # chatterbox-tts pins numpy<2 below 3.13, which manim 0.19 cannot use
+manim = ">=0.19,<0.20"
+ffmpeg = "*"
+pip = "*"
+tomlkit = "<0.14"  # chatterbox pins gradio 6.8, which caps tomlkit and pillow
+pillow = "<13"
+setuptools = "<81"  # resemble-perth (chatterbox watermarker) still imports pkg_resources
+
+[pypi-dependencies]
+manim-voiceover = "*"
+chatterbox-tts = "==0.1.7"
+soundfile = "*"
+faster-whisper = "*"
+num2words = "*"
+
+[pypi-options]
+extra-index-urls = ["https://download.pytorch.org/whl/cu124"]

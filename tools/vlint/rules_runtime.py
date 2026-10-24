@@ -184,6 +184,79 @@ def arrow_over_label(mon, ev, p):
                 yield (id(a), id(m)), f"an arrow runs through {label(m)}"
 
 
+def _content(mon, rule_id):
+    """Visible top-level items below the title band, as (mobject, bbox); arrows, lines and tiny labels left out."""
+    top = float(opt(mon, "title_band", 3.0))
+    out = []
+    for m in mon.scene.mobjects:
+        if rule_id in getattr(m, "_vlint_ok", ()) or not m.get_family() or visibility(m) < 0.05:
+            continue
+        if isinstance(m, (M.Line, M.Arrow, M.CurvedArrow, M.DashedLine, M.DashedVMobject)):
+            continue
+        if all(isinstance(x, (M.TipableVMobject, M.ArrowTip)) for x in m.family_members_with_points()):
+            continue                         # an arrow routed as several segments
+        b = bbox(m)
+        if b[2] - b[0] < 1e-3 and b[3] - b[1] < 1e-3:
+            continue
+        if (b[1] + b[3]) / 2 > top:
+            continue
+        if isinstance(m, TEXTS()) and b[3] - b[1] < 0.22:
+            continue                         # footnotes and captions in a corner don't make a layout
+        out.append((m, b))
+    return out
+
+
+def _usable(mon):
+    X0, Y0, X1, Y1 = frame_box(mon.scene)
+    return X0, Y0, X1, min(Y1, float(opt(mon, "title_band", 3.0)))
+
+
+@rule("layout-crowded", "runtime", "warn", "Two panels (images, plots, diagrams) sit almost touching while a large "
+      "part of the screen stays empty: the content is cramped instead of spread out.", "Part II, Layout (use the space)",
+      "spread the panels over the free space; keep at least ~0.3 units between panels")
+def layout_crowded(mon, ev, p):
+    if ev != "vo_close" or isinstance(mon.scene, M.ThreeDScene):
+        return
+    gap_min, area_min = float(opt(mon, "panel_gap", 0.25)), float(opt(mon, "panel_area", 0.6))
+    items = _content(mon, "layout-crowded")
+    if not items:
+        return
+    X0, Y0, X1, Y1 = _usable(mon)
+    u = [min(b[0] for _, b in items), min(b[1] for _, b in items), max(b[2] for _, b in items), max(b[3] for _, b in items)]
+    free_w, free_h = 1 - (u[2] - u[0]) / (X1 - X0), 1 - (u[3] - u[1]) / (Y1 - Y0)
+    if max(free_w, free_h) < float(opt(mon, "free_fraction", 0.2)):
+        return
+    big = [(m, b) for m, b in items if (b[2] - b[0]) * (b[3] - b[1]) >= area_min and not isinstance(m, TEXTS())]
+    for i in range(len(big)):
+        for j in range(i + 1, len(big)):
+            a, b = big[i][1], big[j][1]
+            dx = max(a[0] - b[2], b[0] - a[2])
+            dy = max(a[1] - b[3], b[1] - a[3])
+            if dx < 0 and dy < 0:
+                continue                     # overlapping or nested: a layer on purpose, or text-overlap's business
+            gap = max(dx, dy)
+            if gap < gap_min:
+                yield (id(big[i][0]), id(big[j][0])), (f"{label(big[i][0])} and {label(big[j][0])} are {gap:.2f} apart while "
+                                                       f"{100 * max(free_w, free_h):.0f}% of the {'width' if free_w >= free_h else 'height'} is empty")
+
+
+@rule("layout-balance", "runtime", "warn", "At the end of a narration block the content sits well off the centre of "
+      "the screen, leaving one side empty.", "Part II, Layout (use the space)", "re-centre the layout or fill the empty side")
+def layout_balance(mon, ev, p):
+    if ev != "vo_close" or isinstance(mon.scene, M.ThreeDScene):
+        return
+    items = _content(mon, "layout-balance")
+    if not items:
+        return
+    X0, Y0, X1, Y1 = _usable(mon)
+    u = [min(b[0] for _, b in items), min(b[1] for _, b in items), max(b[2] for _, b in items), max(b[3] for _, b in items)]
+    cx, cy = (u[0] + u[2]) / 2 - (X0 + X1) / 2, (u[1] + u[3]) / 2 - (Y0 + Y1) / 2
+    tx, ty = float(opt(mon, "balance_x", 1.0)), float(opt(mon, "balance_y", 0.8))
+    if abs(cx) > tx or abs(cy) > ty:
+        side = ("left" if cx > 0 else "right") if abs(cx) > tx else ("bottom" if cy > 0 else "top")
+        yield ("balance", mon.time()), f"content centre is off by ({cx:+.1f}, {cy:+.1f}); the {side} is empty"
+
+
 def _chain_nodes(scene):
     """Visible arrows, and the boxes/labels at their ends: (arrows, nodes) where a node is (bbox, text_only)."""
     arrows, texts, rects, other = [], [], [], []

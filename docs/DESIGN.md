@@ -222,6 +222,12 @@ labelled illustrative/schematic.
   pass through a label, give it a background rectangle and `set_z_index(3)`. The y-axis title needs
   `buff >= 0.95`.
 - The bottom 0.5 units belong to the footnote or credit, so keep plots above y = -3.3.
+- **Use the space, evenly.** Lay panels out on a grid that fills the frame below the title: columns for
+  things compared side by side, rows for stages, flow left to right and top to bottom. Keep at least
+  ~0.3 units between panels; when they nearly touch while part of the screen is empty, spread them out
+  instead of shrinking them. When a scene builds in two halves, centre the first half while it is alone
+  and slide it up when the second arrives. (vlint: `layout-crowded`, `layout-balance`, checked at the
+  end of every narration block.)
 - Generated images need an alpha channel, otherwise they are opaque black squares
   (`shell_pet` Images).
 

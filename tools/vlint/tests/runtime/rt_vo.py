@@ -8,7 +8,7 @@ from manim import *
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 from vlint.runtime import Checked, vlint_ok  # noqa: E402
 
-EXPECT = {"frame-clip": 1, "text-overlap": 1, "vanished-after-intro": 1, "bookmark-unfired": 2, "indicate-image": 1, "text-chain": 1, "arrow-over-label": 1}
+EXPECT = {"frame-clip": 1, "text-overlap": 1, "vanished-after-intro": 1, "bookmark-unfired": 2, "indicate-image": 1, "text-chain": 1, "arrow-over-label": 1, "layout-crowded": 1, "layout-balance": 1}
 
 
 class Fixture(Checked, Scene):
@@ -46,6 +46,10 @@ class Fixture(Checked, Scene):
         self.play(FadeOut(mid), FadeOut(thru), run_time=0.2)
         with self.vlint_off("frame-clip"):
             self.play(FadeIn(Text("edge on purpose", font_size=30).move_to(LEFT * 7.2 + DOWN * 3)), run_time=0.2)
+        self.play(*[FadeOut(m) for m in self.mobjects], run_time=0.2)
+        p1 = Square(1.5).move_to(LEFT * 5 + DOWN * 0.5)
+        p2 = Square(1.5).next_to(p1, RIGHT, buff=0.1)                               # layout-crowded, layout-balance
+        self.play(FadeIn(p1), FadeIn(p2), run_time=0.2)
         self.vlint.event("vo_open", text="One <bookmark mark='a'/>two <bookmark mark='b'/>three.")
         self.vlint.event("cue", mark="a")
         self.vlint.event("cue", mark="zz")                                          # not in the text

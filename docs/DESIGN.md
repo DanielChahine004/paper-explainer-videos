@@ -322,7 +322,7 @@ labelled illustrative/schematic.
 4. Draft: `QUALITY=-ql bash render.sh` inside the video folder (Linux or WSL). Narration is
    generated before any scene renders, by `tools/voice_prepass.py`: two Chatterbox copies
    (`VOICE_WORKERS`, ~4.6 GB of GPU each; use 1 on a smaller card) share out whole scenes and fill each
-   scene's cache, so the scenes only read audio and render CPU-only (`JOBS`, default 6); a scene starts rendering as soon as its own narration is cached, while the rest is still being voiced. Never let
+   scene's cache, so the scenes only read audio and render CPU-only (by default all at once, longest narration first, capped by cores and RAM; `JOBS=n` to override); a scene starts rendering as soon as its own narration is cached, while the rest is still being voiced. Never let
    scenes generate their own voice side by side: one model per scene overflows the card and crawls.
    On WSL, rendering from the Linux filesystem is much faster than from `/mnt/c`
    (`tools/wsl_render.sh` copies the repo there and renders).
@@ -331,7 +331,7 @@ labelled illustrative/schematic.
    vanished objects). Fix and run render.sh again: it re-renders exactly the scenes whose code, shared
    helpers or assets changed (each scene's fingerprint is stored beside its video), so there is nothing
    to delete by hand.
-6. Final: `QUALITY=-qh JOBS=<n scenes>`. **Never above 1080p** (render.sh refuses more). The join is
+6. Final: `QUALITY=-qh`. **Never above 1080p** (render.sh refuses more). The join is
    refused if a scene is missing, stale or has a runtime error, and the joined file is checked for size,
    length and audio drift. Send a 1080p crf 26 re-encode (`_small.mp4`) when the file is over 30 MB,
    never a downscale. A video rendered before vlint existed: `vlint adopt` its unchanged scenes once,

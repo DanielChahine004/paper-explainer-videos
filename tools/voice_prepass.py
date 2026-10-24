@@ -44,7 +44,17 @@ def scene_texts(script):
     return out
 
 
+def longest_first(script, scenes):
+    """The scenes ordered by narration length, longest first: rendering starts the longest scenes first, so the
+    last scene to finish is a short one (render_lib.sh: voice_prepass.py --order SCRIPT SCENES...)."""
+    texts = scene_texts(load_script(script, None))
+    return sorted(scenes, key=lambda sc: -sum(len(t or "") for t in texts.get(sc, [])))
+
+
 def main():
+    if sys.argv[1] == "--order":
+        print("ORDER:", " ".join(longest_first(Path(sys.argv[2]), sys.argv[3:])))
+        return
     path = Path(sys.argv[1])
     s = load_script(path, None)
     texts = scene_texts(s)
@@ -83,7 +93,9 @@ def main():
     waiting = {item[0] for item in todo}
     for sc in scenes:
         if sc not in waiting:
-            (Path(f"m_{sc}") / DEFAULT_VOICEOVER_CACHE_DIR / READY).touch()
+            ready = Path(f"m_{sc}") / DEFAULT_VOICEOVER_CACHE_DIR / READY
+            ready.parent.mkdir(parents=True, exist_ok=True)
+            ready.touch()
     if not todo:
         print("== narration: all cached")
         return

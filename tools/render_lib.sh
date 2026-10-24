@@ -2,8 +2,8 @@
 # Linux / WSL with an NVIDIA GPU; needs pixi. First run downloads Chatterbox and Whisper weights from
 # huggingface.co and installs TinyTeX into ~/.TinyTeX (no sudo needed).
 #   QUALITY=-ql   480p draft (generates and caches all narration); default -qh = 1080p60, the maximum allowed
-#   JOBS=6        scenes rendered at once (CPU only: narration is generated first, in one process, by
-#                 tools/voice_prepass.py, so no scene loads the voice model)
+#   JOBS=n        scenes rendered at once (CPU only: narration comes from tools/voice_prepass.py, so no scene
+#                 loads the voice model); default: all of them, capped by cores - 2 and ~1.2 GB of RAM each
 #   FRESH=1       re-render every scene; otherwise only missing scenes and scenes whose code changed
 #   TTS=espeak    timing check only;  TTS_VOICE=clip.wav  clone a voice with Chatterbox
 #   VLINT_ALLOW=1 report vlint errors without stopping
@@ -38,12 +38,21 @@ fi
 # --disable_caching skips manim's frame cache only; narration stays cached in m_<Scene>/voiceovers.
 # Narration is voiced first on the GPU (tools/voice_prepass.py, in the background); each scene renders on the CPU
 # as soon as its own narration is cached (m_<Scene>/voiceovers/.ready), so voicing and rendering overlap.
+# Longest narration first (the last scene to finish is then a short one), and by default every scene at once, capped
+# by cores (two kept for the voice workers) and memory (~1.2 GB per 1080p scene).
 if [ -n "$todo" ]; then
-  echo "== voicing and rendering:" $todo
+  ordered="$(pixi run python "$ROOT/tools/voice_prepass.py" --order "$SCRIPT" $todo 2>/dev/null | sed -n "s/^ORDER: //p")"
+  [ -n "$ordered" ] && todo="$ordered"
+  n_todo=$(echo $todo | wc -w)
+  mem_gb=$(awk '/MemAvailable/ {print int($2 / 1048576)}' /proc/meminfo)
+  jobs=$(( $(nproc) - 2 )); [ $(( mem_gb * 10 / 12 )) -lt $jobs ] && jobs=$(( mem_gb * 10 / 12 ))
+  [ "$n_todo" -lt "$jobs" ] && jobs=$n_todo; [ "$jobs" -lt 1 ] && jobs=1
+  jobs="${JOBS:-$jobs}"
+  echo "== voicing and rendering ($jobs at once):" $todo
   pixi run python "$ROOT/tools/voice_prepass.py" "$SCRIPT" $todo > voice.log 2>&1 &
   export VPID=$!
   trap 'kill $VPID 2>/dev/null || true' EXIT
-  echo $todo | tr ' ' '\n' | xargs -P "${JOBS:-6}" -I{} sh -c \
+  echo $todo | tr ' ' '\n' | xargs -P "$jobs" -I{} sh -c \
     'while [ ! -f "m_{}/voiceovers/.ready" ] && kill -0 $VPID 2>/dev/null; do sleep 2; done
      [ -f "m_{}/voiceovers/.ready" ] || { echo "FAILED {}: no narration (see voice.log)"; exit 1; }
      pixi run manim "$QUALITY" --disable_caching --progress_bar none --media_dir "m_{}" "'"$SCRIPT"'" "{}" > "m_{}.log" 2>&1 \

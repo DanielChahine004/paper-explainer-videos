@@ -13,6 +13,11 @@ rules, written and refined across a dozen videos. It covers what to show and wha
 explain a mechanism, how to keep every number honest, when to reuse a paper's figure, and a long list
 of pitfalls that broke earlier renders.
 
+**Example output:** two finished videos made with this pipeline are attached to the
+[examples release](https://github.com/DanielChahine004/paper-explainer-videos/releases/tag/examples-v1):
+a review of laser-driven particle accelerators for cancer therapy (11 min), and a topic video on how PET
+detectors are calibrated (12 min).
+
 ## Quick start
 
 Requirements: Linux or WSL2, an NVIDIA GPU with CUDA 12 (about 4 GB per narration job), and
@@ -38,6 +43,14 @@ reviews contact sheets of every scene, fixes what it finds, and renders the fina
 workflow is in [`AGENTS.md`](AGENTS.md). Feedback you give on one video goes into `DESIGN.md`, so the
 next video starts from it.
 
+## Voice
+
+The narrator voice is generated automatically during the draft render and cached, so later renders
+reuse it. Each sentence is synthesised by Chatterbox, transcribed back by Whisper, and regenerated with
+a new seed if it doesn't match the script. Bookmarks are timed from Whisper's word timestamps. See
+[`VOICE.md`](VOICE.md) for how it works, how to write narration it reads well, how to check and fix
+failed sentences, how to clone a voice, and the lighter alternatives.
+
 ## Layout
 
 | Path | What it is |
@@ -46,6 +59,7 @@ next video starts from it.
 | `AGENTS.md`, `CLAUDE.md` | instructions for coding agents |
 | `common.py` | shared look, the `Narrated` scene base, `self.at()` cues, `fit_frame()` |
 | `voices.py` | Chatterbox / Kokoro / espeak speech services with Whisper word timings |
+| `VOICE.md` | how the narration voice is generated, checked and tuned |
 | `pixi.toml` | the environment |
 | `tools/sheet.sh` | 3×3 contact sheets for reviewing scenes |
 | `tools/wsl_render.sh` | renders from the WSL filesystem (much faster than `/mnt/c`) |

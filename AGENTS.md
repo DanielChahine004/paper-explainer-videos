@@ -24,7 +24,7 @@ narration word by word. When asked to make a video, follow this file and `DESIGN
    scene and labelled as computed. Run the syntax check from DESIGN.md Part III.
 5. **Draft:** `cd videos/<name> && QUALITY=-ql JOBS=2 bash render.sh` (Linux, or WSL with
    `bash tools/wsl_render.sh <name>`). This generates and caches all narration; at most 2 jobs while
-   voice is being generated.
+   voice is being generated. Then check the voice log as described in `VOICE.md`.
 6. **Review every scene** with `bash tools/sheet.sh videos/<name> 480p15 <outdir> <Scene>...` and look at
    the sheets: overlaps, clipped labels, things drawn that the narration doesn't say, and the
    reverse. Fix, delete the changed scenes' mp4s under `m_<Scene>/`, and re-render only those.
@@ -37,5 +37,12 @@ narration word by word. When asked to make a video, follow this file and `DESIGN
 
 Linux or WSL2, an NVIDIA GPU with CUDA 12 (about 4 GB per narration job), and
 [pixi](https://pixi.sh). Everything else (manim, ffmpeg, Chatterbox, Whisper, TinyTeX) is installed
-by `pixi install` and the first run of `render.sh`. Without a GPU, `TTS=espeak` gives a robotic voice
-that is still good for checking timing.
+by `pixi install` and the first run of `render.sh`.
+
+## Voice
+
+Narration is generated automatically during the draft render. Read [`VOICE.md`](VOICE.md) before writing
+narration: it explains the Chatterbox + Whisper check, how to write text the voice reads well, how
+to find and fix sentences that failed the check (`grep "\[tts\] best take only" m_*.log`), and the
+alternatives (`TTS=kokoro`, `TTS=espeak` without a GPU, `TTS_VOICE=clip.wav` to clone a voice you have
+permission to use).

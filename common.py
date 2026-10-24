@@ -1,6 +1,7 @@
 """Shared look and plumbing for the narrated paper videos: background, LaTeX template, encoder
 quality, palette and the narrated scene base. Each video folder imports it (`from common import *`)."""
 import sys
+from contextlib import contextmanager
 from pathlib import Path
 
 from manim import *
@@ -8,6 +9,9 @@ from manim_voiceover import VoiceoverScene
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from voices import make_service
+
+sys.path.insert(0, str(Path(__file__).resolve().parent / "tools"))
+from vlint.runtime import Checked, vlint_ok  # noqa: E402,F401  runtime design checks (tools/vlint)
 
 config.background_color = "#0f1117"
 _wide = TexTemplate()
@@ -56,10 +60,23 @@ if not isinstance(_sfw.av, _HQAv):
 BLUE_L, TEAL_L, GREEN_L, ORANGE_L, PURPLE_L = "#4c8fe0", "#2ec4b6", "#3fb27f", "#f08a4b", "#b18cf0"
 
 
-class Narrated(VoiceoverScene):
+class Narrated(Checked, VoiceoverScene):
     def setup(self):
         super().setup()
         self.set_speech_service(make_service())
+
+    # Checked (tools/vlint/runtime.py) sends every play to the vlint monitor; narration and cues go too, so it
+    # can check the frame as it really is: clipped or overlapping labels, vanished objects, bookmarks never reached.
+    @contextmanager
+    def voiceover(self, *a, **kw):
+        self.vlint.event("vo_open", text=kw.get("text", a[0] if a else None))
+        with super().voiceover(*a, **kw) as tracker:
+            yield tracker
+        self.vlint.event("vo_close")
+
+    def wait_until_bookmark(self, mark):
+        self.vlint.event("cue", mark=mark)
+        super().wait_until_bookmark(mark)
 
     def at(self, mark, *anims, **kw):
         """Cue: wait for <bookmark mark='mark'/> in the current voiceover, then play (docs/DESIGN.md §1)."""

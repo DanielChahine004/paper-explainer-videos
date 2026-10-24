@@ -25,17 +25,22 @@ narration word by word. When asked to make a video, follow this file and `docs/D
    `<name>_vo.py`, and set `SCRIPT`, `OUT` and `SCENES` in `render.sh`. Put reused figure crops in
    `videos/<name>/assets/` and keep source PDFs out of git (they are ignored).
 4. **Write the scenes.** Every number must come from the source text (grep for it) or be computed in the
-   scene and labelled as computed. Run the syntax check from docs/DESIGN.md Part III.
+   scene and labelled as computed. Then run `python tools/vlint check videos/<name>` and fix every error;
+   read the warnings as questions (docs/DESIGN.md Part III, step 3; rules in `tools/vlint/README.md`).
 5. **Draft:** `cd videos/<name> && QUALITY=-ql JOBS=2 bash render.sh` (Linux, or WSL with
    `bash tools/wsl_render.sh <name>`). This generates and caches all narration; at most 2 jobs while
    voice is being generated. Then check the voice log as described in `docs/VOICE.md`.
 6. **Review every scene** with `bash tools/sheet.sh videos/<name> 480p15 <outdir> <Scene>...` and look at
-   the sheets: overlaps, clipped labels, things drawn that the narration doesn't say, and the
-   reverse. Fix, delete the changed scenes' mp4s under `m_<Scene>/`, and re-render only those.
-7. **Final:** delete the changed scenes' 1080p mp4s too, then `QUALITY=-qh JOBS=<number of scenes> bash
-   render.sh`. Never render above 1080p. `render.sh` also writes a `_small.mp4` copy for upload limits.
+   the sheets: things drawn that the narration doesn't say, and the reverse, and labels over shapes. The
+   `[vlint]` lines in the render output already list clipped or overlapping labels, objects that
+   vanished and bookmarks never reached. Fix and run `render.sh` again: it re-renders only the scenes
+   whose code, helpers or assets changed.
+7. **Final:** `QUALITY=-qh JOBS=<number of scenes> bash render.sh`. It refuses anything above 1080p,
+   refuses to join a missing, stale or broken scene, checks the joined file for length and audio drift,
+   and writes a `_small.mp4` copy for upload limits. `VLINT_ALLOW=1` reports errors without stopping.
 8. **Learn:** if anything went wrong or worked unusually well, sharpen or add a rule in `docs/DESIGN.md`
-   (§0) before reporting the video as done.
+   (§0) before reporting the video as done. If a program could have caught the mistake, add a vlint
+   rule with a planted bug instead (`tools/vlint/README.md`); `python tools/vlint selftest` must pass.
 
 ## Requirements
 

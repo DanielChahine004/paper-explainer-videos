@@ -9,6 +9,8 @@ V=$1
 DEST=${RENDER_ROOT:-$HOME/paper-explainer-render}
 mkdir -p "$DEST/videos/$V"
 cp "$REPO/pixi.toml" "$REPO/common.py" "$REPO/voices.py" "$DEST/"
+rm -rf "$DEST/tools" && cp -r "$REPO/tools" "$DEST/" && find "$DEST/tools" -name "*.sh" -exec sed -i 's/\r$//' {} +
+[ -f "$REPO/vlint.toml" ] && cp "$REPO/vlint.toml" "$DEST/"
 [ -f "$REPO/pixi.lock" ] && cp "$REPO/pixi.lock" "$DEST/"
 cp -r "$REPO/videos/$V/." "$DEST/videos/$V/"
 find "$DEST/videos/$V" -name "*.sh" -exec sed -i 's/\r$//' {} +

@@ -43,6 +43,28 @@ reviews contact sheets of every scene, fixes what it finds, and renders the fina
 workflow is in [`AGENTS.md`](AGENTS.md). Feedback you give on one video goes into `docs/DESIGN.md`, so the
 next video starts from it.
 
+## Checks (vlint)
+
+Rules that a program can decide don't rely on the agent remembering them. `tools/vlint` checks a video at
+three points, and `render.sh` stops on any error:
+
+- **before rendering** (static, plain Python, ~1 s): non-raw LaTeX strings, an object faded in and pulsed in the
+  same play (it ends invisible), images inside a `VGroup`, scene names that shadow manim, bookmark typos and
+  order, `SCENES` out of step with the script, anything above 1080p;
+- **while each scene renders** (inside `common.Narrated`): labels cut off by the frame, overlapping labels,
+  introduced objects that end invisible, bookmarks never reached;
+- **at the join**: missing or stale scenes, audio drift, length, resolution. Each scene's video carries a
+  fingerprint of the code that made it, so `render.sh` re-renders exactly the scenes you changed.
+
+```bash
+python tools/vlint check videos/<name>   # run after every edit
+python tools/vlint rules                 # what is checked, and the docs/DESIGN.md rule behind each
+```
+
+Every rule has a planted bug in `tools/vlint/tests` (`python tools/vlint selftest`). Severities, options and
+per-scene exceptions go in a `vlint.toml`; one-off exceptions go in a `# vlint: ignore[rule]` comment. To add a
+rule, see [`tools/vlint/README.md`](tools/vlint/README.md).
+
 ## Voice
 
 The narrator voice is generated automatically during the draft render and cached, so later renders
@@ -57,10 +79,12 @@ failed sentences, how to clone a voice.
 |---|---|
 | `docs/DESIGN.md` | the design rules: principles, craft, workflow, pitfalls |
 | `AGENTS.md`, `CLAUDE.md` | instructions for coding agents |
-| `common.py` | shared look, the `Narrated` scene base, `self.at()` cues, `fit_frame()` |
+| `common.py` | shared look, the `Narrated` scene base (with the runtime checks), `self.at()` cues, `fit_frame()` |
 | `voices.py` | the Chatterbox speech service (plus an espeak timing check) with Whisper word timings |
 | `docs/VOICE.md` | how the narration voice is generated, checked and tuned |
 | `pixi.toml` | the environment |
+| `tools/render_lib.sh` | the render pipeline every `render.sh` sources, gated by vlint |
+| `tools/vlint/` | the checks: rules, planted-bug tests, how to add a rule |
 | `tools/sheet.sh` | 3×3 contact sheets for reviewing scenes |
 | `tools/wsl_render.sh` | renders from the WSL filesystem (much faster than `/mnt/c`) |
 | `videos/_template/` | a two-scene starting point |

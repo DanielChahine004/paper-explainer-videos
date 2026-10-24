@@ -19,6 +19,10 @@ Each video should leave this file better than it found it, and this is part of f
 - **After something that worked**, add it where it belongs.
 - Prefer deepening a principle in Part I over adding a new rule. Rules carry a short example in
   brackets so a later reader can judge when they apply.
+- **If a program could have caught it, make the program catch it.** A rule here relies on someone remembering
+  it; a vlint rule (`tools/vlint/README.md`) fails the build. Add one with a planted bug in its tests, and mark
+  the rule here with its id, as in "(vlint: `intro-and-pulse`)". Judgement stays in this file; anything that
+  can be decided from the code or the frames moves into vlint.
 
 ---
 
@@ -55,7 +59,7 @@ on: the object, the shape of the effect and the key number. Neither repeats the 
   the object with dimension arrows. A pipeline becomes shapes joined by arrows. A list of ideas
   becomes a row of icons, each with one word. A timeline carries pictograms. Specs that differ in
   kind become tiles, each an icon plus a number. Any `Tex` holding more than about 3 words is a
-  candidate for a shape.
+  candidate for a shape (vlint: `long-text` warns past 8 prose words; numbers and units don't count).
 - **Appear as it is named; pulse it when it is named again.** Each thing arrives on the word that names it
   and not before. When the narration names something already on screen (a crystal, a detector pair, a
   number), it gets an `Indicate` or `Circumscribe` on that word, so the eye always knows where to look. When a
@@ -72,7 +76,7 @@ on: the object, the shape of the effect and the key number. Neither repeats the 
 
   While a part of the picture is being discussed, dim everything else to about 30% opacity, then
   restore it. Target at least one cue per sentence. A voiceover block with fewer bookmarks than
-  sentences is a sign the eye is being left alone.
+  sentences is a sign the eye is being left alone (vlint: `cue-density`, `bookmark-unused`).
 - **One idea at a time.** One development per scene, with the diagram left and labels right. Build
   the whole panel, fit it to the frame, then reveal it piece by piece so nothing jumps.
 
@@ -179,7 +183,9 @@ labelled illustrative/schematic.
 ## Sync (manim-voiceover)
 - Put `<bookmark mark='x'/>` directly before the noun or number, glued to it:
   `"captured at a <bookmark mark='act'/>luminescence centre"`. Then use `self.at("x", anim)` from
-  `common.Narrated`, which waits for the bookmark and plays the animation.
+  `common.Narrated`, which waits for the bookmark and plays the animation. Cues follow the text's order,
+  each bookmark once (vlint: `bookmark-missing`, `-order`, `-duplicate`, `narration-markup`, and
+  `bookmark-unfired` at render time).
 - Animations run 0.4–0.8 s. Pick the verb by what is happening:
   - a new object: `Create` for lines, `FadeIn` for labels, `GrowArrow`, `Write` for equations;
   - an object named again: `Indicate` or `Circumscribe`, never redraw;
@@ -236,7 +242,8 @@ labelled illustrative/schematic.
 - Render with `pdftoppm -r 300 -x -y -W -H` (poppler, through pixi), crop to the panel, and save to
   `<video>/assets/`. Show it on a white `card()`. Check for stray panel letters. Read figure-only
   numbers from a zoomed render.
-- Anything holding an image is a `Group`, not a `VGroup`, including inside `fit_frame`.
+- Anything holding an image is a `Group`, not a `VGroup`, including inside `fit_frame` (vlint:
+  `vgroup-non-vmobject`).
 
 ---
 
@@ -246,21 +253,25 @@ labelled illustrative/schematic.
    (Part I, "Start here"). Then plan the scenes to serve it (5–8 min by default). For each scene, note
    the mechanism it explains and whether each figure is reused or redrawn.
 2. Copy `videos/_template/` to `videos/<name>/`, rename the script, and set `SCRIPT`, `OUT` and
-   `SCENES` in its `render.sh`.
-3. Syntax-check: `python -W error -c "import ast, pathlib, sys; ast.parse(pathlib.Path(sys.argv[1]).read_text(encoding='utf-8'))" x_vo.py`
-   (silent when clean; `open(...).read()` without closing adds a ResourceWarning that looks like a failure).
+   `SCENES` in its `render.sh` (the pipeline itself is `tools/render_lib.sh`).
+3. Check: `python tools/vlint check <video>` after every edit. Fix every error. Read the warnings as
+   questions (is this label a sentence? is the eye left alone here?). render.sh runs the same check and
+   stops on errors, then checks every scene while it renders and the joined file after.
 4. Draft: `QUALITY=-ql JOBS=2 bash render.sh` inside the video folder (Linux or WSL). This
    synthesises and caches the voice. Use **at most 2 jobs while voice is generated**: each
    Chatterbox process needs about 4 GB of GPU memory, and 3 jobs on an 11 GB card crawl.
    On WSL, rendering from the Linux filesystem is much faster than from `/mnt/c`
    (`tools/wsl_render.sh` copies the repo there and renders).
 5. Review with `bash tools/sheet.sh videos/<name> <res> <outdir> <scenes...>` (a 3×3 sheet per scene),
-   plus frames around dense moments. Fix, then delete the changed scenes' mp4s and re-render
-   only those.
-6. Final: `QUALITY=-qh JOBS=<n scenes>`. **Never above 1080p.** Before it, delete the changed
-   scenes' **1080p** mp4s too, because render.sh skips scenes that already exist, and confirm the
-   output size changed (i3M revision). Join with re-encoded audio (stream copy drifts). Send a
-   1080p crf 26 re-encode (`_small.mp4`) when the file is over 30 MB, never a downscale.
+   plus frames around dense moments, and the `[vlint]` runtime findings (clipped or overlapping labels,
+   vanished objects). Fix and run render.sh again: it re-renders exactly the scenes whose code, shared
+   helpers or assets changed (each scene's fingerprint is stored beside its video), so there is nothing
+   to delete by hand.
+6. Final: `QUALITY=-qh JOBS=<n scenes>`. **Never above 1080p** (render.sh refuses more). The join is
+   refused if a scene is missing, stale or has a runtime error, and the joined file is checked for size,
+   length and audio drift. Send a 1080p crf 26 re-encode (`_small.mp4`) when the file is over 30 MB,
+   never a downscale. A video rendered before vlint existed: `vlint adopt` its unchanged scenes once,
+   so only the edited ones re-render.
 7. Update this file (§0), then report.
 
 Tooling: stay on Manim Community, because manim-voiceover doesn't support ManimGL. The slow parts
@@ -273,9 +284,11 @@ are writing the script and voice synthesis, not rendering.
 **Editing scripts**
 - Any edit touching a LaTeX backslash goes through the Edit tool, never a Python replace script.
   In a non-raw string, `"\t"` in `\textbf` or `\tau` becomes a tab and the match silently fails;
-  this happened in three videos. Python scripts are fine for backslash-free changes such as numbers
-  and positions. For whole scenes, Write the new classes to a scratchpad file and splice them in.
-- Every `Tex`/`MathTex` string with a backslash is raw (`r"et al.\ 2020"`).
+  this happened in three videos, and twice more while writing vlint itself. Python scripts are fine for
+  backslash-free changes such as numbers and positions. For whole scenes, Write the new classes to a
+  scratchpad file and splice them in.
+- Every `Tex`/`MathTex` string with a backslash is raw (`r"et al.\ 2020"`) (vlint: `tex-not-raw`,
+  `control-char`, `syntax-warning`).
 - Adjacent raw strings join with no space.
 - Keep a variable for anything you will remove later. An object created inline in `play` can't be
   faded out.
@@ -283,7 +296,7 @@ are writing the script and voice synthesis, not rendering.
 **Naming**
 - Never name a scene class after a manim object (`Flash`, `Circle`, `Dot`, `Line`...). A scene called
   `Flash` shadowed manim's `Flash` animation, and another scene in the same file crashed with
-  "Scene.__init__() got an unexpected keyword argument 'color'" (laser review video).
+  "Scene.__init__() got an unexpected keyword argument 'color'" (laser review video) (vlint: `shadows-manim`).
 
 **Manim 0.19**
 - `LaggedStartMap` crashes; use `LaggedStart(*[...])`.
@@ -293,12 +306,15 @@ are writing the script and voice synthesis, not rendering.
 - Never `FadeIn(x)` and `Indicate(x)` (or `Circumscribe`) on the same mobject in one `play`. The pulse
   overrides the fade, and the object ends up invisible: map boxes, B symbols, an image charge and a label
   all vanished this way (Feynman Vol. II; the synchrotron magnets in `laser_rt`). Fade in first, then
-  pulse in a separate `play`. Before rendering, grep for lines that contain both on one name.
+  pulse in a separate `play` (vlint: `intro-and-pulse`, and `vanished-after-intro` at render time; the
+  first run found four more in `laser_rt` that had shipped).
 - Dimming the rest of the screen (a spotlight helper) must only touch `VMobject`s. `scene.mobjects`
   also holds `ValueTracker`s, and fading or restoring them crashes with "Please override in a
   child class" (`laser_rt` retrofit). Skip mobjects that have updaters too.
 - Two labels attached to the same edge of a box (`next_to(box, UP)`) will overlap unless they are
-  aligned to opposite ends (`align_to(box, LEFT)` / `align_to(box, RIGHT)`). Check a late frame of the scene.
+  aligned to opposite ends (`align_to(box, LEFT)` / `align_to(box, RIGHT)`). Check a late frame of the scene
+  (vlint: `text-overlap` and `frame-clip` catch label-on-label and cut-off labels; a label over a shape, such
+  as a bar, is still for the eye).
 - `d.get(k, f"{k:g}")` evaluates the default even for string keys; use a conditional.
 - When a title changes, `ReplacementTransform` it.
 

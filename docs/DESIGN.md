@@ -250,6 +250,11 @@ labelled illustrative/schematic.
   as the peak crosses grid points. Average singular parts over each grid cell (integrate them
   exactly). (vlint: `redraw-jitter` steps each animated ValueTracker through its range, redraws the
   curves and flags heights that reverse direction again and again.)
+- **Space rows by what is drawn in them**. A row of shapes drawn to scale (cones, bars,
+  spectra) gets the room its biggest member needs: compute each shape's real extent and place the
+  rows from that, never on a fixed pitch. A caption sits above the tallest shape, not above the
+  row's anchor point. (vlint: `shape-overlap` measures the real overlap of filled shapes and flags
+  partial overlaps; `line-over-label` samples long straight edges densely.)
 - Generated images need an alpha channel, otherwise they are opaque black squares
   (`shell_pet` Images).
 

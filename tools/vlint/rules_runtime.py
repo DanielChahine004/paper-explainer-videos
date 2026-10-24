@@ -202,6 +202,66 @@ def _strokes(scene, rule_id):
     return out
 
 
+def _sample_curve(points, step=0.03):
+    """Points along a VMobject's cubic pieces, about `step` apart (a long straight edge gets as many as it needs)."""
+    import numpy as np
+    pts = points[: len(points) // 4 * 4].reshape(-1, 4, 3)
+    out = []
+    for q in pts:
+        n = max(4, int(np.ceil(np.linalg.norm(q[3] - q[0]) / step)) + 1)
+        t = np.linspace(0, 1, n)[:, None]
+        out.append(((1 - t) ** 3) * q[0] + 3 * ((1 - t) ** 2) * t * q[1] + 3 * (1 - t) * (t ** 2) * q[2] + (t ** 3) * q[3])
+    return np.vstack(out) if out else np.zeros((0, 3))
+
+
+def _inside(poly, P):
+    """Even-odd point-in-polygon for many points P (k, 2) against a closed outline poly (n, 2)."""
+    import numpy as np
+    x, y = P[:, 0][:, None], P[:, 1][:, None]
+    x0, y0 = poly[:, 0][None, :], poly[:, 1][None, :]
+    x1, y1 = np.roll(poly[:, 0], -1)[None, :], np.roll(poly[:, 1], -1)[None, :]
+    cross = ((y0 > y) != (y1 > y)) & (x < (x1 - x0) * (y - y0) / np.where(y1 == y0, 1e-12, y1 - y0) + x0)
+    return cross.sum(axis=1) % 2 == 1
+
+
+@rule("shape-overlap", "runtime", "warn", "Two filled shapes partly overlap: one runs into the other by accident "
+      "(rows spaced closer than the shapes are tall). A shape mostly inside another is a layer and is left alone.",
+      "Part II, Layout", "space the rows by the shapes' real extent, or shrink the shape")
+def shape_overlap(mon, ev, p):
+    if ev != "vo_close" or isinstance(mon.scene, M.ThreeDScene):
+        return
+    import numpy as np
+    lo, hi = float(opt(mon, "overlap_min", 0.03)), float(opt(mon, "overlap_max", 0.6))
+    shapes = []
+    for m, ok in walk(mon.scene.mobjects):
+        if "shape-overlap" in ok or "*" in ok or isinstance(m, TEXTS()) or not isinstance(m, M.VMobject) or len(m.points) < 4:
+            continue
+        if m.get_fill_opacity() < 0.05 or visibility(m) < 0.05:
+            continue
+        b = bbox(m)
+        if (b[2] - b[0]) * (b[3] - b[1]) < 0.15:
+            continue
+        outline = _sample_curve(m.points, 0.05)[:, :2]
+        shapes.append((m, b, outline))
+    text_fam = {id(y) for t in mon.scene.mobjects for x in t.get_family() if isinstance(x, TEXTS()) for y in x.get_family()}
+    shapes = [s_ for s_ in shapes if id(s_[0]) not in text_fam]
+    for i in range(len(shapes)):
+        for j in range(i + 1, len(shapes)):
+            (a, ba, pa), (b, bb, pb) = shapes[i], shapes[j]
+            x0, y0, x1, y1 = max(ba[0], bb[0]), max(ba[1], bb[1]), min(ba[2], bb[2]), min(ba[3], bb[3])
+            if x1 <= x0 or y1 <= y0:
+                continue
+            if a in b.get_family() or b in a.get_family():
+                continue
+            g = np.stack(np.meshgrid(np.linspace(x0, x1, 40), np.linspace(y0, y1, 40)), -1).reshape(-1, 2)
+            both = (_inside(pa, g) & _inside(pb, g)).sum() * (x1 - x0) * (y1 - y0) / len(g)
+            area = lambda bx, pts: _inside(pts, np.stack(np.meshgrid(np.linspace(bx[0], bx[2], 40), np.linspace(bx[1], bx[3], 40)), -1).reshape(-1, 2)).mean() * (bx[2] - bx[0]) * (bx[3] - bx[1])
+            small = min(area(ba, pa), area(bb, pb))
+            if small > 1e-6 and lo < both / small < hi:
+                yield (id(a), id(b)), (f"{type(a).__name__} at ({(ba[0] + ba[2]) / 2:+.1f}, {(ba[1] + ba[3]) / 2:+.1f}) and {type(b).__name__} at "
+                                       f"({(bb[0] + bb[2]) / 2:+.1f}, {(bb[1] + bb[3]) / 2:+.1f}) overlap by {both / small:.0%} of the smaller")
+
+
 @rule("line-over-label", "runtime", "warn", "A plotted curve, line or outline runs through a label: the text is struck "
       "through (a curve label set on top of its own curve).", "Part II, Layout",
       "set the label beside the line in empty space, e.g. next_to a data point on the open side")
@@ -212,11 +272,8 @@ def line_over_label(mon, ev, p):
     texts = [m for m in leaves(mon.scene, "line-over-label") if isinstance(m, TEXTS()) and visibility(m) >= 0.05]
     if not texts:
         return
-    t = np.linspace(0, 1, 9)[:, None]
-    B = np.hstack([(1 - t) ** 3, 3 * (1 - t) ** 2 * t, 3 * (1 - t) * t ** 2, t ** 3])            # cubic Bernstein basis
     for c in _strokes(mon.scene, "line-over-label"):
-        pts = c.points[: len(c.points) // 4 * 4].reshape(-1, 4, 3)
-        samp = np.einsum("sk,nkd->nsd", B, pts).reshape(-1, 3)
+        samp = _sample_curve(c.points)
         cx0, cy0, cx1, cy1 = bbox(c)
         for m in texts:
             x0, y0, x1, y1 = bbox(m)

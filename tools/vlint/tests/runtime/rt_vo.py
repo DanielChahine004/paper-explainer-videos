@@ -8,7 +8,7 @@ from manim import *
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 from vlint.runtime import Checked, vlint_ok  # noqa: E402
 
-EXPECT = {"frame-clip": 1, "text-overlap": 1, "vanished-after-intro": 1, "bookmark-unfired": 2, "indicate-image": 1, "text-chain": 1, "arrow-over-label": 1, "layout-crowded": 1, "layout-balance": 1, "arrow-skew": 1, "title-margin": 1, "line-over-label": 1, "redraw-jitter": 1}
+EXPECT = {"frame-clip": 1, "text-overlap": 1, "vanished-after-intro": 1, "bookmark-unfired": 2, "indicate-image": 1, "text-chain": 1, "arrow-over-label": 1, "layout-crowded": 1, "layout-balance": 1, "arrow-skew": 1, "title-margin": 1, "line-over-label": 1, "redraw-jitter": 1, "shape-overlap": 1}
 
 
 class Fixture(Checked, Scene):
@@ -68,6 +68,11 @@ class Fixture(Checked, Scene):
         with self.vlint_off("frame-clip"):
             self.play(FadeIn(Text("edge on purpose", font_size=30).move_to(LEFT * 7.2 + DOWN * 3)), run_time=0.2)
         self.play(*[FadeOut(m) for m in self.mobjects], run_time=0.2)
+        t1 = Triangle(fill_opacity=0.5).scale(0.8).move_to(LEFT * 5.6 + UP * 1.7)
+        t2 = Triangle(fill_opacity=0.5).scale(0.8).move_to(LEFT * 5.1 + UP * 1.2)                 # shape-overlap
+        lay = Square(0.7, fill_opacity=0.3).move_to(LEFT * 3.4 + UP * 1.6)
+        dot_in = Circle(0.2, fill_opacity=1).move_to(lay)                                         # a layer inside: fine
+        self.add(t1, t2, lay, dot_in)
         p1 = Square(1.5).move_to(LEFT * 5 + DOWN * 0.5)
         p2 = Square(1.5).next_to(p1, RIGHT, buff=0.1)                               # layout-crowded, layout-balance
         self.play(FadeIn(p1), FadeIn(p2), run_time=0.2)

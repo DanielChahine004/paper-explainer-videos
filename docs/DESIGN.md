@@ -61,6 +61,18 @@ on: the object, the shape of the effect and the key number. Neither repeats the 
   number), it gets an `Indicate` or `Circumscribe` on that word, so the eye always knows where to look. When a
   sentence names three things, that is three cues. Equations are lit term by term as they are read.
   Leave the end of a line free: after the last cue, let the speech finish over a still frame.
+- **Steer the eye the whole time** (user, laser review). The voice should never talk about one part of the
+  screen while the eye is free to wander elsewhere. Every object, region or number the narration names
+  gets a visible cue on that word, even if it was introduced earlier. Choose the cue by what is meant:
+  - **the object:** `Indicate` (pulse) or `Flash`;
+  - **an outline or region:** `Circumscribe`, or a `SurroundingRectangle` that stays while it is discussed;
+  - **a direction or path:** a dot or highlight travelling along it (`MoveAlongPath`, `ShowPassingFlash`);
+  - **a comparison:** pulse both items in turn;
+  - **a quantity changing:** a `ValueTracker` animated across the phrase that says it.
+
+  While a part of the picture is being discussed, dim everything else to about 30% opacity, then
+  restore it. Target at least one cue per sentence. A voiceover block with fewer bookmarks than
+  sentences is a sign the eye is being left alone.
 - **One idea at a time.** One development per scene, with the diagram left and labels right. Build
   the whole panel, fit it to the frame, then reveal it piece by piece so nothing jumps.
 
@@ -84,6 +96,19 @@ concrete choices (what is computed, what is kept). Give derivations one line at 
 
 ## 3. Make the physics visible
 
+- **Draw fields as arrows** (user, laser review). Whenever the narration invokes an electric or magnetic
+  field, or a force, draw it rather than naming it:
+  - **E fields:** arrows from + toward −, with length showing strength (`ArrowVectorField`, or a few
+    hand-placed arrows).
+  - **B fields:** ⊙/⊗ symbols for a field into or out of the page, or circulating arrows around a
+    current.
+  - **Forces on a moving charge:** an arrow on the particle, with the force (for example qv×B) shown at
+    right angles to the velocity as the track bends.
+  - **Changing fields:** animate the arrows growing, flipping or rotating as the narration describes.
+
+  Pulse the field arrows on the words "field", "force" and "pushes".
+
+A number is a summary of something physical, so show that thing.
 A number is a summary of something physical, so show that thing.
 - **Show what a number does, then vary its cause.** Put the cause in the scene as a movable object
   (a source's position, a thickness, a timing value, an activity). Draw the effect as the thing the

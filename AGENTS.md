@@ -15,8 +15,12 @@ narration word by word. When asked to make a video, follow this file and `docs/D
 
 1. **Read the source.** For a PDF: `pixi exec -s poppler pdftotext -layout paper.pdf paper.txt`. Check its
    licence (first page or footer) before planning any figure reuse (docs/DESIGN.md §4).
-2. **Plan the scenes** (5–8 minutes by default; longer when the content needs it). For each scene, note
-   the mechanism it explains, the why before the how, and whether each paper figure is reused or redrawn.
+2. **Infer the intent, then plan the scenes.** Decide what kind of resource it is (survey, new method,
+   experiment, thesis, several papers, how-to, clinical study) and what the viewer wants to leave with.
+   Write that intent as one sentence, following the table in `docs/DESIGN.md` ("Start here"). A purpose
+   stated in the request wins. Then plan the scenes to serve that intent (5–8 minutes by default;
+   longer when the content needs it). For each scene, note the mechanism it explains, the why before
+   the how, and whether each paper figure is reused or redrawn.
 3. **Create the folder:** `cp -r videos/_template videos/<name>`, rename `template_vo.py` to
    `<name>_vo.py`, and set `SCRIPT`, `OUT` and `SCENES` in `render.sh`. Put reused figure crops in
    `videos/<name>/assets/` and keep source PDFs out of git (they are ignored).

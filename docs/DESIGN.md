@@ -290,6 +290,10 @@ are writing the script and voice synthesis, not rendering.
 - `MathTex("")` fails.
 - `Tex` options are set at creation.
 - `match_y` takes a Mobject; for a point use `.set_y(p[1])`.
+- Never `FadeIn(x)` and `Indicate(x)` (or `Circumscribe`) on the same mobject in one `play`. The pulse
+  overrides the fade, and the object ends up invisible: map boxes, B symbols, an image charge and a label
+  all vanished this way (Feynman Vol. II; the synchrotron magnets in `laser_rt`). Fade in first, then
+  pulse in a separate `play`. Before rendering, grep for lines that contain both on one name.
 - Dimming the rest of the screen (a spotlight helper) must only touch `VMobject`s. `scene.mobjects`
   also holds `ValueTracker`s, and fading or restoring them crashes with "Please override in a
   child class" (`laser_rt` retrofit). Skip mobjects that have updaters too.

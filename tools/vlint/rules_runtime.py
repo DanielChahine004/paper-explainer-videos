@@ -184,9 +184,45 @@ def arrow_over_label(mon, ev, p):
                 yield (id(a), id(m)), f"an arrow runs through {label(m)}"
 
 
+@rule("arrow-skew", "runtime", "warn", "A straight arrow is a few degrees off horizontal or vertical: it reads as a "
+      "mistake, not a direction. Usually its ends sit on centres of groups whose labels shift them.",
+      "Part II, Layout (align)", "line the ends up on the icons' centres (icon[0], not the labelled group)")
+def arrow_skew(mon, ev, p):
+    if ev != "play" or isinstance(mon.scene, M.ThreeDScene):
+        return
+    import math
+    lo, hi = float(opt(mon, "skew_min_deg", 0.6)), float(opt(mon, "skew_max_deg", 12))
+    for m, ok in walk(mon.scene.mobjects):
+        if not isinstance(m, M.Arrow) or "arrow-skew" in ok or "*" in ok or visibility(m) < 0.05:
+            continue
+        s, e = m.get_start(), m.get_end()
+        dx, dy = e[0] - s[0], e[1] - s[1]
+        if math.hypot(dx, dy) < 0.3:
+            continue
+        a = math.degrees(math.atan2(abs(dy), abs(dx)))           # 0 = horizontal, 90 = vertical
+        dev = min(a, 90 - a)
+        if lo < dev < hi:
+            yield id(m), f"arrow from ({s[0]:+.1f}, {s[1]:+.1f}) to ({e[0]:+.1f}, {e[1]:+.1f}) is {dev:.1f}° off " + ("horizontal" if a < 45 else "vertical")
+
+
+@rule("title-margin", "runtime", "warn", "A title sits too close to the top edge: it crowds the nav chips and looks "
+      "pushed off the screen.", "Part II, Layout (title)", "to_edge(UP, buff=0.8) or more")
+def title_margin(mon, ev, p):
+    if ev != "play" or isinstance(mon.scene, M.ThreeDScene):
+        return
+    gap = float(opt(mon, "title_gap", 0.75))
+    Y1 = frame_box(mon.scene)[3]
+    for m in mon.scene.mobjects:
+        if not isinstance(m, TEXTS()) or "title-margin" in getattr(m, "_vlint_ok", ()) or visibility(m) < 0.05:
+            continue
+        b = bbox(m)
+        if b[3] - b[1] >= 0.2 and b[2] - b[0] >= 2.0 and Y1 - b[3] < gap - 1e-3:
+            yield id(m), f"title {label(m)!r} top is {Y1 - b[3]:.2f} below the frame edge (< {gap})"
+
+
 def _content(mon, rule_id):
     """Visible top-level items below the title band, as (mobject, bbox); arrows, lines and tiny labels left out."""
-    top = float(opt(mon, "title_band", 3.0))
+    top = float(opt(mon, "title_band", 2.75))
     out = []
     for m in mon.scene.mobjects:
         if rule_id in getattr(m, "_vlint_ok", ()) or not m.get_family() or visibility(m) < 0.05:
@@ -209,7 +245,7 @@ def _content(mon, rule_id):
 
 def _usable(mon):
     X0, Y0, X1, Y1 = frame_box(mon.scene)
-    return X0, Y0, X1, min(Y1, float(opt(mon, "title_band", 3.0)))
+    return X0, Y0, X1, min(Y1, float(opt(mon, "title_band", 2.75)))
 
 
 @rule("layout-crowded", "runtime", "warn", "Two panels (images, plots, diagrams) sit almost touching while a large "

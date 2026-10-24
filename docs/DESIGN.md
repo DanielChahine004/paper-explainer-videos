@@ -228,6 +228,13 @@ labelled illustrative/schematic.
   instead of shrinking them. When a scene builds in two halves, centre the first half while it is alone
   and slide it up when the second arrives. (vlint: `layout-crowded`, `layout-balance`, checked at the
   end of every narration block.)
+- **Line things up**. Items in a row share the centre line of their pictures,
+  not of their labelled groups (a label under an icon drops the group centre), so place a labelled
+  group by its image or icon (a `place(g, p)` helper) and draw arrows from `g[0]` to `g[0]`. An arrow
+  joining a row is exactly horizontal, one joining a column exactly vertical; a deliberate branch is
+  clearly diagonal (> ~12 degrees). Titles sit at `to_edge(UP, buff=0.85)`, clear of the nav chips.
+  (vlint: `arrow-skew` warns at 0.6-12 degrees off axis, `title-margin` when a title's top is
+  within 0.75 of the frame edge.)
 - Generated images need an alpha channel, otherwise they are opaque black squares
   (`shell_pet` Images).
 

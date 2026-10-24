@@ -32,50 +32,62 @@ case "$QUALITY" in
   -ql) RES=480p15; GX_RES="-r 854x480 --fps 15" ;;
   *) echo "QUALITY=$QUALITY is not allowed: 1080p (-qh) is the maximum"; exit 1 ;;
 esac
-STEM="${SCRIPT%.py}"
+export STEM="${SCRIPT%.py}"
+
+# Narration is voiced first on the GPU (tools/voice_prepass.py, in the background) and starts before anything else, so
+# the voice model loads while vlint checks the script; scenes already voiced are marked ready at once. Longest
+# narration first: the last scene to finish is then a short one.
+order="$(pixi run python "$ROOT/tools/voice_prepass.py" --order "$SCRIPT" $SCENES 2>/dev/null | sed -n "s/^ORDER: //p")"
+order="${order:-$SCENES}"
+pixi run python "$ROOT/tools/voice_prepass.py" "$SCRIPT" $order > voice.log 2>&1 &
+export VPID=$!
+trap 'kill $VPID 2>/dev/null || true' EXIT
 
 echo "== vlint: static checks"
 pixi run $VLINT check -q "$SCRIPT"
 
-if [ -n "${FRESH:-}" ]; then todo="$SCENES"; else
-  todo="$(pixi run $VLINT stale . --script "$SCRIPT" --res "$RES" $SCENES)"
+if [ -n "${FRESH:-}" ]; then stale="$SCENES"; else
+  stale="$(pixi run $VLINT stale . --script "$SCRIPT" --res "$RES" $SCENES)"
 fi
-# Each scene is its own manim process (cairo draws on one core), so they run side by side (JOBS).
+todo=""; for s in $order; do case " $stale " in *" $s "*) todo="$todo $s" ;; esac; done; todo="${todo# }"
+# Render order: scenes never rendered first (in narration order), then the rest by their last render time, slowest
+# first (ManimGX logs "rendered in N s"), so the slowest scene never starts last.
+todo="$(for s in $todo; do t=$(grep -o "rendered in [0-9.]*" "m_$s.log" 2>/dev/null | tail -1 | awk '{print $3}')
+  echo "${t:-9999} $s"; done | sort -s -k1,1nr | awk '{print $2}' | tr '\n' ' ')"; todo="${todo% }"
+# Each scene is its own process, so they run side by side (JOBS); each starts as soon as its own narration is cached
+# (m_<Scene>/voiceovers/.ready), so voicing and rendering overlap. By default every scene at once, capped by cores
+# (two kept for the voice workers) and memory (~1.2 GB per 1080p scene); ManimGX at most 8 (profiled 2026-10-25:
+# 4 at once left the GPU under 25% busy and the CPU under 70%, the limit being each scene's Python and x264).
 # --disable_caching skips manim's frame cache only; narration stays cached in m_<Scene>/voiceovers.
-# Narration is voiced first on the GPU (tools/voice_prepass.py, in the background); each scene renders on the CPU
-# as soon as its own narration is cached (m_<Scene>/voiceovers/.ready), so voicing and rendering overlap.
-# Longest narration first (the last scene to finish is then a short one), and by default every scene at once, capped
-# by cores (two kept for the voice workers) and memory (~1.2 GB per 1080p scene).
 if [ -n "$todo" ]; then
-  ordered="$(pixi run python "$ROOT/tools/voice_prepass.py" --order "$SCRIPT" $todo 2>/dev/null | sed -n "s/^ORDER: //p")"
-  [ -n "$ordered" ] && todo="$ordered"
   n_todo=$(echo $todo | wc -w)
   mem_gb=$(awk '/MemAvailable/ {print int($2 / 1048576)}' /proc/meminfo)
   jobs=$(( $(nproc) - 2 )); [ $(( mem_gb * 10 / 12 )) -lt $jobs ] && jobs=$(( mem_gb * 10 / 12 ))
   [ "$n_todo" -lt "$jobs" ] && jobs=$n_todo; [ "$jobs" -lt 1 ] && jobs=1
-  [ "$ENGINE" = gx ] && [ $jobs -gt 4 ] && jobs=4   # GPU renders: ~4 at once saturates the 2080 Ti
+  [ "$ENGINE" = gx ] && [ $jobs -gt 8 ] && jobs=8
   jobs="${JOBS:-$jobs}"
   export STEM GX_RES SCRIPT
   echo "== voicing and rendering ($jobs at once):" $todo
-  pixi run python "$ROOT/tools/voice_prepass.py" "$SCRIPT" $todo > voice.log 2>&1 &
-  export VPID=$!
-  trap 'kill $VPID 2>/dev/null || true' EXIT
   echo $todo | tr ' ' '\n' | xargs -P "$jobs" -I{} sh -c \
     'while [ ! -f "m_{}/voiceovers/.ready" ] && kill -0 $VPID 2>/dev/null; do sleep 2; done
      [ -f "m_{}/voiceovers/.ready" ] || { echo "FAILED {}: no narration (see voice.log)"; exit 1; }
      if [ "$ENGINE" = gx ]; then
+       # the CE skip-mode check (vlint runtime record) runs beside the GPU render; marked a re-check, since it may
+       # finish after the video it describes
        d="m_{}/videos/$STEM/'"$RES"'"; mkdir -p "$d"
-       ENGINE=ce VLINT_OUT="$d" pixi run manim -ql -s --disable_caching --progress_bar none --media_dir "m_{}" "$SCRIPT" "{}" \
-         > "m_{}.check.log" 2>&1 || { echo "FAILED {}: CE skip-mode check (see m_{}.check.log)"; exit 1; }
+       ENGINE=ce VLINT_RECHECK=1 VLINT_OUT="$d" pixi run manim -ql -s --disable_caching --progress_bar none \
+         --media_dir "m_{}" "$SCRIPT" "{}" > "m_{}.check.log" 2>&1 & ck=$!
        "$GX_EXE" render "$(wslpath -w "$PWD/$SCRIPT")" "{}" -o "$(wslpath -w "$PWD/$d/{}.mp4")" $GX_RES --crf 14 --preset slow \
-         > "m_{}.log" 2>&1 && rm -f "$d/{}".storyboard*.png && echo "done {}" || { echo "FAILED {} (see m_{}.log)"; exit 1; }
+         > "m_{}.log" 2>&1 || { echo "FAILED {} (see m_{}.log)"; kill $ck 2>/dev/null; exit 1; }
+       wait $ck || { echo "FAILED {}: CE skip-mode check (see m_{}.check.log)"; exit 1; }
+       rm -f "$d/{}".storyboard*.png; echo "done {}"
      else
        pixi run manim "$QUALITY" --disable_caching --progress_bar none --media_dir "m_{}" "$SCRIPT" "{}" > "m_{}.log" 2>&1 \
        && echo "done {}" || { echo "FAILED {} (see m_{}.log)"; exit 1; }
      fi'
-  wait $VPID || { echo "voice pre-pass FAILED (see voice.log)"; exit 1; }
-  grep "^== narration" voice.log || true
 fi
+wait $VPID || { echo "voice pre-pass FAILED (see voice.log)"; exit 1; }
+grep "^== narration" voice.log || true
 
 # Scenes whose video is current but whose findings predate a rule change: re-check them in skip mode
 # (manim -s jumps every play() to its end; seconds per scene) instead of re-rendering them.
@@ -104,7 +116,15 @@ echo "wrote $OUT"
 if [ "$RES" = 1080p60 ]; then
   # A smaller copy for upload limits: same 1080p, stronger compression (never a downscale).
   SMALL="${OUT%_narrated.mp4}"; SMALL="${SMALL%.mp4}_small.mp4"
-  pixi run ffmpeg -loglevel error -y -i "$OUT" -c:v libx264 -crf 26 -preset slow -c:a aac -b:a 128k \
-    -movflags +faststart "$SMALL"
-  echo "wrote $SMALL"
+  # Encoded scene by scene, all at once (one encode of the whole video is bound by decoding a single stream: ~90 s
+  # for 10 min), each kept as m_<Scene>/small.mp4 until its scene changes, then joined with the joined video's
+  # audio; in the background while AFTER_JOIN (run_v.sh: the review sheets) runs.
+  ( echo $SCENES | tr ' ' '\n' | RES=$RES xargs -P "$(nproc)" -I{} sh -c \
+      'f="m_{}/videos/$STEM/$RES/{}.mp4"; s="m_{}/small.mp4"; [ -f "$s" ] && [ "$s" -nt "$f" ] && exit 0
+       pixi run ffmpeg -loglevel error -y -i "$f" -an -c:v libx264 -crf 26 -preset slow "$s.tmp.mp4" && mv "$s.tmp.mp4" "$s"'
+    : > list_small.txt; for s in $SCENES; do echo "file '$PWD/m_$s/small.mp4'" >> list_small.txt; done
+    pixi run ffmpeg -loglevel error -y -f concat -safe 0 -i list_small.txt -i "$OUT" -map 0:v -map 1:a -c:v copy \
+      -c:a aac -b:a 128k -movflags +faststart "$SMALL" ) & SP=$!
 fi
+[ -n "${AFTER_JOIN:-}" ] && { eval "$AFTER_JOIN" || echo "AFTER_JOIN failed (the video is fine)"; }
+if [ -n "${SP:-}" ]; then wait $SP; echo "wrote $SMALL"; fi

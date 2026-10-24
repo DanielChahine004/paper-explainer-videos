@@ -70,7 +70,7 @@ def main(argv=None):
     c = sub.add_parser("check")
     c.add_argument("paths", nargs="+")
     c.add_argument("-q", "--quiet", action="store_true", help="hide info notes")
-    for name in ("stale", "adopt", "parts", "final"):
+    for name in ("stale", "recheck", "adopt", "parts", "final"):
         p = sub.add_parser(name)
         p.add_argument("target")
         p.add_argument("--script", required=True)
@@ -93,7 +93,7 @@ def main(argv=None):
     if a.cmd == "selftest":
         from vlint.selftest import run
         return run()
-    if a.cmd in ("stale", "adopt", "parts", "final"):
+    if a.cmd in ("stale", "recheck", "adopt", "parts", "final"):
         from vlint.rules_output import OutputCtx, runtime_findings
 
         load_rules(stages=("output",))
@@ -109,6 +109,12 @@ def main(argv=None):
                 if why:
                     print(s)
                     print(f"vlint: {s}: {why}", file=sys.stderr)
+            return 0
+        if a.cmd == "recheck":
+            from vlint.rules_output import needs_recheck
+            for s in a.scenes:
+                if needs_recheck(ctx, s):
+                    print(s)
             return 0
         if a.cmd == "adopt":
             from vlint.core import write_json

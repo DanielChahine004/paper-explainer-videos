@@ -307,10 +307,18 @@ labelled illustrative/schematic.
    (Part I, "Start here"). Then plan the scenes to serve it (5–8 min by default). For each scene, note
    the mechanism it explains and whether each figure is reused or redrawn.
 2. Copy `videos/_template/` to `videos/<name>/`, rename the script, and set `SCRIPT`, `OUT` and
-   `SCENES` in its `render.sh` (the pipeline itself is `tools/render_lib.sh`).
+   `SCENES` in its `render.sh` (the pipeline itself is `tools/render_lib.sh`). Lay out with common.py's
+   helpers rather than by eye: `title()` (every title on one line), `CONTENT_TOP`/`top_at()` (content
+   starts under it), `place()` (a labelled group centred by its picture) and `grid()` (fixed pitch,
+   short rows centred).
 3. Check: `python tools/vlint check <video>` after every edit. Fix every error. Read the warnings as
-   questions (is this label a sentence? is the eye left alone here?). render.sh runs the same check and
-   stops on errors, then checks every scene while it renders and the joined file after.
+   questions (is this label a sentence? is the eye left alone here?). For the runtime rules without
+   rendering, run a scene in skip mode inside the video folder (each play() jumps to its end; seconds
+   per scene, narration from the cache): `VLINT_OUT=chk pixi run manim -ql -s --media_dir m_<Scene>
+   <script> <Scene>`, findings in `chk/<Scene>.vlint.json`. render.sh runs the same checks and stops
+   on errors, then checks every scene while it renders and the joined file after. When the rules
+   change, it re-checks in skip mode the scenes it would not re-render (the rule set is part of each
+   record), so old findings never pass for current ones.
 4. Draft: `QUALITY=-ql JOBS=2 bash render.sh` inside the video folder (Linux or WSL). This
    synthesises and caches the voice. Use **at most 2 jobs while voice is generated**: each
    Chatterbox process needs about 4 GB of GPU memory, and 3 jobs on an 11 GB card crawl.

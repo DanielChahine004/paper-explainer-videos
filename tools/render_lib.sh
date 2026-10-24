@@ -43,6 +43,16 @@ if [ -n "$todo" ]; then
      && echo "done {}" || { echo "FAILED {} (see m_{}.log)"; exit 1; }'
 fi
 
+# Scenes whose video is current but whose findings predate a rule change: re-check them in skip mode
+# (manim -s jumps every play() to its end; seconds per scene) instead of re-rendering them.
+recheck="$(pixi run $VLINT recheck . --script "$SCRIPT" --res "$RES" $SCENES)"
+if [ -n "$recheck" ]; then
+  echo "== re-checking with the current rules:" $recheck
+  echo $recheck | tr ' ' '\n' | xargs -P "$(nproc)" -I{} sh -c \
+    'VLINT_RECHECK=1 VLINT_OUT="m_{}/videos/'"$STEM/$RES"'" pixi run manim -ql -s --disable_caching --progress_bar none \
+       --media_dir "m_{}" "'"$SCRIPT"'" "{}" > "m_{}.check.log" 2>&1 || echo "re-check FAILED {} (see m_{}.check.log)"'
+fi
+
 echo "== vlint: scenes before the join"
 pixi run $VLINT parts . --script "$SCRIPT" --res "$RES" $SCENES
 

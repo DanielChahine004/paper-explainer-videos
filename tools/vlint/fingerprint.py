@@ -47,3 +47,21 @@ def fingerprint(script, scene):
                 h.update(f.relative_to(assets).as_posix().encode())
                 h.update(hashlib.sha256(f.read_bytes()).digest())
     return h.hexdigest()[:16]
+
+
+def rules_hash(script):
+    """A hash of the checks themselves (the rule modules and every vlint.toml that applies), saved in each scene's
+    record. When it changes, the scene's video is still current but its findings are not: render.sh re-checks it
+    in skip mode (seconds) instead of re-rendering it."""
+    script = Path(script).resolve()
+    h = hashlib.sha256()
+    here = Path(__file__).resolve().parent
+    for f in sorted(here.glob("rules_*.py")) + [here / "runtime.py"]:
+        h.update(f.name.encode())
+        h.update(f.read_bytes())
+    root = find_root(script.parent)
+    for d in sorted({root, script.parent}):
+        for f in sorted(d.glob("vlint*.py")) + [d / "vlint.toml"]:
+            if f.is_file():
+                h.update(f.read_bytes())
+    return h.hexdigest()[:16]

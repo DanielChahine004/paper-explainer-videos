@@ -86,6 +86,39 @@ class Narrated(Checked, VoiceoverScene):
             self.play(*anims, **kw)
 
 
+# Layout (docs/DESIGN.md Part II): titles sit at TITLE_BUFF from the top (vlint title-margin wants >= 0.75), content
+# starts at CONTENT_TOP or lower (vlint title-gap wants air under the title).
+TITLE_BUFF = 0.85
+CONTENT_TOP = 2.45
+
+
+def title(text, size=32, **kw):
+    """A scene title: Tex at the agreed height, so every scene's title sits on the same line."""
+    return Tex(text, font_size=size, **kw).to_edge(UP, buff=TITLE_BUFF)
+
+
+def top_at(m, y=CONTENT_TOP):
+    """Move m up or down so its top is at y (default: the top of the content area, under the title)."""
+    return m.shift((y - m.get_top()[1]) * UP)
+
+
+def place(g, p):
+    """Move a labelled group so its first part (the image or icon) is centred on p: rows line up on the pictures."""
+    return g.shift(np.array(p) - g[0].get_center())
+
+
+def grid(items, cols, dx, dy, center=ORIGIN, by_icon=True):
+    """Put items on a cols-wide grid of fixed pitch (dx, dy) centred on center, row by row. Centres sit on the grid
+    (by each item's first part when by_icon, see place), so a long label does not push its picture off the line."""
+    rows = (len(items) + cols - 1) // cols
+    for i, m in enumerate(items):
+        r, c = divmod(i, cols)
+        n = min(cols, len(items) - r * cols)             # a short last row is centred too
+        p = np.array(center) + RIGHT * (c - (n - 1) / 2) * dx + UP * ((rows - 1) / 2 - r) * dy
+        place(m, p) if by_icon and len(m.submobjects) else m.move_to(p)
+    return items
+
+
 def fit_frame(m, margin=0.3):
     """Shrink and nudge m so it lies inside the frame with `margin` to spare (docs/DESIGN.md §2)."""
     hw, hh = config.frame_width / 2 - margin, config.frame_height / 2 - margin

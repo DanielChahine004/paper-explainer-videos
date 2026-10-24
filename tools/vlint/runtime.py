@@ -4,14 +4,16 @@ scene's video as <Scene>.vlint.json together with the scene's fingerprint, which
 
 In a scene:  vlint_ok(mob, "text-overlap")         this mobject (and its children) may overlap text on purpose
              with self.vlint_off("frame-clip"): ... the rule is off inside the block
-VLINT=0 turns the monitor off."""
+VLINT=0 turns the monitor off. VLINT_OUT=<dir> saves the record there even when no video is written (skip mode,
+`manim -s`: every play() jumps to its end state, so a whole scene checks in seconds). The record also lists the
+review moments (the end of each narration block, each animated ValueTracker's time window) for tools/review.sh."""
 import os
 import sys
 from contextlib import contextmanager
 from pathlib import Path
 
 from .core import RULES, Finding, dump, load_config, load_rules, write_json
-from .fingerprint import fingerprint
+from .fingerprint import fingerprint, rules_hash
 
 
 def vlint_ok(mob, *rule_ids):
@@ -32,6 +34,7 @@ class Monitor:
         self.rules = [r for r in RULES.values() if r.stage == "runtime" and self.config.level(r.id, self.name) != "off"]
         self.off = []                 # stack of rule-id sets switched off by vlint_off
         self.findings, self._seen, self.state = [], set(), {}
+        self.review = []              # moments worth a look: narration block ends, tracker sweeps
 
     # ---- plumbing ------------------------------------------------------------------------------------------
     def time(self):
@@ -52,6 +55,10 @@ class Monitor:
     def event(self, ev, **payload):
         if not self.enabled:
             return
+        if ev == "vo_close":
+            self.review.append({"kind": "block_end", "t": round(self.time(), 3)})
+        if ev == "play" and payload.get("trackers"):
+            self.review.append({"kind": "sweep", "t0": round(payload.get("t0", self.time()), 3), "t1": round(self.time(), 3)})
         for r in self.rules:
             if self.disabled(r.id):
                 continue
@@ -63,14 +70,20 @@ class Monitor:
 
     def finish(self):
         self.event("end")
+        rec = {"scene": self.name, "script": self.script.name, "fingerprint": fingerprint(self.script, self.name),
+               "rules": rules_hash(self.script), "monitor": self.enabled, "findings": dump(self.findings),
+               "review": self.review}
+        if os.environ.get("VLINT_RECHECK"):
+            rec["rechecked"] = True       # findings refreshed in skip mode; the video beside it is older on purpose
+        out = os.environ.get("VLINT_OUT")
+        if out:
+            write_json(Path(out) / f"{self.name}.vlint.json", rec)
+            return
         fw = getattr(self.scene.renderer, "file_writer", None)
         movie = getattr(fw, "movie_file_path", None)
-        if not movie:
-            return
-        movie = Path(movie)
-        rec = {"scene": self.name, "script": self.script.name, "fingerprint": fingerprint(self.script, self.name),
-               "monitor": self.enabled, "findings": dump(self.findings)}
-        write_json(movie.with_name(movie.stem + ".vlint.json"), rec)
+        if movie:
+            movie = Path(movie)
+            write_json(movie.with_name(movie.stem + ".vlint.json"), rec)
 
     @contextmanager
     def suspend(self, *rule_ids):
@@ -92,8 +105,9 @@ class Checked:
     def play(self, *anims, **kw):
         from manim import ValueTracker
         trackers = [(a.mobject, a.mobject.get_value()) for a in anims if isinstance(getattr(a, "mobject", None), ValueTracker)]
+        t0 = self.vlint.time()
         super().play(*anims, **kw)
-        self.vlint.event("play", anims=anims, trackers=trackers)
+        self.vlint.event("play", anims=anims, trackers=trackers, t0=t0)
 
     def vlint_off(self, *rule_ids):
         """`with self.vlint_off("frame-clip"):` switches runtime rules off for a block (all if none named)."""

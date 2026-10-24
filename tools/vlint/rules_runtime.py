@@ -65,7 +65,13 @@ def leaves(scene, rule_id):
 
 
 def bbox(m):
-    return m.get_left()[0], m.get_bottom()[1], m.get_right()[0], m.get_top()[1]
+    import numpy as np
+    pts = np.asarray(m.get_all_points(), dtype=float).reshape(-1, 3)    # one pass over the points, not four critical-point searches
+    if len(pts) == 0:
+        c = m.get_center()
+        return c[0], c[1], c[0], c[1]
+    lo, hi = pts.min(0), pts.max(0)
+    return lo[0], lo[1], hi[0], hi[1]
 
 
 def frame_box(scene):
@@ -269,16 +275,16 @@ def line_over_label(mon, ev, p):
     if ev != "play" or isinstance(mon.scene, M.ThreeDScene):
         return
     import numpy as np
-    texts = [m for m in leaves(mon.scene, "line-over-label") if isinstance(m, TEXTS()) and visibility(m) >= 0.05]
+    texts = [(m, bbox(m)) for m in leaves(mon.scene, "line-over-label") if isinstance(m, TEXTS()) and visibility(m) >= 0.05]
     if not texts:
         return
     for c in _strokes(mon.scene, "line-over-label"):
-        samp = _sample_curve(c.points)
         cx0, cy0, cx1, cy1 = bbox(c)
-        for m in texts:
-            x0, y0, x1, y1 = bbox(m)
-            if x1 < cx0 or x0 > cx1 or y1 < cy0 or y0 > cy1:
-                continue
+        near = [(m, b) for m, b in texts if not (b[2] < cx0 or b[0] > cx1 or b[3] < cy0 or b[1] > cy1)]
+        if not near:
+            continue
+        samp = _sample_curve(c.points)
+        for m, (x0, y0, x1, y1) in near:
             x0, y0, x1, y1 = x0 + 0.04, y0 + 0.04, x1 - 0.04, y1 - 0.04
             hit = (samp[:, 0] > x0) & (samp[:, 0] < x1) & (samp[:, 1] > y0) & (samp[:, 1] < y1)
             if hit.sum() >= 2:

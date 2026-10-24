@@ -61,7 +61,7 @@ class OutputCtx:
         if rec.get("fingerprint") != self.fp(scene):
             return "its code, shared helpers or assets changed since it was rendered"
         recf = p.with_name(p.stem + ".vlint.json")
-        if p.stat().st_mtime + 2 < recf.stat().st_mtime:
+        if not rec.get("rechecked") and p.stat().st_mtime + 2 < recf.stat().st_mtime:
             return "its last render did not finish writing the video"
         return None
 
@@ -146,6 +146,13 @@ def join_duration(ctx):
         got = ctx.probe(ctx.final)["video"]
         if abs(total - got) > float(opt(ctx, "join_tolerance", 1.0)):
             yield ctx.final.name, f"{got:.1f}s joined vs {total:.1f}s of scenes"
+
+
+def needs_recheck(ctx, scene):
+    """The scene's video is current but its findings came from an older rule set."""
+    from .fingerprint import rules_hash
+    rec = ctx.record(scene) if ctx.parts[scene].exists() else None
+    return bool(rec) and ctx.stale(scene) is None and rec.get("monitor", True) and rec.get("rules") != rules_hash(ctx.script)
 
 
 def runtime_findings(ctx):

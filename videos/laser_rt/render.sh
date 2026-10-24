@@ -18,7 +18,7 @@ export PATH="$HOME/.local/bin:$PATH"
 pixi install
 
 export QUALITY="${QUALITY:--qh}"   # -qh = 1920x1080 at 60 fps
-SCENES="Opening WhyParticles Accelerators Overview LWFA TNSA RPA BeamTime BeamYield UHDR Transport SOBP Biology Challenges Future Takeaway"
+SCENES="Opening WhyParticles Accelerators Overview LWFA TNSA RPA Compare BeamTime BeamYield UHDR Transport SOBP Biology Challenges Future Takeaway FieldMap"
 case "$QUALITY" in -qp) RES=1440p60 ;; -qk) RES=2160p60 ;; -qh) RES=1080p60 ;; -qm) RES=720p30 ;; *) RES=480p15 ;; esac
 video() { echo "m_$1/videos/laser_vo/$RES/$1.mp4"; }
 

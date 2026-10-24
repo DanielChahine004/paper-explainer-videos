@@ -15,7 +15,7 @@ of pitfalls that broke earlier renders.
 
 **Example output:** two finished videos made with this pipeline are attached to the
 [examples release](https://github.com/DanielChahine004/paper-explainer-videos/releases/tag/examples-v1):
-a review of laser-driven particle accelerators for cancer therapy (11 min), and a topic video on how PET
+a review of laser-driven particle accelerators for cancer therapy (13 min), and a topic video on how PET
 detectors are calibrated (12 min).
 
 ## Quick start
@@ -73,7 +73,7 @@ closely. Their rendered videos are on the [examples release](https://github.com/
 
 | Folder | Kind | Source | Shows |
 |---|---|---|---|
-| `laser_rt` | single paper (review), 16 scenes, 11 min | R. Alabd & D. R. Franklin, laser-driven particle accelerators for cancer therapy, Phys. Med. Biol. 2026 (CC BY 4.0) | mechanisms redrawn as animations; computed ranges and magnet radii; a spread-out Bragg peak solved in the scene |
+| `laser_rt` | survey (review), 18 scenes, 13 min | R. Alabd & D. R. Franklin, laser-driven particle accelerators for cancer therapy, Phys. Med. Biol. 2026 (CC BY 4.0) | shaped for a survey: a field map promised up front, a navigator on every scene, a side-by-side comparison of the three mechanisms, and the full map with gaps at the end; mechanisms redrawn as animations |
 | `calib` | topic across papers, 21 scenes, 12 min | how PET detectors are calibrated, pixelated vs (semi-)monolithic: Casey & Nutt 1986, Maas 2009, Borghi 2016, Cucarella 2026, Freire 2026 | bench demonstrations (flood, pencil beam, fan beam); "why before how" scenes; reused CC BY figures with credits |
 
 The example narrations summarise third-party work, and every number in them comes from the cited

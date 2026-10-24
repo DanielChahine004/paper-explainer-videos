@@ -1,7 +1,9 @@
 """Explainer: R. Alabd and D. R. Franklin, 'Laser-driven particle accelerators for cancer therapy: a review of
 state-of-the-art techniques, challenges and opportunities', Phys. Med. Biol. (2026), accepted manuscript, CC BY 4.0.
 
-Every number is from the review's text. Its four figures are schematics (depth-dose curves, LWFA, TNSA, RPA), so
+Intent (survey): leave with a map of the field: three mechanisms, what each produces, how far each has got,
+where each wins, and what blocks the clinic. A navigator chip strip keeps the map on screen; Compare and FieldMap
+close the loop. Every number is from the review's text. Its four figures are schematics (depth-dose curves, LWFA, TNSA, RPA), so
 they are redrawn as step-by-step animations (docs/DESIGN.md §4: mechanisms are remade, not reused). Computed here and
 labelled: proton/carbon ranges from the Bragg-Kleeman rule (R = 0.0022 E^1.77 cm in water, carbon scaled by A/Z^2),
 dipole radii from r = p/(qB), the spread-out Bragg peak weights, and all depth-dose shapes (illustrative).
@@ -81,6 +83,30 @@ def pulse_curve(width=2.4, height=1.0, cycles=9, color=LASER_C):
     return ParametricFunction(lambda t: np.array([t, f(t), 0]), t_range=[-width / 2, width / 2], color=color, stroke_width=3)
 
 
+BRANCHES = [("LWFA", r"e$^-$", ELEC_C), ("TNSA", r"p", PROT_C), ("RPA", r"p, C", CARB_C)]
+
+
+def map_chips(active=None, scale=1.0):
+    """The field map as three chips (mechanism -> particle). active: index of the branch in view, 'all' for
+    a cross-cutting section, None for none highlighted."""
+    chips = VGroup()
+    for k, (n, p, c) in enumerate(BRANCHES):
+        on = active == k
+        fill = 0.85 if on else (0.25 if active == "all" else 0.0)
+        box = RoundedRectangle(corner_radius=0.06, width=1.05, height=0.36, stroke_color=c, stroke_width=1.5, fill_color=c, fill_opacity=fill)
+        t = Tex(n + r" $\to$ " + p, font_size=15, color=BLACK if on else c).move_to(box)
+        chips.add(VGroup(box, t))
+    return chips.arrange(RIGHT, buff=0.08).scale(scale)
+
+
+def nav(active=None, section=None):
+    """A small map in the top-left corner, so the viewer always knows which branch or section they are in."""
+    g = VGroup(map_chips(active))
+    if section:
+        g.add(Tex(section, font_size=16, color=GREY_A).next_to(g[0], DOWN, buff=0.06, aligned_edge=LEFT))
+    return g.to_corner(UL, buff=0.2)
+
+
 def foil(w, h, color=FOIL_C):
     return Rectangle(width=w, height=h, fill_color=color, fill_opacity=0.5, stroke_color=color, stroke_width=1.5)
 
@@ -104,15 +130,15 @@ class Opening(Narrated):
         spray = VGroup(*[Arrow(f_.get_right(), f_.get_right() + 1.5 * np.array([np.cos(a), np.sin(a), 0]), buff=0.02, color=PROT_C,
                                stroke_width=3, max_tip_length_to_length_ratio=0.15) for a in np.linspace(-0.35, 0.35, 5)])
         ll = Tex(r"millimetres", font_size=26).next_to(f_, DOWN, buff=1.0).set_x(f_.get_x())
-        q = VGroup(*[Tex(t, font_size=26, color=c) for t, c in (("mechanisms", LASER_C), ("beams", PROT_C), ("biology", GOOD_C), ("obstacles", BAD_C))])
-        q.arrange(RIGHT, buff=0.8).to_edge(DOWN, buff=0.35)
+        q = map_chips(scale=1.6).move_to(UP * 1.05)
+        ql = Tex(r"the map: \textbf{3} mechanisms $\to$ how far $\to$ what blocks", font_size=24, color=GREY_A).next_to(q, UP, buff=0.15)
         with self.voiceover(text="This video explains a review by Roumani Alabd and Daniel Franklin on laser driven particle "
                                  "accelerators for cancer therapy. <bookmark mark='c'/>Today, the proton and ion beams used in "
                                  "therapy come from accelerators the size of a building: linacs, cyclotrons and synchrotrons. "
                                  "<bookmark mark='l'/>A laser plasma accelerator does the accelerating over millimetres instead of tens "
                                  "of metres, <bookmark mark='p'/>by hitting a target with an extremely intense, extremely short laser "
-                                 "pulse. <bookmark mark='q'/>The review asks how this works, what the beams look like, what biology "
-                                 "has been done with them, and what still stands in the way."):
+                                 "pulse. <bookmark mark='q'/>By the end, you should have a map of the field: three ways to accelerate, "
+                                 "what each one produces, how far each has got, and what still blocks the clinic."):
             self.play(Write(title), FadeIn(sub), FadeIn(who), run_time=1.2)
             self.at("c", Create(ring), FadeIn(mags), Create(bld), FadeIn(cl), FadeIn(p))
             self.play(MoveAlongPath(p, ring), run_time=1.5, rate_func=linear)
@@ -120,7 +146,7 @@ class Opening(Narrated):
             self.at("p", Create(pulse), run_time=0.6)
             self.play(pulse.animate.next_to(f_, LEFT, buff=0.02), run_time=0.5, rate_func=linear)
             self.play(FadeOut(pulse), LaggedStart(*[GrowArrow(a) for a in spray], lag_ratio=0.1), run_time=0.8)
-            self.at("q", LaggedStart(*[FadeIn(x, shift=0.1 * UP) for x in q], lag_ratio=0.3), run_time=1.5)
+            self.at("q", LaggedStart(*[FadeIn(x, shift=0.1 * UP) for x in q], lag_ratio=0.3), FadeIn(ql), run_time=1.5)
         self.wait(0.5)
         fade_all(self)
 
@@ -279,6 +305,7 @@ class Overview(Narrated):
 
 class LWFA(Narrated):
     def construct(self):
+        self.add(nav(0, None))
         title = Tex(r"laser wakefield acceleration", font_size=34).to_edge(UP, buff=0.35)
         Rb, cy = 0.95, -0.2
         xs, ys = np.linspace(-6.8, 6.8, 46), np.linspace(-1.7, 1.7, 13)
@@ -313,7 +340,7 @@ class LWFA(Narrated):
         ebar = always_redraw(lambda: Rectangle(width=0.3, height=0.05 + 1.6 * gain.get_value(), fill_color=WHITE, fill_opacity=0.9, stroke_width=0)
                              .move_to(np.array([6.3, -2.6, 0]), aligned_edge=DOWN))
         elab[0].move_to(np.array([6.3, -2.85, 0]))
-        lab = VGroup(Tex(r"electrons", font_size=22, color=ELEC_C), Tex(r"ions", font_size=22, color=ION_C)).arrange(RIGHT, buff=0.5).to_corner(UL, buff=0.3).shift(DOWN * 0.6)
+        lab = VGroup(Tex(r"electrons", font_size=22, color=ELEC_C), Tex(r"ions", font_size=22, color=ION_C)).arrange(RIGHT, buff=0.5).to_corner(UR, buff=0.3).shift(DOWN * 0.6)
         pond = Tex(r"ponderomotive push", font_size=22, color=LASER_C)
         bub = Tex(r"bubble: ions only", font_size=22, color=ION_C)
         facts = VGroup(Tex(r"\textbf{20--40 fs} $<$ plasma wavelength", font_size=24),
@@ -347,6 +374,7 @@ class LWFA(Narrated):
 
 class TNSA(Narrated):
     def construct(self):
+        self.add(nav(1, None))
         title = Tex(r"target normal sheath acceleration", font_size=34).to_edge(UP, buff=0.35)
         cy = -0.1
         f_ = foil(0.5, 3.6).move_to(LEFT * 2.2 + UP * cy)
@@ -411,6 +439,7 @@ class TNSA(Narrated):
 
 class RPA(Narrated):
     def construct(self):
+        self.add(nav(2, None))
         title = Tex(r"radiation pressure acceleration", font_size=34).to_edge(UP, buff=0.35)
         req = Tex(r"$I \approx$ \textbf{10$^{21}$--10$^{23}$} W/cm$^2$", font_size=28, color=LASER_C).next_to(title, DOWN, buff=0.2)
         t = ValueTracker(0.0)
@@ -431,7 +460,7 @@ class RPA(Narrated):
             Rectangle(width=0.06, height=2.2, fill_color=ION_C, fill_opacity=1, stroke_width=0).move_to(np.array([x0 + 3.2 * t.get_value() ** 2, ls_c[1], 0]))))
         las2 = always_redraw(lambda: Arrow(np.array([x0 - 1.4, ls_c[1], 0]), np.array([x0 + 3.2 * t.get_value() ** 2 - 0.05, ls_c[1], 0]), buff=0, color=LASER_C, stroke_width=7))
         ls_l = Tex(r"light sail: \textbf{5--50\,nm}, thinner than $\lambda$", font_size=24).move_to(np.array([ls_c[0] + 0.8, hb_l.get_y(), 0]))
-        lab = VGroup(Tex(r"electrons", font_size=20, color=ELEC_C), Tex(r"ions", font_size=20, color=ION_C)).arrange(RIGHT, buff=0.4).to_corner(UL, buff=0.3).shift(DOWN * 1.0)
+        lab = VGroup(Tex(r"electrons", font_size=20, color=ELEC_C), Tex(r"ions", font_size=20, color=ION_C)).arrange(RIGHT, buff=0.4).to_corner(UR, buff=0.3).shift(DOWN * 1.0)
         trade = Tex(r"higher energy, lower flux", font_size=22, color=GREY_A).next_to(ls_l, DOWN, buff=0.1)
         circ = Tex(r"circular polarisation: motion, not heat", font_size=22, color=LASER_C).to_edge(DOWN, buff=1.35)
         # payoffs: a spectrum and the scaling law
@@ -477,6 +506,7 @@ class RPA(Narrated):
 
 class BeamTime(Narrated):
     def construct(self):
+        self.add(nav("all", "beams"))
         title = Tex(r"the beams: short, intense, divergent, mixed", font_size=32).to_edge(UP, buff=0.35)
         ax, labs = log_axis(-15, -8, 6.0, {-15: "1 fs", -12: "1 ps", -9: "1 ns"}, y=1.6)
         ax.shift(LEFT * 2.6)
@@ -528,6 +558,7 @@ class BeamTime(Narrated):
 
 class BeamYield(Narrated):
     def construct(self):
+        self.add(nav("all", "beams"))
         title = Tex(r"a catch: what is actually usable", font_size=34).to_edge(UP, buff=0.35)
         ax, labs = log_axis(6, 14, 8.0, {6: "$10^6$", 9: "$10^9$", 12: "$10^{12}$", 14: "$10^{14}$"}, y=-1.7)
         ax.shift(RIGHT * 0.8)
@@ -558,6 +589,7 @@ class BeamYield(Narrated):
 
 class UHDR(Narrated):
     def construct(self):
+        self.add(nav("all", "dose rate"))
         title = Tex(r"ultra-high dose rate and FLASH", font_size=34).to_edge(UP, buff=0.35)
         # oxygen cartoon: a normal cell beside a vessel, a hypoxic tumour cell
         cn = Circle(radius=0.7, color=GOOD_C, fill_opacity=0.08).move_to(LEFT * 4.4 + UP * 1.75)
@@ -610,6 +642,7 @@ class UHDR(Narrated):
 
 class Transport(Narrated):
     def construct(self):
+        self.add(nav("all", "delivery"))
         title = Tex(r"taming the beam: capture and selection", font_size=34).to_edge(UP, buff=0.35)
         src = Dot(LEFT * 6.0 + UP * 1.2, color=WHITE)
         spray = VGroup(*[Line(src.get_center(), src.get_center() + 1.6 * np.array([np.cos(a), np.sin(a), 0]), color=PROT_C, stroke_width=2) for a in np.linspace(-0.45, 0.45, 9)])
@@ -665,6 +698,7 @@ class Transport(Narrated):
 
 class SOBP(Narrated):
     def construct(self):
+        self.add(nav("all", "delivery"))
         title = Tex(r"from a broad spectrum to a flat dose", font_size=34).to_edge(UP, buff=0.35)
         ax = Axes(x_range=[0, 22, 5], y_range=[0, 1.25, 0.5], x_length=9.0, y_length=4.0, tips=False,
                   axis_config={"color": GREY_B, "font_size": 20}, x_axis_config={"numbers_to_include": [0, 5, 10, 15, 20]},
@@ -708,6 +742,7 @@ class SOBP(Narrated):
 
 class Biology(Narrated):
     def construct(self):
+        self.add(nav("all", "biology"))
         title = Tex(r"the biology so far", font_size=34).to_edge(UP, buff=0.35)
         ax = Axes(x_range=[0, 3, 1], y_range=[0.8, 1.8, 0.2], x_length=4.2, y_length=3.4, tips=False,
                   axis_config={"color": GREY_B, "font_size": 18}, y_axis_config={"numbers_to_include": [1.0, 1.2, 1.4, 1.6]},
@@ -756,6 +791,7 @@ class Biology(Narrated):
 
 class Challenges(Narrated):
     def construct(self):
+        self.add(nav("all", "obstacles"))
         title = Tex(r"what stands in the way", font_size=34).to_edge(UP, buff=0.35)
         items = [("beam quality", r"spread, shot-to-shot", PROT_C), ("transport", r"compact, focused", BLUE_L), ("dose shaping", r"SOBP, FLASH control", BAD_C),
                  ("dosimetry", r"extreme dose rates", YELLOW), ("clinic + regulation", r"no UHDR standards yet", GREY_A)]
@@ -799,6 +835,7 @@ class Challenges(Narrated):
 
 class Future(Narrated):
     def construct(self):
+        self.add(nav("all", "outlook"))
         title = Tex(r"what is changing", font_size=34).to_edge(UP, buff=0.35)
         c = LEFT * 3.7 + UP * 0.6
         nodes = [("laser", LASER_C), ("target", FOIL_C), ("measure", YELLOW), ("optimiser", GOOD_C)]
@@ -851,6 +888,7 @@ class Future(Narrated):
 
 class Takeaway(Narrated):
     def construct(self):
+        self.add(nav("all", "energy"))
         title = Tex(r"where it stands: energy reached vs needed", font_size=32).to_edge(UP, buff=0.35)
         ax = NumberLine(x_range=[0, 450, 50], length=9.5, include_numbers=True, font_size=20, color=GREY_B).move_to(DOWN * 2.3 + RIGHT * 0.9)
         axl = Tex(r"MeV (per nucleon for carbon)", font_size=20, color=GREY_B).next_to(ax, DOWN, buff=0.45)
@@ -870,19 +908,175 @@ class Takeaway(Narrated):
                          Tex(r"ELI plan 110", font_size=16, color=CARB_C))
         planned[1].next_to(planned[0], LEFT, buff=0.06)
         note = Tex(r"depths: Bragg--Kleeman, computed here", font_size=16, color=GREY_B).to_corner(DR, buff=0.15)
-        moral = Tex(r"next: \textbf{control}, not just energy", font_size=28, color=YELLOW).to_edge(DOWN, buff=0.15).shift(LEFT * 3.5)
-        with self.voiceover(text="So where does it stand? <bookmark mark='e'/>Electrons are there on energy: therapy needs fifty to two "
-                                 "hundred and fifty MeV, and wakefields have gone far beyond. <bookmark mark='p'/>Protons have reached one "
-                                 "hundred and fifty MeV, inside the therapeutic range and enough for about fifteen centimetres of water. "
-                                 "<bookmark mark='c'/>Carbon has reached forty eight MeV per nucleon, against the one hundred and twenty to "
-                                 "four hundred and thirty needed, which is under a centimetre of range. <bookmark mark='q'/>The review's "
-                                 "conclusion is that the remaining gap is less about peak energy than about control: the spectrum, "
-                                 "stability, delivery, dosimetry and regulation. Automation, control and target engineering will drive "
-                                 "translation as much as raw energy."):
+        with self.voiceover(text="So where does each branch stand on energy? <bookmark mark='e'/>Electrons are there: therapy needs fifty to "
+                                 "two hundred and fifty MeV, and wakefields have gone far beyond. <bookmark mark='p'/>Protons have reached "
+                                 "one hundred and fifty MeV, inside the therapeutic range and enough for about fifteen centimetres of "
+                                 "water. <bookmark mark='c'/>Carbon has reached forty eight MeV per nucleon, against the one hundred and "
+                                 "twenty to four hundred and thirty needed, which is under a centimetre of range."):
             self.play(Write(title), Create(ax), FadeIn(axl), FadeIn(key), FadeIn(note), run_time=1.0)
             for k, m in enumerate("epc"):
                 self.at(m, FadeIn(groups[k][0]), GrowFromCenter(groups[k][1]), FadeIn(groups[k][2], shift=0.2 * DOWN), FadeIn(groups[k][3]))
             self.play(FadeIn(planned))
-            self.at("q", FadeIn(moral))
+        self.wait(1.0)
+        fade_all(self)
+
+
+# ---- survey structure: compare the branches, then the full map (docs/DESIGN.md Part I, "Start here") ---------------
+def mini_spectrum(kind, w=1.3, h=0.55, color=WHITE):
+    """Illustrative spectrum shapes: 'broad' (decaying, wide) or 'bunch' (a narrow peak)."""
+    if kind == "bunch":
+        f = lambda x: np.exp(-((x - 0.65) / 0.06) ** 2)
+    else:
+        f = lambda x: np.exp(-x / 0.35) * (x > 0.02) + 0.0
+    pts = [np.array([x * w - w / 2, f(x) * h - h / 2, 0]) for x in np.linspace(0, 1, 60)]
+    base = Line(np.array([-w / 2, -h / 2, 0]), np.array([w / 2, -h / 2, 0]), color=GREY_B, stroke_width=1.5)
+    return VGroup(base, VMobject(color=color, stroke_width=3).set_points_smoothly(pts))
+
+
+def mini_cone(full_angle, L=1.3, color=WHITE):
+    o = np.array([-L / 2, 0, 0])
+    if full_angle < 0.01:
+        return VGroup(Polygon(o, o + RIGHT * L + UP * L * np.tan(full_angle / 2), o + RIGHT * L + DOWN * L * np.tan(full_angle / 2),
+                              color=color, fill_opacity=0.5, stroke_width=1.5))
+    return VGroup(Polygon(o, o + RIGHT * L + UP * L * np.tan(full_angle / 2), o + RIGHT * L + DOWN * L * np.tan(full_angle / 2),
+                          color=color, fill_opacity=0.35, stroke_width=1))
+
+
+def mini_need(lo, hi, rec, color, w=1.6, xmax=450.0, beyond=False):
+    """Therapy range (band) against the best result (triangle) on a 0-450 MeV(/u) axis."""
+    x = lambda v: -w / 2 + w * min(v, xmax) / xmax
+    axis = Line(np.array([-w / 2, -0.18, 0]), np.array([w / 2, -0.18, 0]), color=GREY_B, stroke_width=1.5)
+    band = Rectangle(width=x(hi) - x(lo), height=0.22, fill_color=color, fill_opacity=0.3, stroke_color=color, stroke_width=1).move_to(np.array([(x(lo) + x(hi)) / 2, 0, 0]))
+    tri = Triangle(color=color, fill_opacity=1).scale(0.09).rotate(PI).move_to(np.array([x(rec), 0.25, 0]))
+    g = VGroup(axis, band, tri)
+    if beyond:
+        g.add(Arrow(np.array([x(rec) - 0.15, 0.25, 0]), np.array([x(rec) + 0.2, 0.25, 0]), buff=0, color=color, stroke_width=2, max_tip_length_to_length_ratio=0.4))
+    return g
+
+
+class Compare(Narrated):
+    def construct(self):
+        self.add(nav("all", "compare"))
+        title = Tex(r"the three branches side by side", font_size=34).to_edge(UP, buff=0.35)
+        ys = [1.05, -0.35, -1.75]
+        cols = [-3.75, -1.85, 0.05, 1.95, 3.9, 5.85]
+        heads = [r"target", r"intensity, W/cm$^2$", r"spectrum", r"spread (to scale)", r"energy vs need", r"furthest biology"]
+        hrow = VGroup(*[Tex(h, font_size=18, color=GREY_A).move_to(np.array([x, 2.15, 0])) for h, x in zip(heads, cols)])
+        rows = VGroup(*[map_chips(k, 1.25)[k].copy().move_to(np.array([-5.85, y, 0])) for k, y in enumerate(ys)])
+        grid = VGroup(*[Line(np.array([-6.8, y + 0.7, 0]), np.array([6.8, y + 0.7, 0]), color=GREY_E, stroke_width=1) for y in ys])
+        # targets
+        gas = VGroup(*[Dot(np.array([x, y, 0]), radius=0.03, color=GREY_B) for x in np.linspace(-0.3, 0.3, 5) for y in np.linspace(-0.22, 0.22, 4)])
+        tg = [VGroup(gas, Tex(r"gas", font_size=16, color=GREY_B).next_to(gas, DOWN, buff=0.08)),
+              VGroup(foil(0.14, 0.6), Tex(r"5--50\,$\mu$m", font_size=16, color=GREY_B)),
+              VGroup(foil(0.03, 0.6), Tex(r"nm--1.5\,$\mu$m", font_size=16, color=GREY_B))]
+        for t_ in tg[1:]:
+            t_[1].next_to(t_[0], DOWN, buff=0.08)
+        # intensity on a 10^18 .. 10^23 log scale
+        def ibar(a, b, c):
+            w = 1.5
+            x = lambda e: -w / 2 + w * (e - 18) / 5
+            ax_ = Line(np.array([-w / 2, -0.2, 0]), np.array([w / 2, -0.2, 0]), color=GREY_B, stroke_width=1.5)
+            bar = Rectangle(width=x(b) - x(a), height=0.22, fill_color=c, fill_opacity=0.8, stroke_width=0).move_to(np.array([(x(a) + x(b)) / 2, 0.02, 0]))
+            ticks = VGroup(Tex(r"18", font_size=14, color=GREY_B).move_to(np.array([x(18), -0.38, 0])), Tex(r"23", font_size=14, color=GREY_B).move_to(np.array([x(23), -0.38, 0])))
+            return VGroup(ax_, bar, ticks)
+        it = [ibar(18, 18.8, ELEC_C), ibar(18, 20.3, PROT_C), ibar(21, 23, CARB_C)]
+        sp = [mini_spectrum("broad", color=ELEC_C), mini_spectrum("broad", color=PROT_C), mini_spectrum("bunch", color=CARB_C)]
+        dv = [VGroup(mini_cone(0.005, color=ELEC_C), Tex(r"1--5 mrad", font_size=16, color=ELEC_C)),
+              VGroup(mini_cone(0.3, color=PROT_C), Tex(r"200--300 mrad", font_size=16, color=PROT_C)),
+              VGroup(mini_cone(0.05, color=CARB_C), Tex(r"$\sim$50 mrad", font_size=16, color=CARB_C))]
+        for d in dv:
+            d[1].next_to(d[0], DOWN, buff=0.12)
+        en = [VGroup(mini_need(50, 250, 450, ELEC_C, beyond=True), Tex(r"7.8 GeV", font_size=16, color=ELEC_C)),
+              VGroup(mini_need(60, 250, 150, PROT_C), Tex(r"150 MeV", font_size=16, color=PROT_C)),
+              VGroup(mini_need(120, 430, 48, CARB_C), Tex(r"C: 48 MeV/u", font_size=16, color=CARB_C))]
+        for e in en:
+            e[1].next_to(e[0], DOWN, buff=0.08)
+        bio = [VGroup(RoundedRectangle(corner_radius=0.08, width=1.45, height=0.42, color=GOOD_C, fill_opacity=0.2), Tex(r"e$^-$ in vivo, 2015", font_size=16)),
+               VGroup(RoundedRectangle(corner_radius=0.08, width=1.45, height=0.42, color=GOOD_C, fill_opacity=0.2), Tex(r"p in vivo, 2022", font_size=16)),
+               VGroup(RoundedRectangle(corner_radius=0.08, width=1.45, height=0.42, color=ORANGE_L, fill_opacity=0.2), Tex(r"C in vitro, 2023", font_size=16))]
+        for b in bio:
+            b[1].move_to(b[0])
+        cells = [tg, it, sp, dv, en, bio]
+        for c, x in zip(cells, cols):
+            for k, m in enumerate(c):
+                m.move_to(np.array([x, ys[k], 0]))
+        note = Tex(r"spectrum shapes illustrative; biology by particle", font_size=16, color=GREY_B).to_corner(DR, buff=0.12)
+        verdicts = [Tex(r"\textbf{LWFA} wins on energy and beam spread $\to$ VHEE", font_size=26, color=ELEC_C),
+                    Tex(r"\textbf{TNSA} wins on maturity and particle numbers $\to$ protons today", font_size=26, color=PROT_C),
+                    Tex(r"\textbf{RPA} wins on spectrum and scaling $\to$ the route to carbon, furthest from the clinic", font_size=26, color=CARB_C)]
+        for v in verdicts:
+            v.to_edge(DOWN, buff=0.3)
+            fit_frame(v)
+        wins = [[(4, 0), (3, 0)], [(5, 1), (0, 1)], [(2, 2), (1, 2)]]
+        hl = [VGroup(*[SurroundingRectangle(cells[c][r], buff=0.08, color=YELLOW, stroke_width=3) for c, r in w]) for w in wins]
+        with self.voiceover(text="Before looking at the beams in detail, here is how the three branches compare. <bookmark mark='t'/>"
+                                 "Targets: a gas, a micrometre foil, a nanometre foil. <bookmark mark='i'/>Intensity: wakefields and sheath "
+                                 "acceleration work from about ten to the eighteen watts per square centimetre; radiation pressure needs "
+                                 "ten to the twenty one and up. <bookmark mark='s'/>Spectrum: wakefield electrons and sheath protons come "
+                                 "out with broad energy spreads, while radiation pressure ions come out as a bunch. <bookmark mark='d'/>"
+                                 "Spread: wakefield electrons a few milliradians, radiation pressure ions about fifty, slow sheath protons "
+                                 "up to three hundred. <bookmark mark='e'/>Energy against what therapy needs: electrons are already far "
+                                 "beyond it, protons have reached the therapeutic range, and carbon is well short. <bookmark mark='b'/>And "
+                                 "biology: laser electrons and laser protons have both treated tumours in mice, while radiation pressure "
+                                 "carbon has so far irradiated cells in a dish. <bookmark mark='w'/>So each branch wins somewhere. "
+                                 "<bookmark mark='l'/>Wakefields win on energy and beam spread, for very high energy electrons. "
+                                 "<bookmark mark='n'/>Sheath acceleration wins on maturity and particle numbers, for protons today. "
+                                 "<bookmark mark='r'/>Radiation pressure wins on spectrum and scaling, the route to carbon, but it is the "
+                                 "furthest from the clinic."):
+            self.play(Write(title), FadeIn(rows), FadeIn(grid), run_time=1.0)
+            for k, m in enumerate("tisdeb"):
+                self.at(m, FadeIn(hrow[k]), LaggedStart(*[FadeIn(c_) for c_ in cells[k]], lag_ratio=0.25), FadeIn(note) if k == 2 else Wait(0), run_time=1.0)
+            self.at("w", Indicate(rows, color=YELLOW, scale_factor=1.05))
+            self.at("l", Create(hl[0]), FadeIn(verdicts[0]))
+            self.at("n", ReplacementTransform(hl[0], hl[1]), ReplacementTransform(verdicts[0], verdicts[1]))
+            self.at("r", ReplacementTransform(hl[1], hl[2]), ReplacementTransform(verdicts[1], verdicts[2]))
+        self.wait(0.5)
+        fade_all(self)
+
+
+class FieldMap(Narrated):
+    def construct(self):
+        title = Tex(r"the map of the field", font_size=34).to_edge(UP, buff=0.35)
+        root = VGroup(RoundedRectangle(corner_radius=0.12, width=3.4, height=0.55, color=LASER_C), Tex(r"laser-plasma acceleration", font_size=24, color=LASER_C))
+        root[1].move_to(root[0])
+        root.move_to(UP * 2.35)
+        xs = [-4.3, 0.0, 4.3]
+        mods = [r"VHEE electrons", r"proton therapy", r"carbon therapy"]
+        status = [[(r"energy: reached", GOOD_C), (r"in vivo: yes", GOOD_C), (r"open: spread, dosimetry", BAD_C)],
+                  [(r"energy: in range", GOOD_C), (r"in vivo: yes", GOOD_C), (r"open: spectrum, spread, SOBP", BAD_C)],
+                  [(r"energy: $<$1 cm range", BAD_C), (r"cells only", ORANGE_L), (r"open: $10^{21+}$ W/cm$^2$, rep rate", BAD_C)]]
+        branches = VGroup()
+        for k, (x, m) in enumerate(zip(xs, mods)):
+            chip = map_chips(k, 1.5)[k].copy().move_to(np.array([x, 1.2, 0]))
+            edge = Line(root.get_bottom(), chip.get_top(), color=GREY_B, stroke_width=2)
+            mod = Tex(m, font_size=24, color=BRANCHES[k][2]).next_to(chip, DOWN, buff=0.2)
+            st = VGroup(*[Tex(t, font_size=20, color=c) for t, c in status[k]]).arrange(DOWN, buff=0.1).next_to(mod, DOWN, buff=0.25)
+            branches.add(VGroup(edge, chip, mod, st))
+        cross = VGroup(RoundedRectangle(corner_radius=0.1, width=12.4, height=0.55, color=BAD_C, fill_opacity=0.12),
+                       Tex(r"across all three: shot-to-shot stability $\cdot$ compact transport $\cdot$ dosimetry $\cdot$ regulation for UHDR", font_size=22, color=BAD_C))
+        cross[1].move_to(cross[0])
+        cross.move_to(DOWN * 2.35)
+        enab = VGroup(RoundedRectangle(corner_radius=0.1, width=12.4, height=0.55, color=GOOD_C, fill_opacity=0.12),
+                      Tex(r"enablers: closed-loop optimisation $\cdot$ multi-Hz targets $\cdot$ LhARA, ELI", font_size=22, color=GOOD_C))
+        enab[1].move_to(enab[0])
+        enab.move_to(DOWN * 3.05)
+        with self.voiceover(text="Putting the map together. <bookmark mark='m'/>Three mechanisms, each feeding one kind of therapy. "
+                                 "<bookmark mark='e'/>Wakefield electrons, for very high energy electron therapy: the energy is reached "
+                                 "and tumours have been treated in mice; what remains is the energy spread and dosimetry at extreme dose "
+                                 "rates. <bookmark mark='p'/>Sheath protons: inside the therapeutic energy range and through a first in "
+                                 "vivo study; what remains is the broad spectrum, the wide spread, and building a uniform spread out "
+                                 "Bragg peak from it. <bookmark mark='c'/>Radiation pressure carbon: still under a centimetre of range, "
+                                 "and cells only; it needs a thousand times the intensity and faster repetition. <bookmark mark='x'/>Across "
+                                 "all three run the same open problems: shot to shot stability, compact transport, dosimetry, and "
+                                 "regulation that does not yet cover ultra high dose rates. <bookmark mark='f'/>And the enablers the review "
+                                 "points to: closed loop optimisation, targets that survive multi hertz operation, and dedicated "
+                                 "facilities. Its conclusion is that translation will be driven as much by automation, control and target "
+                                 "engineering as by peak energy."):
+            self.play(Write(title), FadeIn(root), run_time=1.0)
+            self.at("m", *[AnimationGroup(Create(b[0]), FadeIn(b[1]), FadeIn(b[2])) for b in branches], run_time=1.2)
+            for k, m in enumerate("epc"):
+                self.at(m, Indicate(branches[k][1], color=WHITE), LaggedStart(*[FadeIn(t_, shift=0.05 * DOWN) for t_ in branches[k][3]], lag_ratio=0.4), run_time=1.5)
+            self.at("x", FadeIn(cross, shift=0.1 * UP))
+            self.at("f", FadeIn(enab, shift=0.1 * UP))
         self.wait(1.0)
         fade_all(self)

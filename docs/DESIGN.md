@@ -290,6 +290,11 @@ are writing the script and voice synthesis, not rendering.
 - `MathTex("")` fails.
 - `Tex` options are set at creation.
 - `match_y` takes a Mobject; for a point use `.set_y(p[1])`.
+- Dimming the rest of the screen (a spotlight helper) must only touch `VMobject`s. `scene.mobjects`
+  also holds `ValueTracker`s, and fading or restoring them crashes with "Please override in a
+  child class" (`laser_rt` retrofit). Skip mobjects that have updaters too.
+- Two labels attached to the same edge of a box (`next_to(box, UP)`) will overlap unless they are
+  aligned to opposite ends (`align_to(box, LEFT)` / `align_to(box, RIGHT)`). Check a late frame of the scene.
 - `d.get(k, f"{k:g}")` evaluates the default even for string keys; use a conditional.
 - When a title changes, `ReplacementTransform` it.
 

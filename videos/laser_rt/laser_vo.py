@@ -107,6 +107,43 @@ def nav(active=None, section=None):
     return g.to_corner(UL, buff=0.2)
 
 
+def spotlight(scene, keep, run_time=0.5, fade=0.7):
+    """Steer the eye (docs/DESIGN.md §1): dim everything on screen except `keep` (and the title/navigator strip at the
+    top) to about 30%. Returns the animation that restores it. Mobjects with updaters are left alone."""
+    keep_fam = set()
+    for k in keep:
+        keep_fam |= set(k.get_family())
+    others = [m for m in scene.mobjects if isinstance(m, VMobject) and not m.updaters and not (set(m.get_family()) & keep_fam)
+              and m.get_center()[1] < 3.0]                   # VMobject only: ValueTrackers live in scene.mobjects and cannot fade
+    for m in others:
+        m.save_state()
+    if others:
+        scene.play(*[m.animate.fade(fade) for m in others], run_time=run_time)
+    return AnimationGroup(*[Restore(m) for m in others], run_time=run_time) if others else Wait(0.01)
+
+
+def b_symbols(rect, into=True, nx=4, ny=4, color=BLUE_L):
+    """A magnetic field into (x in a circle) or out of (dot in a circle) the page, tiled over a rectangle."""
+    g = VGroup()
+    for i in range(nx):
+        for j in range(ny):
+            p = rect.get_corner(DL) + np.array([(i + 0.5) * rect.width / nx, (j + 0.5) * rect.height / ny, 0])
+            c = Circle(radius=0.1, color=color, stroke_width=2).move_to(p)
+            mark = VGroup(Line(p + UL * 0.06, p + DR * 0.06), Line(p + UR * 0.06, p + DL * 0.06)).set_stroke(color, 2) if into \
+                else Dot(p, radius=0.03, color=color)
+            g.add(VGroup(c, mark))
+    return g
+
+
+def e_arrows(start, end, n=3, spread=0.5, color=YELLOW, sw=3):
+    """A few parallel electric-field arrows from `start` to `end` (from + toward -), spread perpendicular to the line."""
+    d = np.array(end) - np.array(start)
+    perp = np.array([-d[1], d[0], 0]) / max(np.linalg.norm(d), 1e-6)
+    offs = np.linspace(-spread, spread, n) if n > 1 else [0.0]
+    return VGroup(*[Arrow(np.array(start) + o * perp, np.array(end) + o * perp, buff=0, color=color, stroke_width=sw,
+                          max_tip_length_to_length_ratio=0.25) for o in offs])
+
+
 def foil(w, h, color=FOIL_C):
     return Rectangle(width=w, height=h, fill_color=color, fill_opacity=0.5, stroke_color=color, stroke_width=1.5)
 
@@ -182,11 +219,11 @@ class WhyParticles(Narrated):
                        Tex(r"hadron therapy since 1946: $\sim$\textbf{260\,000} patients", font_size=24, color=PROT_C)).arrange(RIGHT, buff=0.8)
         stats.to_edge(DOWN, buff=0.45)
         with self.voiceover(text="First, why charged particles at all. <bookmark mark='x'/>X-ray photons deposit most of their dose near "
-                                 "the surface and fade with depth, so the tissue in front of a deep tumour gets more dose than the "
-                                 "tumour. <bookmark mark='p'/>Protons are different. They lose energy slowly at first, then faster as "
-                                 "they slow, and dump most of it in a sharp Bragg peak, with no dose beyond it. <bookmark mark='c'/>"
-                                 "Carbon ions have an even sharper peak, with a small tail from fragments. <bookmark mark='e'/>Very high "
-                                 "energy electrons give a broad, flat profile that tolerates changes in tissue density. <bookmark mark='d'/>"
+                                 "the <bookmark mark='ns'/>surface and fade with depth, so the tissue in front of a deep "
+                                 "<bookmark mark='dt'/>tumour gets more dose than the tumour. <bookmark mark='p'/>Protons are different. They lose energy slowly at first, then faster as "
+                                 "they slow, and dump most of it in a sharp <bookmark mark='bp'/>Bragg peak, with no dose <bookmark mark='nb'/>beyond it. <bookmark mark='c'/>"
+                                 "Carbon ions have an even sharper peak, with a small <bookmark mark='tf'/>tail from fragments. <bookmark mark='e'/>Very high "
+                                 "energy electrons give a broad, <bookmark mark='fp'/>flat profile that tolerates changes in tissue density. <bookmark mark='d'/>"
                                  "The depth of the peak is set by the energy: <bookmark mark='s'/>sweep a proton beam from sixty to two "
                                  "hundred and fifty MeV, and its peak moves from about three to almost forty centimetres. "
                                  "<bookmark mark='n'/>Yet about ninety percent of radiotherapy still uses X-rays, and only about two "
@@ -194,9 +231,19 @@ class WhyParticles(Narrated):
                                  "these beams are large, specialised and expensive."):
             self.play(Write(title), Create(ax), FadeIn(axl), FadeIn(tum), FadeIn(tl), FadeIn(note), run_time=1.0)
             self.at("x", Create(cx), FadeIn(leg[0]), run_time=1.2)
-            self.at("p", Create(cp), FadeIn(leg[1]), Indicate(tum, color=BAD_C), run_time=1.5)
+            self.at("ns", Flash(ax.c2p(4, photon_dd(4)), color=XRAY_C, flash_radius=0.35))
+            self.at("dt", Indicate(tum, color=BAD_C, scale_factor=1.05), Indicate(tl, color=BAD_C))
+            self.at("p", Create(cp), FadeIn(leg[1]), run_time=1.5)
+            self.at("bp", Flash(ax.c2p(Rp, 1.0), color=PROT_C, flash_radius=0.35))
+            beyond = Rectangle(width=ax.c2p(42, 0)[0] - ax.c2p(Rp + 0.4, 0)[0], height=ax.c2p(0, 1.1)[1] - ax.c2p(0, 0)[1], fill_color=PROT_C,
+                               fill_opacity=0.18, stroke_width=0).move_to(ax.c2p(Rp + 0.4, 0), aligned_edge=DL)
+            self.at("nb", FadeIn(beyond), run_time=0.4)
+            self.play(FadeOut(beyond), run_time=0.6)
             self.at("c", Create(cc), FadeIn(leg[2]), run_time=1.2)
+            tail = Rectangle(width=ax.c2p(30, 0)[0] - ax.c2p(Rc + 0.5, 0)[0], height=0.5).move_to(ax.c2p((Rc + 30) / 2, 0.08))
+            self.at("tf", Circumscribe(tail, color=CARB_C))
             self.at("e", Create(ce), FadeIn(leg[3]), run_time=1.2)
+            self.at("fp", Indicate(ce, color=ELEC_C, scale_factor=1.0), Indicate(leg[3], color=ELEC_C))
             self.at("d", FadeOut(cx), FadeOut(cc), FadeOut(ce), FadeOut(cp), FadeIn(slider), FadeIn(readout))
             self.at("s", E.animate.set_value(60), run_time=1.5)
             self.play(E.animate.set_value(250), run_time=3.0)
@@ -238,27 +285,41 @@ class Accelerators(Narrated):
         gain = Tex(r"$\Rightarrow$ \textbf{10 MeV} over 10\,$\mu$m (computed)", font_size=26).next_to(field, RIGHT, buff=0.4)
         eff = tile(VGroup(Circle(radius=0.25, color=LASER_C), Tex(r"$\%$", font_size=26, color=LASER_C)), r"wall-plug \textbf{0.1--1\%} + cooling", 4.0)
         eff.to_edge(DOWN, buff=0.25).shift(RIGHT * 3.2)
-        with self.voiceover(text="Conventional machines push particles through radio frequency cavities again and again. "
-                                 "<bookmark mark='l'/>A linac lines the cavities up in a row; <bookmark mark='c'/>a cyclotron bends "
-                                 "the particles into a spiral so they cross the same gap many times, and makes most of today's therapy "
-                                 "protons; <bookmark mark='s'/>a synchrotron ramps its magnets around a fixed ring, and makes the heavier "
-                                 "ions. <bookmark mark='b'/>Each needs a dedicated building, power and shielding, and switching between "
-                                 "ion species is slow. <bookmark mark='f'/>A laser plasma accelerator replaces the cavities with the "
-                                 "electric field inside a plasma, of order a teravolt per metre. <bookmark mark='g'/>At that field, ten "
-                                 "micrometres is enough for ten MeV. <bookmark mark='e'/>The catch is efficiency: the titanium sapphire "
-                                 "lasers that drive them turn only zero point one to one percent of their electrical power into light, "
-                                 "and need heavy cooling."):
+        # fields: E across each linac gap, B through the cyclotron dees (out of the page for an anticlockwise proton)
+        gaps = VGroup(*[Arrow(cav[k].get_right() + LEFT * 0.04, cav[k + 1].get_left() + RIGHT * 0.04, buff=0, color=YELLOW, stroke_width=3,
+                              max_tip_length_to_length_ratio=0.5) for k in range(5)])
+        cyc_b = b_symbols(Square(1.3).move_to(cc), into=False, nx=3, ny=3)
+        cyc_bl = Tex(r"$\mathbf{B}$", font_size=22, color=BLUE_L).next_to(dees, LEFT, buff=0.1)
+        sdot = Dot(sring.point_at_angle(0), color=PROT_C, radius=0.07)
+        with self.voiceover(text="Conventional machines push particles through radio frequency <bookmark mark='rf'/>cavities again and "
+                                 "again. <bookmark mark='l'/>A linac lines the cavities up in a row; <bookmark mark='c'/>a cyclotron bends "
+                                 "the particles into a spiral so they cross the same <bookmark mark='cg'/>gap many times, and makes most of "
+                                 "today's therapy protons; <bookmark mark='s'/>a synchrotron ramps its <bookmark mark='sm'/>magnets around a "
+                                 "fixed ring, and makes the heavier ions. <bookmark mark='b'/>Each needs a dedicated building, power and "
+                                 "shielding, and switching between ion species is slow. <bookmark mark='f'/>A laser plasma accelerator "
+                                 "replaces the cavities with the <bookmark mark='ef'/>electric field inside a plasma, of order a "
+                                 "<bookmark mark='tv'/>teravolt per metre. <bookmark mark='g'/>At that field, ten micrometres is enough for "
+                                 "ten MeV. <bookmark mark='e'/>The catch is efficiency: the titanium sapphire lasers that drive them turn only "
+                                 "zero point one to one percent of their electrical power into light, and need heavy cooling."):
             self.play(Write(title), run_time=0.8)
-            self.wait_until_bookmark("l")
             dot = Dot(cav.get_left() + LEFT * 0.2, color=PROT_C)
-            self.play(FadeIn(cav), FadeIn(lin_l), FadeIn(dot))
-            self.play(dot.animate.move_to(cav.get_right() + RIGHT * 0.2), run_time=1.0, rate_func=rate_functions.ease_in_quad)
-            self.at("c", FadeIn(dees), Create(spiral), FadeIn(cyc_l), run_time=1.5)
-            self.at("s", Create(sring), FadeIn(smag), FadeIn(syn_l))
+            self.at("rf", FadeIn(cav), FadeIn(dot))
+            self.at("l", FadeIn(lin_l), LaggedStart(*[GrowArrow(g_) for g_ in gaps], lag_ratio=0.15), run_time=0.8)
+            self.play(dot.animate.move_to(cav.get_right() + RIGHT * 0.2), LaggedStart(*[Indicate(g_, color=YELLOW, scale_factor=1.4) for g_ in gaps],
+                                                                                     lag_ratio=0.2), run_time=1.2, rate_func=rate_functions.ease_in_quad)
+            self.at("c", FadeIn(dees), FadeIn(cyc_b), FadeIn(cyc_bl), Create(spiral), FadeIn(cyc_l), run_time=1.5)
+            self.at("cg", ShowPassingFlash(spiral.copy().set_stroke(YELLOW, 5), time_width=0.3), Indicate(cyc_b, color=BLUE_L), run_time=1.2)
+            self.at("s", Create(sring), FadeIn(smag), FadeIn(syn_l), FadeIn(sdot))
+            self.at("sm", MoveAlongPath(sdot, sring), LaggedStart(*[Indicate(m, color=BLUE_L, scale_factor=1.5) for m in smag],
+                                                                               lag_ratio=0.1), run_time=1.5)
             self.at("b", Create(bld), FadeIn(bl))
-            self.at("f", FadeIn(f_), LaggedStart(*[GrowArrow(a) for a in field], lag_ratio=0.2), FadeIn(fl))
-            self.at("g", Create(ruler), FadeIn(gain))
-            self.at("e", FadeIn(eff))
+            self.wait_until_bookmark("f")
+            restore = spotlight(self, [title])
+            self.play(FadeIn(f_))
+            self.at("ef", LaggedStart(*[GrowArrow(a) for a in field], lag_ratio=0.2), FadeIn(fl))
+            self.at("tv", Indicate(fl, color=YELLOW), Indicate(field, color=YELLOW, scale_factor=1.1))
+            self.at("g", Create(ruler), FadeIn(gain), Indicate(ruler, color=WHITE))
+            self.at("e", restore, FadeIn(eff))
         self.wait(0.5)
         fade_all(self)
 
@@ -329,10 +390,16 @@ class LWFA(Narrated):
                                             for x, y in grid]))
         pulse = always_redraw(lambda: VGroup(Ellipse(width=0.35, height=1.2, fill_color=LASER_C, fill_opacity=0.55, stroke_width=0),
                                              pulse_curve(0.6, 0.35, 4).rotate(0)).move_to(np.array([xL.get_value(), cy, 0])))
-        fields = always_redraw(lambda: VGroup(*[Arrow(np.array([xL.get_value() - Rb + Rb * 0.7 * np.cos(a), cy + Rb * 0.7 * np.sin(a), 0]),
-                                                      np.array([xL.get_value() - Rb + Rb * 0.25 * np.cos(a), cy + Rb * 0.25 * np.sin(a), 0]),
-                                                      buff=0, color=YELLOW, stroke_width=2, max_tip_length_to_length_ratio=0.3)
+        # E points from the positive ion bubble outward to the electron sheath (+ to -); the force on an electron is the reverse
+        fields = always_redraw(lambda: VGroup(*[Arrow(np.array([xL.get_value() - Rb + Rb * 0.25 * np.cos(a), cy + Rb * 0.25 * np.sin(a), 0]),
+                                                      np.array([xL.get_value() - Rb + Rb * 0.8 * np.cos(a), cy + Rb * 0.8 * np.sin(a), 0]),
+                                                      buff=0, color=YELLOW, stroke_width=2.5, max_tip_length_to_length_ratio=0.3)
                                                 for a in np.linspace(0, TAU, 8, endpoint=False)]))
+        e_lab = always_redraw(lambda: MathTex(r"\mathbf{E}", font_size=30, color=YELLOW).move_to(np.array([xL.get_value() - Rb, cy + Rb * 1.55, 0])))
+        push = always_redraw(lambda: VGroup(Arrow(np.array([xL.get_value(), cy + 0.45, 0]), np.array([xL.get_value(), cy + 1.15, 0]), buff=0, color=LASER_C,
+                                                  stroke_width=3, max_tip_length_to_length_ratio=0.3),
+                                            Arrow(np.array([xL.get_value(), cy - 0.45, 0]), np.array([xL.get_value(), cy - 1.15, 0]), buff=0, color=LASER_C,
+                                                  stroke_width=3, max_tip_length_to_length_ratio=0.3)))
         gain = ValueTracker(0.0)
         bunch = always_redraw(lambda: VGroup(*[Dot(np.array([xL.get_value() - 2 * Rb + 0.25 + 0.6 * gain.get_value() + dx, cy + dy, 0]), radius=0.06,
                                                    color=WHITE) for dx, dy in ((0, 0), (0.08, 0.07), (0.08, -0.07), (0.16, 0))]))
@@ -345,26 +412,40 @@ class LWFA(Narrated):
         bub = Tex(r"bubble: ions only", font_size=22, color=ION_C)
         facts = VGroup(Tex(r"\textbf{20--40 fs} $<$ plasma wavelength", font_size=24),
                        Tex(r"record \textbf{7.8 GeV}; therapy \textbf{50--250 MeV}; 400 MeV $\to$ $>$40 cm", font_size=24)).arrange(DOWN, buff=0.12).to_edge(DOWN, buff=0.25)
-        with self.voiceover(text="Wakefield acceleration first. <bookmark mark='p'/>The plasma is a sea of light electrons and heavy "
-                                 "positive ions. <bookmark mark='l'/>As the laser pulse passes, its ponderomotive force shoves the "
-                                 "electrons sideways, out of its path. <bookmark mark='b'/>Behind the pulse they leave a bubble that "
-                                 "holds only ions. <bookmark mark='f'/>That charge separation makes an enormous electric field inside "
-                                 "the bubble. <bookmark mark='i'/>An electron caught at the back is pulled forward and toward the axis, "
-                                 "<bookmark mark='a'/>surfs the bubble, and gains energy all the way. <bookmark mark='s'/>The pulses last "
-                                 "twenty to forty femtoseconds, shorter than the plasma wavelength, so the wake is driven resonantly. "
-                                 "<bookmark mark='r'/>Wakefields have produced seven point eight GeV electrons. Therapy needs fifty to two "
-                                 "hundred and fifty MeV, and four hundred MeV beams can reach beyond forty centimetres."):
+        force = always_redraw(lambda: VGroup(Arrow(bunch.get_right() + RIGHT * 0.02, bunch.get_right() + RIGHT * 0.75, buff=0, color=WHITE, stroke_width=4,
+                                                   max_tip_length_to_length_ratio=0.3),
+                                             MathTex(r"\mathbf{F}", font_size=26).next_to(bunch.get_right() + RIGHT * 0.4, UP, buff=0.05)))
+        with self.voiceover(text="Wakefield acceleration first. <bookmark mark='p'/>The plasma is a sea of light <bookmark mark='pe'/>electrons "
+                                 "and heavy positive <bookmark mark='pi'/>ions. <bookmark mark='l'/>As the laser pulse passes, its "
+                                 "<bookmark mark='pf'/>ponderomotive force shoves the electrons sideways, out of its path. "
+                                 "<bookmark mark='b'/>Behind the pulse they leave a <bookmark mark='bb'/>bubble that holds only ions. "
+                                 "<bookmark mark='f'/>That charge separation makes an enormous <bookmark mark='ee'/>electric field inside "
+                                 "the bubble. <bookmark mark='i'/>An electron caught at the back is <bookmark mark='pu'/>pulled forward and "
+                                 "toward the axis, <bookmark mark='a'/>surfs the bubble, and gains energy all the way. <bookmark mark='s'/>The "
+                                 "pulses last twenty to forty femtoseconds, shorter than the plasma wavelength, so the wake is driven "
+                                 "resonantly. <bookmark mark='r'/>Wakefields have produced seven point eight GeV electrons. Therapy needs "
+                                 "fifty to two hundred and fifty MeV, and four hundred MeV beams can reach beyond forty centimetres."):
             self.play(Write(title), run_time=0.8)
             self.at("p", FadeIn(ions), FadeIn(elec), FadeIn(lab))
+            self.at("pe", Indicate(lab[0], color=ELEC_C, scale_factor=1.4))
+            self.at("pi", Indicate(lab[1], color=ION_C, scale_factor=1.4))
             self.wait_until_bookmark("l")
             self.add(pulse)
             pond.next_to(np.array([-1.5, cy + 1.95, 0]), UP, buff=0.05)
-            self.play(xL.animate.set_value(-1.5), FadeIn(pond), run_time=2.5, rate_func=linear)
-            self.at("b", xL.animate.set_value(0.5), FadeOut(pond), run_time=1.5, rate_func=linear)
+            self.play(xL.animate.set_value(-3.5), run_time=1.0, rate_func=linear)
+            self.wait_until_bookmark("pf")
+            self.add(push)
+            self.play(xL.animate.set_value(-1.5), FadeIn(pond), run_time=1.5, rate_func=linear)
+            self.at("b", xL.animate.set_value(0.5), FadeOut(pond), FadeOut(push), run_time=1.5, rate_func=linear)
             bub.next_to(np.array([0.5 - Rb, cy - 1.9, 0]), DOWN, buff=0.0)
-            self.play(FadeIn(bub), run_time=0.4)
-            self.at("f", FadeIn(fields), FadeOut(bub))
+            ring_ = Circle(radius=Rb * 1.12, color=ION_C, stroke_width=4).move_to(np.array([0.5 - Rb, cy, 0]))
+            self.at("bb", FadeIn(bub), Create(ring_), run_time=0.6)
+            self.play(FadeOut(ring_), run_time=0.3)
+            self.at("f", FadeOut(bub))
+            self.at("ee", FadeIn(fields), FadeIn(e_lab))
+            self.play(Indicate(e_lab, color=YELLOW, scale_factor=1.5))
             self.at("i", FadeIn(bunch, scale=2), FadeIn(elab[0]), FadeIn(ebar))
+            self.at("pu", FadeIn(force), Flash(bunch.get_center(), color=WHITE, flash_radius=0.3))
             self.at("a", xL.animate.set_value(5.6), gain.animate.set_value(1.0), run_time=3.0, rate_func=linear)
             self.at("s", FadeIn(facts[0]))
             self.at("r", FadeIn(facts[1]))
@@ -409,30 +490,49 @@ class TNSA(Narrated):
                     Tex(r"slow: up to \textbf{200--300 mrad}", font_size=22, color=GREY_A).move_to(p0 + RIGHT * 2.6 + DOWN * 2.3))
         facts = VGroup(Tex(r"up to \textbf{6$\times$10$^{13}$} protons/pulse", font_size=24),
                        Tex(r"$E_{\max} \propto \sqrt{I}$", font_size=28, color=BAD_C)).arrange(RIGHT, buff=0.8).to_edge(DOWN, buff=0.25)
-        with self.voiceover(text="For protons, the workhorse is target normal sheath acceleration. <bookmark mark='f'/>The laser hits a "
-                                 "thin foil five to fifty micrometres thick. <bookmark mark='h'/>Its leading edge makes a hot plasma on "
-                                 "the front, and the main pulse drives those electrons to nearly the speed of light, <bookmark mark='t'/>"
-                                 "straight through the foil <bookmark mark='s'/>and out of the back, where they hang as a thin negative "
-                                 "sheath. <bookmark mark='e'/>The field between the sheath and the foil is of order teravolts per metre. "
-                                 "<bookmark mark='c'/>It does not pull ions out of the foil itself, but out of a thin layer of moisture and "
-                                 "hydrocarbons on the back surface, which is why the beam is mostly protons, <bookmark mark='a'/>launched "
-                                 "normal to the surface. <bookmark mark='d'/>The fastest protons leave in a narrow cone; the slow ones "
-                                 "spread wide, up to two to three hundred milliradians. <bookmark mark='m'/>TNSA has given up to six "
-                                 "times ten to the thirteen protons per pulse, <bookmark mark='q'/>but its maximum energy grows only "
-                                 "with the square root of the laser intensity."):
+        # charges and the field: the foil's rear is left positive, the sheath beyond it negative; E points from + to -
+        plus = VGroup(*[MathTex(r"+", font_size=26, color=BAD_C).move_to(f_.get_right() + LEFT * 0.12 + UP * y) for y in np.linspace(-1.4, 1.4, 6)])
+        minus = VGroup(*[MathTex(r"-", font_size=30, color=ELEC_C).move_to(h_layer.get_right() + RIGHT * 0.95 + UP * y) for y in np.linspace(-1.2, 1.2, 4)])
+        e_lab = MathTex(r"\mathbf{E}", font_size=32, color=YELLOW).next_to(field, UP, buff=0.12)
+        launch = VGroup(Dot(p0 + RIGHT * 0.15, color=PROT_C, radius=0.07),
+                        Arrow(p0 + RIGHT * 0.2, p0 + RIGHT * 0.95, buff=0, color=YELLOW, stroke_width=5, max_tip_length_to_length_ratio=0.3),
+                        MathTex(r"\mathbf{F} = e\mathbf{E}", font_size=24, color=YELLOW).next_to(p0 + RIGHT * 0.6, DOWN, buff=0.12))
+        with self.voiceover(text="For protons, the workhorse is target normal sheath acceleration. <bookmark mark='f'/>The <bookmark mark='lh'/>"
+                                 "laser hits a thin <bookmark mark='tf'/>foil five to fifty micrometres thick. <bookmark mark='h'/>Its leading "
+                                 "edge makes a hot <bookmark mark='hp'/>plasma on the front, and the main pulse drives those "
+                                 "<bookmark mark='de'/>electrons to nearly the speed of light, <bookmark mark='t'/>straight through the foil "
+                                 "<bookmark mark='s'/>and out of the back, where they hang as a thin negative <bookmark mark='ns'/>sheath. "
+                                 "<bookmark mark='e'/>The <bookmark mark='fe'/>field between the sheath and the foil is of order "
+                                 "<bookmark mark='tv'/>teravolts per metre. <bookmark mark='c'/>It does not pull ions out of the foil itself, "
+                                 "but out of a thin layer of moisture and hydrocarbons on the back surface, which is why the beam is mostly "
+                                 "protons, <bookmark mark='a'/>launched normal to the surface. <bookmark mark='d'/>The fastest protons leave in "
+                                 "a narrow <bookmark mark='nc'/>cone; the slow ones <bookmark mark='sw'/>spread wide, up to two to three "
+                                 "hundred milliradians. <bookmark mark='m'/>TNSA has given up to six times ten to the thirteen protons per "
+                                 "pulse, <bookmark mark='q'/>but its maximum energy grows only with the square root of the laser intensity."):
             self.play(Write(title), run_time=0.8)
-            self.at("f", FadeIn(f_), FadeIn(fl), GrowArrow(laser))
-            self.at("h", FadeIn(pre), FadeIn(hot))
+            self.at("f", FadeIn(f_), FadeIn(fl))
+            self.at("lh", GrowArrow(laser))
+            self.at("tf", Indicate(f_, color=WHITE, scale_factor=1.05), Indicate(fl))
+            self.at("h", FadeIn(pre))
+            self.at("hp", Flash(pre.get_center(), color=LASER_C, flash_radius=0.6))
+            self.at("de", FadeIn(hot, scale=1.5))
             self.at("t", *[d.animate.move_to(h_layer.get_center() + UP * (p_[1] - h_layer.get_center()[1])) for d, p_ in zip(hot, start)], run_time=0.8)
             self.at("s", *[d.animate.move_to(e) for d, e in zip(hot, end)], FadeIn(sheath_l), run_time=1.0)
-            self.at("e", LaggedStart(*[GrowArrow(a) for a in field], lag_ratio=0.1), FadeIn(fdl))
-            self.at("c", FadeIn(h_layer), FadeIn(hl), Indicate(h_layer, color=H_C, scale_factor=1.05))
+            self.at("ns", FadeIn(minus), FadeIn(plus), Circumscribe(VGroup(*hot), color=ELEC_C))
+            self.wait_until_bookmark("fe")
+            restore = spotlight(self, [title, f_, plus, minus, *hot])
+            self.play(LaggedStart(*[GrowArrow(a) for a in field], lag_ratio=0.1), FadeIn(e_lab), run_time=1.0)
+            self.at("tv", FadeIn(fdl), Indicate(field, color=YELLOW, scale_factor=1.15), Indicate(e_lab, color=YELLOW, scale_factor=1.5))
+            self.at("c", restore, FadeIn(h_layer), FadeIn(hl), Indicate(h_layer, color=H_C, scale_factor=1.05))
             self.wait_until_bookmark("a")
+            self.play(FadeIn(launch[0], scale=2), GrowArrow(launch[1]), FadeIn(launch[2]), run_time=0.6)
             self.add(protons)
-            self.play(t.animate.set_value(1.0), FadeOut(field), FadeOut(fdl), run_time=3.0, rate_func=linear)
-            self.at("d", FadeIn(cone_f), FadeIn(cone_s), FadeIn(cl))
-            self.at("m", FadeIn(facts[0]))
-            self.at("q", FadeIn(facts[1]))
+            self.play(t.animate.set_value(1.0), FadeOut(field), FadeOut(fdl), FadeOut(e_lab), FadeOut(launch), run_time=3.0, rate_func=linear)
+            self.at("d", FadeIn(cone_f), FadeIn(cone_s))
+            self.at("nc", Indicate(cone_f, color=PROT_C, scale_factor=1.05), FadeIn(cl[0]))
+            self.at("sw", Indicate(cone_s, color=WHITE, scale_factor=1.05), FadeIn(cl[1]))
+            self.at("m", FadeIn(facts[0]), Indicate(facts[0]))
+            self.at("q", FadeIn(facts[1]), Indicate(facts[1], color=BAD_C))
         self.wait(0.5)
         fade_all(self)
 
@@ -447,17 +547,24 @@ class RPA(Narrated):
         hb_c = LEFT * 3.6 + UP * 0.4
         thick = foil(2.0, 2.2).move_to(hb_c)
         hb_l = Tex(r"hole boring: up to \textbf{1.5\,$\mu$m}", font_size=24).next_to(thick, DOWN, buff=0.2)
+        # electrons are pushed ahead (-), ions lag behind (+): E points forward from the ion layer to the electron layer
+        def layers(xi, h=2.2, gap=0.3):
+            xe = xi + gap
+            return VGroup(Rectangle(width=0.05, height=h, fill_color=ELEC_C, fill_opacity=1, stroke_width=0).move_to(np.array([xe, 0, 0])),
+                          Rectangle(width=0.07, height=h, fill_color=ION_C, fill_opacity=1, stroke_width=0).move_to(np.array([xi, 0, 0])),
+                          VGroup(*[Arrow(np.array([xi + 0.04, y, 0]), np.array([xe - 0.03, y, 0]), buff=0, color=YELLOW, stroke_width=3,
+                                         max_tip_length_to_length_ratio=0.45) for y in (-0.6, 0.0, 0.6)]))
+
         front = always_redraw(lambda: VGroup(
-            Rectangle(width=0.05, height=2.2, fill_color=ELEC_C, fill_opacity=1, stroke_width=0).move_to(thick.get_left() + RIGHT * (0.1 + 1.6 * t.get_value()) + RIGHT * 0.06),
-            Rectangle(width=0.08, height=2.2, fill_color=ION_C, fill_opacity=1, stroke_width=0).move_to(thick.get_left() + RIGHT * (0.1 + 1.6 * t.get_value()) + RIGHT * 0.15),
-            Rectangle(width=0.1 + 1.6 * t.get_value(), height=2.2, fill_color=BLACK, fill_opacity=0.65, stroke_width=0).move_to(thick.get_left(), aligned_edge=LEFT)))
+            layers(thick.get_left()[0] + 0.12 + 1.5 * t.get_value()).shift(UP * hb_c[1]),
+            Rectangle(width=0.1 + 1.5 * t.get_value(), height=2.2, fill_color=BLACK, fill_opacity=0.65, stroke_width=0).move_to(thick.get_left(), aligned_edge=LEFT)))
         las1 = always_redraw(lambda: Arrow(thick.get_left() + LEFT * 1.3, thick.get_left() + RIGHT * (0.05 + 1.6 * t.get_value()), buff=0, color=LASER_C, stroke_width=7))
         # light sail (right): the whole foil accelerates
         ls_c = RIGHT * 2.2 + UP * 0.4
         x0 = ls_c[0] - 0.6
-        sail = always_redraw(lambda: VGroup(
-            Rectangle(width=0.05, height=2.2, fill_color=ELEC_C, fill_opacity=1, stroke_width=0).move_to(np.array([x0 + 3.2 * t.get_value() ** 2 + 0.05, ls_c[1], 0])),
-            Rectangle(width=0.06, height=2.2, fill_color=ION_C, fill_opacity=1, stroke_width=0).move_to(np.array([x0 + 3.2 * t.get_value() ** 2, ls_c[1], 0]))))
+        sail = always_redraw(lambda: layers(x0 + 3.2 * t.get_value() ** 2, gap=0.22).shift(UP * ls_c[1]))
+        e_lab = MathTex(r"\mathbf{E}", font_size=28, color=YELLOW)
+        rp_l = Tex(r"light pressure", font_size=22, color=LASER_C).next_to(thick.get_left() + LEFT * 0.7, UP, buff=0.25)
         las2 = always_redraw(lambda: Arrow(np.array([x0 - 1.4, ls_c[1], 0]), np.array([x0 + 3.2 * t.get_value() ** 2 - 0.05, ls_c[1], 0]), buff=0, color=LASER_C, stroke_width=7))
         ls_l = Tex(r"light sail: \textbf{5--50\,nm}, thinner than $\lambda$", font_size=24).move_to(np.array([ls_c[0] + 0.8, hb_l.get_y(), 0]))
         lab = VGroup(Tex(r"electrons", font_size=20, color=ELEC_C), Tex(r"ions", font_size=20, color=ION_C)).arrange(RIGHT, buff=0.4).to_corner(UR, buff=0.3).shift(DOWN * 1.0)
@@ -473,33 +580,44 @@ class RPA(Narrated):
                      Tex(r"TNSA $\propto \sqrt{I}$", font_size=20, color=PROT_C).next_to(ax.c2p(4, 2), DOWN, buff=0.1),
                      Tex(r"scaling only", font_size=16, color=GREY_B).next_to(ax, UP, buff=0.05))
         bunch = VGroup(Tex(r"ions leave as a \textbf{bunch}: far more monoenergetic", font_size=24)).to_edge(DOWN, buff=0.35).shift(LEFT * 2.0)
-        with self.voiceover(text="Radiation pressure acceleration needs a thousand times more intensity, ten to the twenty one to ten to "
-                                 "the twenty three watts per square centimetre. <bookmark mark='p'/>Now the pressure of the light itself "
-                                 "does the work. <bookmark mark='e'/>The pulse shoves the electrons forward, <bookmark mark='i'/>the charge "
-                                 "separation drags the ions after them, and the two layers move as one. <bookmark mark='h'/>In a target "
-                                 "up to about one and a half micrometres thick, the laser bores a hole: a front marches into the target "
-                                 "and pushes ions ahead of it, like a piston. <bookmark mark='l'/>In a target thinner than the laser "
-                                 "wavelength, five to fifty nanometres, the whole foil flies off as a light sail, reaching higher "
-                                 "energies at lower flux. <bookmark mark='c'/>Circularly polarised light helps, turning the pulse energy "
-                                 "into motion rather than heat. <bookmark mark='s'/>Two payoffs: the ions leave as a bunch, so they are "
-                                 "far more monoenergetic, <bookmark mark='g'/>and their energy grows linearly with intensity, against "
-                                 "the square root for TNSA."):
+        with self.voiceover(text="Radiation pressure acceleration needs a thousand times more <bookmark mark='in'/>intensity, ten to the "
+                                 "twenty one to ten to the twenty three watts per square centimetre. <bookmark mark='p'/>Now the "
+                                 "<bookmark mark='pl'/>pressure of the light itself does the work. <bookmark mark='e'/>The pulse shoves the "
+                                 "<bookmark mark='se'/>electrons forward, <bookmark mark='i'/>the charge separation drags the "
+                                 "<bookmark mark='di'/>ions after them, and the two layers move <bookmark mark='mo'/>as one. <bookmark mark='h'/>"
+                                 "In a target up to about one and a half micrometres thick, the laser bores a hole: a <bookmark mark='fm'/>front "
+                                 "marches into the target and pushes ions ahead of it, like a piston. <bookmark mark='l'/>In a target thinner "
+                                 "than the laser wavelength, five to fifty nanometres, the whole foil flies off as a <bookmark mark='ls'/>light "
+                                 "sail, reaching higher energies at lower flux. <bookmark mark='c'/>Circularly polarised light helps, turning "
+                                 "the pulse energy into motion rather than heat. <bookmark mark='s'/>Two payoffs: the ions leave as a "
+                                 "<bookmark mark='bu'/>bunch, so they are far more monoenergetic, <bookmark mark='g'/>and their energy grows "
+                                 "<bookmark mark='ln'/>linearly with intensity, against the <bookmark mark='sr'/>square root for TNSA."):
             self.play(Write(title), FadeIn(req), run_time=1.0)
+            self.at("in", Indicate(req, color=LASER_C, scale_factor=1.15))
             self.at("p", FadeIn(thick), FadeIn(hb_l), FadeIn(lab))
-            self.wait_until_bookmark("e")
+            self.wait_until_bookmark("pl")
             self.add(front, las1)
-            self.play(t.animate.set_value(0.15), run_time=0.8)
-            self.at("i", Indicate(lab, color=YELLOW))
-            self.at("h", t.animate.set_value(1.0), run_time=2.5, rate_func=linear)
+            self.play(FadeIn(rp_l), Indicate(las1, color=LASER_C, scale_factor=1.1), run_time=0.6)
+            self.at("se", Indicate(lab[0], color=ELEC_C, scale_factor=1.4), t.animate.set_value(0.08), run_time=0.8)
+            e_lab.next_to(front[0][2], UP, buff=0.15)
+            self.at("di", Indicate(lab[1], color=ION_C, scale_factor=1.4), FadeIn(e_lab))
+            self.play(Indicate(e_lab, color=YELLOW, scale_factor=1.5), run_time=0.5)
+            self.at("mo", t.animate.set_value(0.2), FadeOut(e_lab), run_time=0.8)
+            self.at("h", t.animate.set_value(0.5), run_time=1.0, rate_func=linear)
+            self.at("fm", t.animate.set_value(1.0), Indicate(hb_l), run_time=2.0, rate_func=linear)
             self.wait_until_bookmark("l")
             t.set_value(0.0)
             self.remove(front, las1)
             self.add(thick.copy().set_opacity(0.3), sail, las2)
-            self.play(FadeIn(ls_l), t.animate.set_value(1.0), run_time=2.5, rate_func=linear)
+            self.play(FadeOut(rp_l), FadeIn(ls_l), run_time=0.4)
+            self.at("ls", t.animate.set_value(1.0), run_time=2.5, rate_func=rate_functions.ease_in_quad)
             self.play(FadeIn(trade))
-            self.at("c", FadeIn(circ))
+            self.at("c", FadeIn(circ), Indicate(las2, color=LASER_C, scale_factor=1.1))
             self.at("s", FadeIn(bunch))
-            self.at("g", Create(ax), FadeIn(axl[:2]), Create(sq), FadeIn(axl[3]), Create(li), FadeIn(axl[2]), FadeIn(axl[4]), run_time=1.5)
+            self.at("bu", Indicate(bunch, color=YELLOW, scale_factor=1.05))
+            self.at("g", Create(ax), FadeIn(axl[:2]), FadeIn(axl[4]), run_time=0.8)
+            self.at("ln", Create(li), FadeIn(axl[2]), run_time=0.8)
+            self.at("sr", Create(sq), FadeIn(axl[3]), run_time=0.8)
         self.wait(0.5)
         fade_all(self)
 
@@ -618,23 +736,29 @@ class UHDR(Narrated):
                      VGroup(Square(0.12, color=WHITE, fill_opacity=1), Tex(r"average", font_size=18)).arrange(RIGHT, buff=0.1)).arrange(RIGHT, buff=0.4).next_to(ax, UP, buff=1.6).align_to(ax, RIGHT)
         with self.voiceover(text="Why care about such short pulses? Because of FLASH. <bookmark mark='f'/>Above about forty grays per "
                                  "second, irradiated normal tissue appears to be spared. <bookmark mark='o'/>The leading explanation: the "
-                                 "dose arrives so fast that it uses up the oxygen in normal cells before the blood can resupply it, "
-                                 "<bookmark mark='h'/>so for a moment they behave like hypoxic tumour cells, which resist radiation. "
-                                 "<bookmark mark='p'/>Laser sources reach extreme peak dose rates: ten to the seven grays per second in "
-                                 "an early proton study, ten to the nine in others, two times ten to the nine for a single four hundred "
-                                 "picosecond carbon pulse, and up to ten to the thirteen for electrons. <bookmark mark='a'/>Their "
-                                 "average dose rates are another matter: zero point two grays per second in that early proton study, "
-                                 "about one for a kilohertz electron source, and one to two grays per minute in the first mouse study. "
+                                 "dose arrives so fast that it uses up the <bookmark mark='ox'/>oxygen in normal cells before the <bookmark mark='bl'/>blood can resupply it, "
+                                 "<bookmark mark='h'/>so for a moment they behave like hypoxic <bookmark mark='ht'/>tumour cells, which resist radiation. "
+                                 "<bookmark mark='p'/>Laser sources reach extreme peak dose rates: <bookmark mark='p1'/>ten to the seven grays per second in "
+                                 "an early proton study, <bookmark mark='p2'/>ten to the nine in others, <bookmark mark='p3'/>two times ten to the nine for a single four hundred "
+                                 "picosecond carbon pulse, and up to <bookmark mark='p4'/>ten to the thirteen for electrons. <bookmark mark='a'/>Their "
+                                 "average dose rates are another matter: <bookmark mark='a1'/>zero point two grays per second in that early proton study, "
+                                 "<bookmark mark='a2'/>about one for a kilohertz electron source, and <bookmark mark='a3'/>one to two grays per minute in the first mouse study. "
                                  "<bookmark mark='q'/>The review stresses that relying on FLASH will need careful control of exactly "
                                  "this pulse structure."):
             self.play(Write(title), Create(ax), FadeIn(labs), FadeIn(axl), run_time=1.0)
             self.at("f", Create(fline), FadeIn(fll))
             self.at("o", FadeIn(cn), FadeIn(ct), FadeIn(vessel), FadeIn(o2n), FadeIn(o2t), FadeIn(cl))
+            self.at("ox", Indicate(o2n, color=BLUE_L, scale_factor=1.3))
             self.play(flash.animate.set_fill(opacity=0.35), run_time=0.15)
             self.play(flash.animate.set_fill(opacity=0.0), *[FadeOut(d, scale=0.3) for d in o2n[:15]], run_time=0.8)
+            self.at("bl", Indicate(vessel, color=BAD_C, scale_factor=1.15))
             self.at("h", FadeIn(res), Indicate(cn, color=GOOD_C))
-            self.at("p", FadeIn(key), LaggedStart(*[FadeIn(p, scale=1.5) for p in pk], lag_ratio=0.4), run_time=2.5)
-            self.at("a", LaggedStart(*[FadeIn(a, scale=1.5) for a in av], lag_ratio=0.4), run_time=2.0)
+            self.at("ht", Indicate(ct, color=BAD_C), Indicate(cl[1], color=BAD_C))
+            self.at("p", FadeIn(key), Indicate(fline, color=YELLOW, scale_factor=1.0))
+            for m, idx in (("p1", [0]), ("p2", [1]), ("p3", [2]), ("p4", [3, 4])):
+                self.at(m, *[FadeIn(pk[i], scale=1.8) for i in idx], *[Flash(pk[i][0].get_center(), color=WHITE, flash_radius=0.25) for i in idx])
+            for m, i in (("a1", 0), ("a2", 1), ("a3", 2)):
+                self.at(m, FadeIn(av[i], scale=1.8), Flash(av[i][0].get_center(), color=WHITE, flash_radius=0.25))
             self.at("q", Indicate(fline, color=YELLOW, scale_factor=1.0))
         self.wait(0.5)
         fade_all(self)
@@ -658,7 +782,7 @@ class Transport(Narrated):
         r_c = momentum(12 * T, 11177.9) / 1000 / (0.29979 * 6 * B)
         o = RIGHT * 0.4 + UP * 0.1
         fld = Rectangle(width=3.2, height=3.0, fill_color=BLUE_L, fill_opacity=0.12, stroke_color=BLUE_L).move_to(o + RIGHT * 1.6 + DOWN * 0.6)
-        fl = Tex(r"dipole \textbf{0.9 T}", font_size=22, color=BLUE_L).next_to(fld, UP, buff=0.08)
+        fl = Tex(r"dipole \textbf{0.9 T}", font_size=22, color=BLUE_L).next_to(fld, UP, buff=0.08).align_to(fld, LEFT)
         S = 3.0 / r_c                                          # screen units per metre: carbon bends over the full field
         def track(r, col, length=3.2):
             R = r * S * 1.0
@@ -675,23 +799,47 @@ class Transport(Narrated):
                     Tex(r"$r = p/qB$, at 9.5 MeV/u (computed)", font_size=18, color=GREY_B)).arrange(DOWN, aligned_edge=LEFT, buff=0.1).to_corner(DL, buff=0.35)
         mq = Tex(r"$m/q$: carbon \textbf{2}, proton \textbf{1}", font_size=24).next_to(rl, UP, buff=0.25).align_to(rl, LEFT)
         gantry = Tex(r"capture + selection gantry: \textbf{2--3$\times$} smaller", font_size=24, color=GOOD_C).to_corner(UR, buff=0.3).shift(DOWN * 0.75)
-        with self.voiceover(text="A broad, divergent, mixed beam has to be tamed before it can reach a patient. <bookmark mark='c'/>First, "
-                                 "capture it: pulsed solenoids or permanent magnet quadrupoles grab the spreading particles and make "
-                                 "them parallel; <bookmark mark='t'/>one recent system collimated a ten MeV proton beam with just two "
-                                 "permanent magnets. <bookmark mark='s'/>Then select. In a laser driven carbon experiment, a zero point "
-                                 "nine tesla dipole sat fifty millimetres from the target. <bookmark mark='b'/>A carbon ion has twice a "
-                                 "proton's mass to charge ratio, so at the same energy per nucleon it bends on twice the radius, about "
-                                 "one metre against half a metre. <bookmark mark='l'/>A five hundred micrometre slit then passes only "
-                                 "the carbon. <bookmark mark='g'/>Gantry designs built around capture and energy selection come out two "
-                                 "to three times smaller than a conventional proton gantry."):
-            self.play(Write(title), FadeIn(src), run_time=0.8)
-            self.at("c", Create(spray), FadeIn(lens), FadeIn(ll))
-            self.play(Create(par), run_time=0.8)
-            self.at("t", FadeIn(two))
-            self.at("s", FadeIn(fld), FadeIn(fl), Create(inbeam))
+        bsym = b_symbols(fld, into=False, nx=5, ny=4)                    # B out of the page bends positive ions downward
+        bl = Tex(r"$\mathbf{B}$ out of page", font_size=18, color=BLUE_L).next_to(fld, UP, buff=0.08).align_to(fld, RIGHT)
+
+        def force(r, col, s0):
+            R = r * S
+            p = o + np.array([R * np.sin(s0), -(R - R * np.cos(s0)), 0])
+            v = np.array([np.cos(s0), -np.sin(s0), 0])
+            f = (o + np.array([0, -R, 0]) - p) / R
+            return VGroup(Arrow(p, p + 0.55 * v, buff=0, color=WHITE, stroke_width=3, max_tip_length_to_length_ratio=0.3),
+                          Arrow(p, p + 0.55 * f, buff=0, color=YELLOW, stroke_width=4, max_tip_length_to_length_ratio=0.3))
+        fp, fc = force(r_p, PROT_C, 0.35), force(r_c, CARB_C, 0.55)
+        fll = VGroup(Tex(r"$\mathbf{v}$", font_size=22).next_to(fc[0].get_end(), RIGHT, buff=0.05),
+                     Tex(r"$\mathbf{F} = q\,\mathbf{v}\times\mathbf{B}$", font_size=22, color=YELLOW).next_to(fld, DOWN, buff=0.08).align_to(fld, LEFT))
+        with self.voiceover(text="A broad, <bookmark mark='br'/>divergent, mixed beam has to be tamed before it can reach a patient. "
+                                 "<bookmark mark='c'/>First, capture it: pulsed solenoids or permanent magnet quadrupoles <bookmark mark='g1'/>"
+                                 "grab the spreading particles and make them <bookmark mark='pa'/>parallel; <bookmark mark='t'/>one recent "
+                                 "system collimated a ten MeV proton beam with just two permanent magnets. <bookmark mark='s'/>Then select. "
+                                 "In a laser driven carbon experiment, a zero point nine tesla <bookmark mark='dp'/>dipole sat fifty "
+                                 "millimetres from the target. <bookmark mark='b'/>A carbon ion has twice a proton's mass to charge ratio, "
+                                 "so at the same energy per nucleon it <bookmark mark='bd'/>bends on twice the radius, about "
+                                 "<bookmark mark='r1'/>one metre against <bookmark mark='r2'/>half a metre. <bookmark mark='l'/>A five "
+                                 "hundred micrometre slit then passes only the carbon. <bookmark mark='g'/>Gantry designs built around "
+                                 "capture and energy selection come out two to three times smaller than a conventional proton gantry."):
+            self.play(Write(title), FadeIn(src), Create(spray), run_time=0.8)
+            self.at("br", Indicate(spray, color=YELLOW, scale_factor=1.05))
+            self.at("c", FadeIn(lens), FadeIn(ll))
+            self.play(Circumscribe(lens, color=YELLOW), run_time=0.6)
+            self.at("g1", Create(par), run_time=0.8)
+            self.at("pa", Indicate(par, color=YELLOW, scale_factor=1.03))
+            self.at("t", FadeIn(two), Indicate(lens, color=BLUE_L))
+            self.wait_until_bookmark("s")
+            restore = spotlight(self, [title])
+            self.play(FadeIn(fld), FadeIn(fl), FadeIn(bsym), FadeIn(bl), Create(inbeam))
+            self.at("dp", Indicate(bsym, color=BLUE_L, scale_factor=1.15), Circumscribe(fld, color=BLUE_L))
             self.at("b", Create(tp), Create(tc), FadeIn(mq), FadeIn(rl), run_time=1.5)
-            self.at("l", FadeIn(slit), FadeIn(sl), Indicate(tc, color=CARB_C))
-            self.at("g", FadeIn(gantry))
+            self.play(GrowArrow(fp[0]), GrowArrow(fc[0]), GrowArrow(fp[1]), GrowArrow(fc[1]), FadeIn(fll), run_time=0.8)
+            self.at("bd", Indicate(VGroup(fp[1], fc[1]), color=YELLOW, scale_factor=1.3))
+            self.at("r1", Indicate(tc, color=CARB_C), Indicate(rl[1], color=CARB_C))
+            self.at("r2", Indicate(tp, color=PROT_C), Indicate(rl[0], color=PROT_C))
+            self.at("l", FadeIn(slit), FadeIn(sl), ShowPassingFlash(tc.copy().set_stroke(YELLOW, 8), time_width=0.4), run_time=1.0)
+            self.at("g", restore, FadeIn(gantry))
         self.wait(0.5)
         fade_all(self)
 
@@ -865,21 +1013,27 @@ class Future(Narrated):
                      Tex(r"\textbf{Dr.~LASER} (ELI, Romania): C to \textbf{110 MeV/u}, $\sim$30 mm", font_size=22)).arrange(DOWN, buff=0.1).to_edge(DOWN, buff=0.2)
         with self.voiceover(text="What is changing? <bookmark mark='b'/>Tuning a laser plasma source is a nonlinear search in many dimensions, "
                                  "where adjusting one knob at a time is slow and misses the best settings. <bookmark mark='l'/>A closed "
-                                 "loop Bayesian optimiser adjusts the laser wavefront and target position, fires, measures, and chooses "
-                                 "the next shot. <bookmark mark='r'/>The first such system matched the best manual proton energy using "
+                                 "loop Bayesian optimiser adjusts the <bookmark mark='lw'/>laser wavefront and target position, <bookmark mark='fi'/>fires, "
+                                 "<bookmark mark='me'/>measures, and <bookmark mark='ch'/>chooses the next shot. <bookmark mark='r'/>The first such system matched the best manual proton energy using "
                                  "only sixty percent of the laser energy. <bookmark mark='f'/>It needs a fast signal from every shot, and "
                                  "transmitted laser light is one candidate. <bookmark mark='t'/>It also needs targets that survive: "
-                                 "cryogenic hydrogen jets, liquid sheets and tape drives now allow sustained multi hertz operation. "
+                                 "<bookmark mark='t1'/>cryogenic hydrogen jets, <bookmark mark='t2'/>liquid sheets and <bookmark mark='t3'/>tape drives now allow sustained multi hertz operation. "
                                  "<bookmark mark='p'/>Two dedicated research facilities are planned: LhARA in the UK, with protons up to "
                                  "one hundred and twenty seven MeV and carbon up to thirty three point four MeV per nucleon, "
                                  "<bookmark mark='d'/>and Dr LASER at ELI in Romania, aiming for carbon up to one hundred and ten MeV per "
                                  "nucleon, about three centimetres in tissue."):
             self.play(Write(title), run_time=0.8)
             self.at("b", Create(ax), FadeIn(axl), LaggedStart(*[FadeIn(d) for d in trials], lag_ratio=0.05), run_time=1.5)
-            self.at("l", FadeIn(loop), FadeIn(knobs), LaggedStart(*[Create(a) for a in arrows], lag_ratio=0.25), Create(bline), run_time=2.0)
+            self.at("l", FadeIn(loop), LaggedStart(*[Create(a) for a in arrows], lag_ratio=0.25), Create(bline), run_time=1.5)
+            self.at("lw", FadeIn(knobs), Indicate(loop[0], color=LASER_C, scale_factor=1.15))
+            self.at("fi", Indicate(loop[1], color=WHITE, scale_factor=1.15))
+            self.at("me", Indicate(loop[2], color=YELLOW, scale_factor=1.15))
+            self.at("ch", Indicate(loop[3], color=GOOD_C, scale_factor=1.15))
             self.at("r", FadeIn(res), Indicate(bline, color=GOOD_C, scale_factor=1.0))
             self.at("f", FadeIn(sig), Indicate(loop[2], color=YELLOW))
-            self.at("t", FadeIn(tgl), LaggedStart(*[FadeIn(t_) for t_ in tg], lag_ratio=0.3))
+            self.at("t", FadeIn(tgl))
+            for m, i in (("t1", 0), ("t2", 1), ("t3", 2)):
+                self.at(m, FadeIn(tg[i], scale=1.1))
             self.at("p", FadeIn(fac[0]))
             self.at("d", FadeIn(fac[1]))
         self.wait(0.5)
@@ -1074,9 +1228,14 @@ class FieldMap(Narrated):
                                  "engineering as by peak energy."):
             self.play(Write(title), FadeIn(root), run_time=1.0)
             self.at("m", *[AnimationGroup(Create(b[0]), FadeIn(b[1]), FadeIn(b[2])) for b in branches], run_time=1.2)
+            restore = None
             for k, m in enumerate("epc"):
-                self.at(m, Indicate(branches[k][1], color=WHITE), LaggedStart(*[FadeIn(t_, shift=0.05 * DOWN) for t_ in branches[k][3]], lag_ratio=0.4), run_time=1.5)
-            self.at("x", FadeIn(cross, shift=0.1 * UP))
+                self.wait_until_bookmark(m)
+                if restore is not None:
+                    self.play(restore)
+                restore = spotlight(self, [title, root, branches[k]], run_time=0.4)
+                self.play(Indicate(branches[k][1], color=WHITE), LaggedStart(*[FadeIn(t_, shift=0.05 * DOWN) for t_ in branches[k][3]], lag_ratio=0.4), run_time=1.5)
+            self.at("x", restore, FadeIn(cross, shift=0.1 * UP))
             self.at("f", FadeIn(enab, shift=0.1 * UP))
         self.wait(1.0)
         fade_all(self)

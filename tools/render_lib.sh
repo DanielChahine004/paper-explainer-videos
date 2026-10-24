@@ -49,7 +49,7 @@ pixi run $VLINT check -q "$SCRIPT"
 if [ -n "${FRESH:-}" ]; then stale="$SCENES"; else
   stale="$(pixi run $VLINT stale . --script "$SCRIPT" --res "$RES" $SCENES)"
 fi
-todo=""; for s in $order; do case " $stale " in *" $s "*) todo="$todo $s" ;; esac; done; todo="${todo# }"
+stale="$(echo $stale)"; todo=""; for s in $order; do case " $stale " in *" $s "*) todo="$todo $s" ;; esac; done; todo="${todo# }"
 # Render order: scenes never rendered first (in narration order), then the rest by their last render time, slowest
 # first (ManimGX logs "rendered in N s"), so the slowest scene never starts last.
 todo="$(for s in $todo; do t=$(grep -o "rendered in [0-9.]*" "m_$s.log" 2>/dev/null | tail -1 | awk '{print $3}')

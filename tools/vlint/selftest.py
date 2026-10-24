@@ -136,13 +136,17 @@ def runtime():
             print(r.stdout[-2000:], r.stderr[-2000:])
             print("runtime: FAILED (fixture did not render)")
             return False
-        got = Counter(f["rule"] for f in json.loads(recs[0].read_text())["findings"])
+        found = json.loads(recs[0].read_text())["findings"]
+        got = Counter(f["rule"] for f in found)
     ns = {}
     exec(compile(re.search(r"EXPECT = \{[^}]*\}", src.read_text()).group(0), "EXPECT", "exec"), ns)
     for k in sorted(set(ns["EXPECT"]) | set(got)):
         if ns["EXPECT"].get(k, 0) != got.get(k, 0):
             ok = False
             print(f"  runtime {k}: expected {ns['EXPECT'].get(k, 0)}, got {got.get(k, 0)}")
+            for f in found:
+                if f["rule"] == k:
+                    print(f"    {f.get('msg', f)}")
     planted = set(ns["EXPECT"])
     for rr in RULES.values():
         if rr.stage == "runtime" and rr.id not in planted and not rr.fn.__module__.startswith("vlint_local"):

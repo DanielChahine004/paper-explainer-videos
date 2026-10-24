@@ -235,6 +235,16 @@ labelled illustrative/schematic.
   clearly diagonal (> ~12 degrees). Titles sit at `to_edge(UP, buff=0.85)`, clear of the nav chips.
   (vlint: `arrow-skew` warns at 0.6-12 degrees off axis, `title-margin` when a title's top is
   within 0.75 of the frame edge.)
+- **Label curves beside them, never on them**. A curve label goes next to one data point on
+  the open side (left of a rising stretch, below-right of the last points), not centred on the peak
+  where the line runs through it. A comparison arrow between two captions runs straight between
+  them; it never ends inside a caption. (vlint: `line-over-label` for any curve, line or outline
+  through a text; `arrow-over-label` also flags an arrow that ends inside a text.)
+- **Moving curves are polylines**. A curve rebuilt every frame (`always_redraw`) is drawn
+  with `VMobject().set_points_as_corners(points)` from a fixed, dense sample set, extra-dense around
+  any peak or edge. `ax.plot` at a fixed step samples a narrow peak at a different height each frame
+  and its Bezier smoothing overshoots at the edge, so a sweeping Bragg peak flickers. (vlint:
+  `redraw-plot`.)
 - Generated images need an alpha channel, otherwise they are opaque black squares
   (`shell_pet` Images).
 

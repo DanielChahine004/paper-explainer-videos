@@ -367,6 +367,19 @@ def long_text(s):
                 yield node, f"{len(w)} words on screen: {' '.join(w)[:50]!r}"
 
 
+@rule("redraw-plot", "static", "warn", "An always_redraw rebuilds a smoothed function plot (ax.plot / plot_line_graph) "
+      "every frame. A narrow peak or a sharp edge is sampled at a different height each frame and the Bezier smoothing "
+      "overshoots, so the curve flickers while it moves.", "Part II, Motion",
+      "build the curve as a polyline: VMobject().set_points_as_corners(points), with dense samples around the sharp part")
+def redraw_plot(s):
+    for node in ast.walk(s.tree):
+        if call_name(node) == "always_redraw":
+            for sub in ast.walk(node):
+                if sub is not node and isinstance(sub, ast.Call) and isinstance(sub.func, ast.Attribute) and sub.func.attr in ("plot", "plot_line_graph"):
+                    yield sub, f"always_redraw(... .{sub.func.attr}(...)) redraws a smoothed plot each frame"
+                    break
+
+
 # ---- render.sh -------------------------------------------------------------------------------------------------
 @rule("scene-list", "static", "error", "render.sh SCENES and the scene classes in the script disagree: a missing "
       "scene is never rendered, an unknown one crashes the render.", "Part III, step 2",

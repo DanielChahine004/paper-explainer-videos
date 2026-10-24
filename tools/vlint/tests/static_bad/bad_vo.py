@@ -27,6 +27,9 @@ class Flash(Narrated):  # expect: shadows-manim
         box = VGroup()
         box.add(card("z.png"))  # expect: vgroup-non-vmobject
         words = Tex(r"this label is really a whole sentence that the narration should be saying instead")  # expect: long-text
+        ax = Axes()
+        k = ValueTracker(1.0)
+        wob = always_redraw(lambda: ax.plot(lambda x: np.exp(-k.get_value() * x * x), color=RED))  # expect: redraw-plot
         small = Tex(r"source: a long credit line with many words is fine at footnote size", font_size=16)
         self.play(FadeIn(a), Indicate(a))  # expect: intro-and-pulse
         self.play(AnimationGroup(Create(b), Circumscribe(b)))  # expect: intro-and-pulse

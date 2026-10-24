@@ -8,7 +8,7 @@ from manim import *
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 from vlint.runtime import Checked, vlint_ok  # noqa: E402
 
-EXPECT = {"frame-clip": 1, "text-overlap": 1, "vanished-after-intro": 1, "bookmark-unfired": 2, "indicate-image": 1, "text-chain": 1, "arrow-over-label": 1, "layout-crowded": 1, "layout-balance": 1, "arrow-skew": 1, "title-margin": 1}
+EXPECT = {"frame-clip": 1, "text-overlap": 1, "vanished-after-intro": 1, "bookmark-unfired": 2, "indicate-image": 1, "text-chain": 1, "arrow-over-label": 1, "layout-crowded": 1, "layout-balance": 1, "arrow-skew": 1, "title-margin": 1, "line-over-label": 1}
 
 
 class Fixture(Checked, Scene):
@@ -53,6 +53,12 @@ class Fixture(Checked, Scene):
         lo = Text("a title set right", font_size=32).to_edge(UP, buff=0.8).shift(RIGHT * 3)
         self.play(FadeIn(hi), FadeIn(lo), run_time=0.2)
         self.play(FadeOut(hi), FadeOut(lo), run_time=0.2)
+        crv = Line(LEFT * 3 + DOWN * 2.6, RIGHT * 3 + DOWN * 2.6)
+        on = Text("on the line", font_size=30).move_to(LEFT * 1.8 + DOWN * 2.6)                 # line-over-label
+        off = Text("beside the line", font_size=30).next_to(crv, UP, buff=0.15).shift(RIGHT * 1.8)   # fine
+        box = SurroundingRectangle(off, buff=0.1)                                   # an outline around a label: fine
+        self.play(Create(crv), FadeIn(on), FadeIn(off), Create(box), run_time=0.2)
+        self.play(FadeOut(crv), FadeOut(on), FadeOut(off), FadeOut(box), run_time=0.2)
         with self.vlint_off("frame-clip"):
             self.play(FadeIn(Text("edge on purpose", font_size=30).move_to(LEFT * 7.2 + DOWN * 3)), run_time=0.2)
         self.play(*[FadeOut(m) for m in self.mobjects], run_time=0.2)

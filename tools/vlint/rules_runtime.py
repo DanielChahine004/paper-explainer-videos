@@ -178,10 +178,52 @@ def arrow_over_label(mon, ev, p):
         for m in targets:
             x0, y0, x1, y1 = bbox(m)
             x0, y0, x1, y1 = x0 + 0.03, y0 + 0.03, x1 - 0.03, y1 - 0.03
-            if any(x0 < q[0] < x1 and y0 < q[1] < y1 for q in (s, e)):
+            if isinstance(m, M.AbstractImageMobject) and any(x0 < q[0] < x1 and y0 < q[1] < y1 for q in (s, e)):
                 continue                     # it points into this one (an arrow landing on an image)
+            if any(x0 < q[0] < x1 and y0 < q[1] < y1 for q in (s, e)):
+                yield (id(a), id(m)), f"an arrow ends inside {label(m)}"
+                continue
             if any(x0 < q[0] < x1 and y0 < q[1] < y1 for q in samp):
                 yield (id(a), id(m)), f"an arrow runs through {label(m)}"
+
+
+def _strokes(scene, rule_id):
+    """Visible drawn strokes (curves, lines, outlines) outside text and arrows, as leaf VMobjects."""
+    out, stack = [], [(m, frozenset(getattr(m, "_vlint_ok", ()))) for m in scene.mobjects]
+    while stack:
+        m, ok = stack.pop()
+        if rule_id in ok or "*" in ok or isinstance(m, TEXTS()) or isinstance(m, (M.Arrow, M.CurvedArrow, M.CurvedDoubleArrow, M.ArrowTip)):
+            continue
+        if isinstance(m, M.VMobject) and len(m.points) >= 4 and m.get_stroke_width() > 0 and max(m.get_stroke_opacities(), default=0) >= 0.05:
+            out.append(m)
+        stack += [(c, ok | frozenset(getattr(c, "_vlint_ok", ()))) for c in m.submobjects]
+    return out
+
+
+@rule("line-over-label", "runtime", "warn", "A plotted curve, line or outline runs through a label: the text is struck "
+      "through (a curve label set on top of its own curve).", "Part II, Layout",
+      "set the label beside the line in empty space, e.g. next_to a data point on the open side")
+def line_over_label(mon, ev, p):
+    if ev != "play" or isinstance(mon.scene, M.ThreeDScene):
+        return
+    import numpy as np
+    texts = [m for m in leaves(mon.scene, "line-over-label") if isinstance(m, TEXTS()) and visibility(m) >= 0.05]
+    if not texts:
+        return
+    t = np.linspace(0, 1, 9)[:, None]
+    B = np.hstack([(1 - t) ** 3, 3 * (1 - t) ** 2 * t, 3 * (1 - t) * t ** 2, t ** 3])            # cubic Bernstein basis
+    for c in _strokes(mon.scene, "line-over-label"):
+        pts = c.points[: len(c.points) // 4 * 4].reshape(-1, 4, 3)
+        samp = np.einsum("sk,nkd->nsd", B, pts).reshape(-1, 3)
+        cx0, cy0, cx1, cy1 = bbox(c)
+        for m in texts:
+            x0, y0, x1, y1 = bbox(m)
+            if x1 < cx0 or x0 > cx1 or y1 < cy0 or y0 > cy1:
+                continue
+            x0, y0, x1, y1 = x0 + 0.04, y0 + 0.04, x1 - 0.04, y1 - 0.04
+            hit = (samp[:, 0] > x0) & (samp[:, 0] < x1) & (samp[:, 1] > y0) & (samp[:, 1] < y1)
+            if hit.sum() >= 2:
+                yield (id(c), id(m)), f"a {type(c).__name__} runs through {label(m)}"
 
 
 @rule("arrow-skew", "runtime", "warn", "A straight arrow is a few degrees off horizontal or vertical: it reads as a "

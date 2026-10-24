@@ -8,7 +8,7 @@ from manim import *
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 from vlint.runtime import Checked, vlint_ok  # noqa: E402
 
-EXPECT = {"frame-clip": 1, "text-overlap": 1, "vanished-after-intro": 1, "bookmark-unfired": 2}
+EXPECT = {"frame-clip": 1, "text-overlap": 1, "vanished-after-intro": 1, "bookmark-unfired": 2, "indicate-image": 1}
 
 
 class Fixture(Checked, Scene):
@@ -23,6 +23,10 @@ class Fixture(Checked, Scene):
         d = vlint_ok(Text("allowed", font_size=36).move_to(DOWN * 0.5), "text-overlap")
         e = Text("allowed too", font_size=36).move_to(DOWN * 0.5 + RIGHT * 0.2)
         self.play(FadeIn(d), FadeIn(e), run_time=0.2)                               # exempt: fine
+        pic = Group(ImageMobject(np.full((8, 8, 4), 200, dtype=np.uint8)).set_height(1).move_to(LEFT * 4), Square(1).move_to(LEFT * 4))
+        self.add(pic)
+        self.play(Indicate(pic), run_time=0.2)                                      # indicate-image
+        self.play(Indicate(pic[1]), run_time=0.2)                                   # the frame: fine
         with self.vlint_off("frame-clip"):
             self.play(FadeIn(Text("edge on purpose", font_size=30).move_to(LEFT * 7.2 + DOWN * 3)), run_time=0.2)
         self.vlint.event("vo_open", text="One <bookmark mark='a'/>two <bookmark mark='b'/>three.")

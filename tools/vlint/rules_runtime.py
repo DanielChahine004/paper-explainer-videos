@@ -143,6 +143,20 @@ def vanished_after_intro(mon, ev, p):
             yield id(m), f"{type(a).__name__}({label(m)}) ended with the object invisible"
 
 
+@rule("indicate-image", "runtime", "warn", "Indicate pulses an image: it recolours the whole picture (a flat yellow or "
+      "white wash) instead of drawing the eye to it.", "Part IV, Manim 0.19",
+      "pulse the image's frame (framed(...)[1]) or use Circumscribe")
+def indicate_image(mon, ev, p):
+    if ev != "play":
+        return
+    for a in _flatten(p.get("anims", ())):
+        m = getattr(a, "mobject", None)
+        if m is None or not isinstance(a, M.Indicate):
+            continue
+        if any(isinstance(sm, M.AbstractImageMobject) and not ("indicate-image" in ok or "*" in ok) for sm, ok in walk([m])):
+            yield id(m), f"Indicate({label(m)}) pulses an image"
+
+
 @rule("bookmark-unfired", "runtime", "error", "A bookmark was never waited for, or a cue named a bookmark the "
       "narration lacks; the picture and the words drift apart.", "Part II, Sync",
       "cue every bookmark once with self.at, in narration order")

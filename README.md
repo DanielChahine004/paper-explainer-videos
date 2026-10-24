@@ -52,7 +52,7 @@ three points, and `render.sh` stops on any error:
   same play (it ends invisible), images inside a `VGroup`, scene names that shadow manim, bookmark typos and
   order, `SCENES` out of step with the script, anything above 1080p;
 - **while each scene renders** (inside `common.Narrated`): labels cut off by the frame, overlapping labels,
-  introduced objects that end invisible, bookmarks never reached;
+  introduced objects that end invisible, pulses that recolour an image, bookmarks never reached;
 - **at the join**: missing or stale scenes, audio drift, length, resolution. Each scene's video carries a
   fingerprint of the code that made it, so `render.sh` re-renders exactly the scenes you changed.
 

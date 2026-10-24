@@ -72,7 +72,13 @@ on: the object, the shape of the effect and the key number. Neither repeats the 
   - **an outline or region:** `Circumscribe`, or a `SurroundingRectangle` that stays while it is discussed;
   - **a direction or path:** a dot or highlight travelling along it (`MoveAlongPath`, `ShowPassingFlash`);
   - **a comparison:** pulse both items in turn;
-  - **a quantity changing:** a `ValueTracker` animated across the phrase that says it.
+  - **a quantity changing:** a `ValueTracker` animated across the phrase that says it;
+  - **a size (a width, a spread, a gap, a ratio):** draw it on the object itself, as a double arrow across
+    the width or a bar between two levels, and pulse that;
+  - **a method with two readings** (sinogram and list mode, matrix and event by event): show both, the
+    sinogram view and the individual lines being traced, so either intuition lands.
+  - **feedback loops in a box diagram:** route the return arrow above or below the row as straight
+    segments, never a `CurvedArrow` across the boxes.
 
   While a part of the picture is being discussed, dim everything else to about 30% opacity, then
   restore it. Target at least one cue per sentence. A voiceover block with fewer bookmarks than
@@ -308,6 +314,8 @@ are writing the script and voice synthesis, not rendering.
   all vanished this way (Feynman Vol. II; the synchrotron magnets in `laser_rt`). Fade in first, then
   pulse in a separate `play` (vlint: `intro-and-pulse`, and `vanished-after-intro` at render time; the
   first run found four more in `laser_rt` that had shipped).
+- Never `Indicate` an image. It recolours the whole picture into a flat yellow or white wash for the length of
+  the pulse. Pulse its frame or `Circumscribe` it (vlint: `indicate-image`).
 - Dimming the rest of the screen (a spotlight helper) must only touch `VMobject`s. `scene.mobjects`
   also holds `ValueTracker`s, and fading or restoring them crashes with "Please override in a
   child class" (`laser_rt` retrofit). Skip mobjects that have updaters too.

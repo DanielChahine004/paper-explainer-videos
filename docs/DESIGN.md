@@ -108,6 +108,13 @@ concrete choices (what is computed, what is kept). Give derivations one line at 
   "photopeak kept 10%"). Then show the procedure step by step. Then say how often it is redone and how
   long it takes, using reported times only. A topic the viewer can't yet see the need for gets a why-scene
   of its own. Length follows the content: going past 8 minutes is fine when each scene earns its place.
+- **Name each component by what goes in and what comes out** (user, flow_match). When a process or
+  computation has parts (a network, a solver, a training step, a sampler, a reconstruction), say for each
+  one what it receives and what it produces ("takes a noisy point and a time, outputs a velocity"), and
+  draw it as inputs → box → outputs, with the inputs and outputs as pictures (a dot for a point, an arrow
+  for a velocity, a cloud for noise). When two methods are compared, compare their inputs and outputs
+  side by side (flow matching outputs a velocity; a diffusion model, given the same input, outputs the
+  noise).
 - **Method before result.** Name the simulation code and settings, the detector model, the
   reconstruction and its update equation, and the standard test (NEMA etc.), with the numbers that
   define them. Results come after the method that produced them.

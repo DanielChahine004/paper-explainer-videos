@@ -187,3 +187,20 @@ def fit_frame(m, margin=0.3):
 
 def fade_all(scene):
     scene.play(*[FadeOut(m) for m in scene.mobjects])
+
+def point(scene, m, color=WHITE):
+    """The term marker: a box that moves onto whichever part of an equation the voice is naming, so the eye
+    always knows which symbol is being read (docs/DESIGN.md §1). Returns the animation; the first call draws the box.
+    Point at a part that is on screen: under ManimGX a Transform reshapes its target, so transform into
+    target.copy() when you will point at the target's parts later."""
+    box = SurroundingRectangle(m, buff=0.08, color=color, stroke_width=2.5)
+    old = getattr(scene, "_ptr", None)
+    scene._ptr = box
+    return ReplacementTransform(old, box) if old is not None else Create(box)
+
+
+def unpoint(scene):
+    """Fade the term marker; call it at the next block's first cue, not right after the last `at`."""
+    old, scene._ptr = scene._ptr, None
+    return FadeOut(old)
+

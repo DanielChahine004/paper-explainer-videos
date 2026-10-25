@@ -75,6 +75,14 @@ on: the object, the shape of the effect and the key number. Neither repeats the 
   and not before. When the narration names something already on screen (a crystal, a detector pair, a
   number), it gets an `Indicate` or `Circumscribe` on that word, so the eye always knows where to look. When a
   sentence names three things, that is three cues. Equations are lit term by term as they are read.
+  Write an equation in its parts (`MathTex(a, b, c)`), each part on the word that names it, and while the
+  voice reads or reuses a term already on screen, keep the **term marker** on it: `point(self, eq[k])` (common)
+  moves one box from term to term on each bookmark, and `unpoint(self)` at the next block's first cue. A
+  whole equation written at once and then talked over leaves the viewer hunting for "that minimum" or "the
+  exponent" (a viewer: "when speaking about parts of the equations they don't pulse or get signalled in any
+  way, so it's hard to track"). Every symbol the voice names (a term, a factor, a limit, an inequality sign)
+  is a cue (vlint: `equation-talked-over` warns when a multi-part `MathTex` is written whole in a block that
+  cues none of its parts).
   Leave the end of a line free: after the last cue, let the speech finish over a still frame.
 - **Steer the eye the whole time** (user, laser review). The voice should never talk about one part of the
   screen while the eye is free to wander elsewhere. Every object, region or number the narration names
@@ -196,7 +204,13 @@ labelled illustrative/schematic.
   shapes. Keep scales fixed during a move.
 - **When your own model contradicts your script, the script changes.** In the i3M Light scene, the
   model showed reflective walls do not compress positions more than black paint, so that claim
-  was cut.
+  was cut. The same goes for a drawn example: a claim made in general ("at low energy the likelihood grows a
+  second peak") must be visible in the one case on screen; when it is not, cut the claim or the scene.
+- **Illustrative is a valid answer; ask before building a simulator.** When the source's data are
+  missing, a schematic labelled illustrative often explains the method as well as a computed one (a
+  from-scratch photon Monte Carlo drew the reaction "no need to code it all yourself; it could just be
+  theoretical/illustrative"). Compute only what the argument needs, and say on screen which parts are
+  computed here and on what assumptions.
 - **Real data stays real.** Reuse the paper's own figure for real data (photos, reconstructions,
   measured maps or spectra), for dense plots that would be slow to rebuild faithfully, and for the
   result the paper is known for, licence permitting. Redraw mechanisms and schematics, and pull out
@@ -401,7 +415,8 @@ out: different API, no voiceover. GX gotchas, each of which cost a render:
   this happened in three videos, twice more while writing vlint itself, and again when a quoted bash
   heredoc halved `\\` (Git Bash). Python scripts are fine for
   backslash-free changes such as numbers and positions. For whole scenes, Write the new classes to a
-  scratchpad file and splice them in.
+  scratchpad file and splice them in. `sed` is no safer: `s/.../.../` eats the backslash in `\l`, so
+  `\lambda'_i` became `\ambda'_i`.
 - Every `Tex`/`MathTex` string with a backslash is raw (`r"et al.\ 2020"`) (vlint: `tex-not-raw`,
   `control-char`, `syntax-warning`).
 - Adjacent raw strings join with no space.
@@ -433,6 +448,19 @@ out: different API, no voiceover. GX gotchas, each of which cost a render:
   (vlint: `text-overlap` and `frame-clip` catch label-on-label and cut-off labels; a label over a shape, such
   as a bar, is still for the eye).
 - `d.get(k, f"{k:g}")` evaluates the default even for string keys; use a conditional.
+- Narration built with an f-string (`f"{say(x)} times the bound"`) is a computed text: `voice_prepass.py` skips
+  it and ManimGX only reads the cache, so the render fails with `KeyError: '<the sentence>'`. After changing
+  such a line, render that scene once under Manim CE (`ENGINE=ce`), which voices it, then render again;
+  re-running the pre-pass does not help (it reports "all cached").
+- Under ManimGX, `TransformFromCopy(a, target)` and `Transform` reshape `target` itself, so its parts
+  (`target[3]`) no longer match the glyphs drawn: a box or `Indicate` on them lands on nothing. Transform
+  into `target.copy()` when you will point at the target's parts later.
+- A `self.play` after the last `self.at` in a voiceover runs at once, not when the speech ends. A closing
+  fade there (`unpoint`, a dim restore) removes the cue while its words are still being spoken; put it at
+  the next block's first bookmark instead.
+- ManimGX `Axes` whose ranges do not start at 0 drew the x axis through y = 1 on a log plot. Shift the ranges
+  to start at 0 (keep the offset), hide the axes' stroke and draw your own frame lines. `add` the hidden axes
+  rather than `Create` them, or `vanished-after-intro` fails.
 - When a title changes, `ReplacementTransform` it.
 
 **Shell (Windows → WSL)**

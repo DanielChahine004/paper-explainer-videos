@@ -481,3 +481,29 @@ def algebra_shown(s):
         said = sorted({m.group(0).lower() for m in ALGEBRA.finditer(vo.text)})
         if said and not any(call_name(n) in MOVES | {"Cross"} for n in ast.walk(vo.node)):
             yield vo.node, f"says {', '.join(repr(w) for w in said)} but no term moves (no Transform/Cross in the block)"
+
+
+@rule("equation-talked-over", "static", "warn", "A multi-part equation is written whole inside a voiceover and none "
+      "of its parts is cued in that block, so the voice reads its terms while the eye hunts for them.",
+      "Part I §1, appear as it is named (equations)", "write it part by part on the words that name them, or keep "
+      "the term marker on each term as it is read: point(self, eq[k])")
+def equation_talked_over(s):
+    for cls in s.scenes:
+        eqs = {}                                    # name -> number of parts, for MathTex(a, b, c, ...) in this scene
+        for n in ast.walk(cls):
+            if (isinstance(n, ast.Assign) and len(n.targets) == 1 and isinstance(n.targets[0], ast.Name)
+                    and call_name(n.value) == "MathTex" and not any(isinstance(a, ast.Starred) for a in n.value.args)
+                    and len(n.value.args) >= 3):
+                eqs[n.targets[0].id] = len(n.value.args)
+        if not eqs:
+            continue
+        for vo in s.voiceovers:
+            if not cls.lineno <= vo.node.lineno <= cls.end_lineno:
+                continue
+            nodes = list(ast.walk(vo.node))
+            cued = {n.value.id for n in nodes if isinstance(n, ast.Subscript) and isinstance(n.value, ast.Name)}
+            for n in nodes:
+                if (call_name(n) in INTRO and n.args and isinstance(n.args[0], ast.Name) and n.args[0].id in eqs
+                        and n.args[0].id not in cued):
+                    yield n, (f"{n.args[0].id} ({eqs[n.args[0].id]} parts) is written whole and none of its parts is "
+                              "cued while the voice reads it")

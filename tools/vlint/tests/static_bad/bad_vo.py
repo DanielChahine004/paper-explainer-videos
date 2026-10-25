@@ -69,6 +69,12 @@ class Flash(Narrated):  # expect: shadows-manim
         self.play(Write(t1))  # expect: fixed-frame-early
         with self.voiceover(text="Now we substitute the first result into the second."):  # expect: algebra-shown
             self.play(FadeOut(t1), FadeIn(t3))
+        eq = MathTex(r"P", r"=", r"\tfrac12\sum", r"\min(p_A, p_B)")
+        with self.voiceover(text="Its <bookmark mark='e'/>error is half the summed overlap of the two."):
+            self.at("e", Write(eq))  # expect: equation-talked-over
+        with self.voiceover(text="That <bookmark mark='m'/>minimum is awkward. So <bookmark mark='k'/>bound it."):
+            self.at("m", Write(eq))                     # a part is cued in the block: fine
+            self.at("k", Indicate(eq[3]))
 
 
 class Circle(Narrated):  # expect: shadows-manim

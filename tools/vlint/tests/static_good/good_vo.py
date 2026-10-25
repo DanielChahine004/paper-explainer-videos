@@ -10,7 +10,9 @@ class Intro(Narrated):
     def construct(self):
         pic = card("x.png")
         eq = MathTex(r"\tau = \frac{1}{2}")
-        lab = Tex(r"\textbf{1.8} mm", font_size=28)
+        lab = Tex(r"\textbf{1.8} mm, $a$ and $b$, ``quoted''", font_size=28)
+        self.add_fixed_in_frame_mobjects(lab)
+        self.remove(lab)
         row = Group(pic, VGroup(eq, lab).arrange(DOWN))
         with self.voiceover(text="The <bookmark mark='p'/>picture comes first. Then the <bookmark mark='e'/>equation, "
                                  "and the <bookmark mark='n'/>number."):

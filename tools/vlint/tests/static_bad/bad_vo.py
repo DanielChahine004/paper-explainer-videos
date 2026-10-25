@@ -60,6 +60,13 @@ class Flash(Narrated):  # expect: shadows-manim
         sig = MathTex("\sigma")  # expect: syntax-warning, tex-not-raw
         # vlint: ignore-next[long-text] and on the line before
         long2 = Tex(r"another label that is far too long to be a label on the screen of a video")
+        t1 = Tex(r"$a$$b$")  # expect: gx-tex
+        t2 = Tex(r"costs \$5")  # expect: gx-tex
+        t3 = Tex(r"one\\two")                           # a line break works in GX: fine
+        self.add_fixed_in_frame_mobjects(t1, t2, t3)
+        self.remove(t2)
+        self.play(FadeIn(t2), Write(t3))                # removed first, or introduced at once: fine
+        self.play(Write(t1))  # expect: fixed-frame-early
 
 
 class Circle(Narrated):  # expect: shadows-manim

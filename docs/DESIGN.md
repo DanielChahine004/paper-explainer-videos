@@ -286,8 +286,15 @@ labelled illustrative/schematic.
   and render 3D scenes first. Recolouring a surface every frame costs about 10 minutes
   (`brain_swin`).
 - Scale every part from one unit and write the conversion down (`wt_pet` Sparse was built 10× too
-  big). Fix text in frame with `add_fixed_in_frame_mobjects`. Rotate at about 0.1 rad/s, and only
-  while the object is being discussed.
+  big). Fix text in frame with `add_fixed_in_frame_mobjects`, which shows it at once: `self.remove`
+  it straight after, then FadeIn/Write it on its cue (vlint: `fixed-frame-early`). Rotate at about
+  0.1 rad/s, and only while the object is being discussed.
+- A label or overlay that sits inside a solid is hidden by the depth test: put it on an outer face
+  or fix it in frame.
+- When a title moves down, content placed at fixed y values can collide with it; place content with
+  `top_at()` instead.
+- Small marks need contrast against what lies under them; a dot dimmed below half opacity is a ghost
+  and may recede (vlint: `faint-mark`).
 
 ## Reusing a figure
 - **Licence first.** "All rights reserved" means redraw (`liquid_tc`, Moliner 2012). CC BY means
@@ -344,9 +351,20 @@ interop (`GX_EXE`), because WSL has no NVIDIA Vulkan driver. `ENGINE=ce` renders
 ManimGX. `common.py` dispatches to `common_gx.py`, whose `Narrated` replays the voice pre-pass cache with
 `add_sound` and times `self.at()` from the word timings. vlint's runtime record still comes from CE in skip
 mode, so **every scene must run under both engines**: write the API they share. ManimGX typesets with Typst
-(LaTeX converted by mitex); common_gx patches `\'` accents, `\&` and `\ `, and a LaTeX package mitex lacks
-fails the render. A 10-minute, 15-scene video builds in under 2 minutes instead of 6, and 3D scenes render
-~50× faster. ManimGL was ruled out: different API, no voiceover.
+(LaTeX converted by mitex); common_gx patches `\'` accents, `\&`, `\ ` (as `\;` in maths), and in Tex
+text the macros mitex prints as words or crashes on (`\quad`, `\,`, `~`, `\dots`, `\checkmark`,
+`\textperiodcentered`, `\_`, ``` ``quotes'' ```). A LaTeX package mitex lacks fails the render. A 10-minute,
+15-scene video builds in under 2 minutes instead of 6, and 3D scenes render ~50× faster. ManimGL was ruled
+out: different API, no voiceover. GX gotchas, each of which cost a render:
+- `$a$$b$` (two maths runs touching) crashes Typst; `\$` prints "dollar" (vlint: `gx-tex`). A `\\`
+  line break in Tex works.
+- A MathTex with several underbraces or repeated substrings can fail with "cannot tell these parts
+  apart": build the parts as separate MathTex.
+- A wait that ends between frames is held as a frame sampled just inside the next animation, so the
+  first stroke of a Write sat on screen for the whole pause. `Narrated.wait` snaps every wait to the
+  frame grid; a scene not built on `Narrated` must do the same.
+- No scipy in a plain ManimGX install (write the numpy), no `rate_functions` module (common_gx gives a
+  namespace), and a translucent fill can come out opaque (lower `fill_opacity`).
 
 ---
 
@@ -355,7 +373,8 @@ fails the render. A 10-minute, 15-scene video builds in under 2 minutes instead 
 **Editing scripts**
 - Any edit touching a LaTeX backslash goes through the Edit tool, never a Python replace script.
   In a non-raw string, `"\t"` in `\textbf` or `\tau` becomes a tab and the match silently fails;
-  this happened in three videos, and twice more while writing vlint itself. Python scripts are fine for
+  this happened in three videos, twice more while writing vlint itself, and again when a quoted bash
+  heredoc halved `\\` (Git Bash). Python scripts are fine for
   backslash-free changes such as numbers and positions. For whole scenes, Write the new classes to a
   scratchpad file and splice them in.
 - Every `Tex`/`MathTex` string with a backslash is raw (`r"et al.\ 2020"`) (vlint: `tex-not-raw`,

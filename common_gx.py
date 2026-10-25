@@ -17,22 +17,48 @@ _ACC = {"'": "́", "`": "̀", '"': "̈", "^": "̂", "~": "̃"}
 _ACC_RE = re.compile(r"""\\(['`"^~])\{?([A-Za-z])\}?""")
 
 
-def _accents(s):
+def _accents(s, math=False):
     import unicodedata
     if not isinstance(s, str):
         return s
-    s = s.replace("\\&", "&").replace("\\ ", " ")   # mitex sets these as "amp" and "thick"
-    return _ACC_RE.sub(lambda m: unicodedata.normalize("NFC", m.group(2) + _ACC[m.group(1)]), s) if isinstance(s, str) else s
+    # mitex sets \& as "amp" and "\ " as "thick" (in maths it drops the gap, which \; keeps); keep \\ breaks
+    s = re.sub(r"(?<!\\)\\ ", r"\\; " if math else " ", s.replace("\\&", "&"))
+    return _ACC_RE.sub(lambda m: unicodedata.normalize("NFC", m.group(2) + _ACC[m.group(1)]), s)
+
+
+# text-mode macros mitex prints as words ("quad", "dots") or crashes on; outside $...$ they become the characters
+_TEXT_MACROS = [(re.compile(p), r) for p, r in (
+    (r"\\textperiodcentered\b\s*", "·"), (r"\\checkmark\b\s*", "✓"), (r"\\l?dots\b\s*", "…"),
+    (r"\\qquad\b\s*", "\u2003\u2003"), (r"\\quad\b\s*", "\u2003"), (r"\\,", "\u2009"), (r"(?<!\\)~", "\u00a0"),
+    (r"\\_", "_"), (r"``", "“"), (r"''", "”"), (r"(?<![\w\\])`", "‘"))]
+
+
+def _text_mode(parts):
+    out, math = [], False
+    for p in parts:
+        if not isinstance(p, str):
+            out.append(p)
+            continue
+        segs = re.split(r"((?<!\\)\$)", p)
+        for i, seg in enumerate(segs):
+            if seg == "$":
+                math = not math
+            elif not math:
+                for rx, r in _TEXT_MACROS:
+                    seg = rx.sub(r, seg)
+            segs[i] = seg
+        out.append("".join(segs))
+    return out
 
 
 class Tex(_Tex):
     def __init__(self, *parts, **kw):
-        super().__init__(*[_accents(p) for p in parts], **kw)
+        super().__init__(*[_accents(p) for p in _text_mode(parts)], **kw)
 
 
 class MathTex(_MathTex):
     def __init__(self, *parts, **kw):
-        super().__init__(*[_accents(p) for p in parts], **kw)
+        super().__init__(*[_accents(p, math=True) for p in parts], **kw)
 
 for _cls in (Mobject, ImageMobject):   # CE's old aliases
     _cls.set_height = lambda self, h, **kw: self.scale_to_fit_height(h, **kw)
@@ -47,16 +73,45 @@ def vlint_ok(mob, *rule_ids):
     return mob
 
 
+import types
+rate_functions = types.SimpleNamespace(**{n: globals()[n] for n in (
+    "smooth", "linear", "there_and_back", "rush_into", "rush_from", "double_smooth", "ease_in_out_sine",
+    "ease_out_cubic", "wiggle", "there_and_back_with_pause", "exponential_decay") if n in globals()})   # CE's module
+
+
 class _Tracker:
-    def __init__(self, duration, marks):
-        self.duration, self.marks = duration, marks
+    """manim-voiceover's tracker: the block's length, its bookmarks, and how much of it is left."""
+    def __init__(self, scene, t0, duration, marks):
+        self.scene, self.t0, self.duration, self.marks = scene, t0, duration, marks
+
+    def get_remaining_duration(self, buff=0.0):
+        return max(self.duration - (self.scene.time - self.t0) + buff, 0)
+
+    def time_until_bookmark(self, mark, buff=0, limit=None):
+        left = max(self.marks[mark] - (self.scene.time - self.t0) + buff, 0)
+        return min(left, limit) if limit is not None else left
 
 
 class Narrated(Scene):
+    def wait(self, duration=1.0, *a, **kw):
+        # end every wait on a whole frame: a wait ending between frames is held as a frame sampled just inside the
+        # next animation, so the first stroke of a Write/Create sat on screen for the whole pause
+        fps = config.frame_rate
+        d = round((self.time + duration) * fps) / fps - self.time
+        if d > 0.5 / fps:
+            super().wait(d, *a, **kw)
+
     def _cache(self):
         base = os.environ.get("VOICE_ROOT") or Path(inspect.getfile(type(self))).parent
         root = Path(base) / f"m_{type(self).__name__}" / "voiceovers"
-        return root, {e["input_data"]["input_text"]: e for e in json.loads((root / "cache.json").read_text())}
+        for k in range(20):   # the voice pre-pass may be rewriting cache.json for another line right now
+            try:
+                return root, {e["input_data"]["input_text"]: e for e in json.loads((root / "cache.json").read_text())}
+            except json.JSONDecodeError:
+                if k == 19:
+                    raise
+                import time
+                time.sleep(0.25)
 
     @contextmanager
     def voiceover(self, text):
@@ -75,7 +130,7 @@ class Narrated(Scene):
         duration = words[-1]["audio_offset"] / 10_000_000
         self._vo = (self.time, marks)
         self.add_sound(str(root / entry["original_audio"]))
-        yield _Tracker(duration, marks)
+        yield _Tracker(self, self.time, duration, marks)
         left = duration - (self.time - self._vo[0])
         if left > 1 / 60:
             self.wait(left)

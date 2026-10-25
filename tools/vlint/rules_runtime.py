@@ -592,3 +592,62 @@ def bookmark_unfired(mon, ev, p):
         if missed:
             yield ("missed", tuple(missed), mon.time()), f"bookmark(s) never waited for: {', '.join(missed)}"
         st.pop("marks")
+
+
+def _lum(rgb):
+    c = [x / 12.92 if x <= 0.03928 else ((x + 0.055) / 1.055) ** 2.4 for x in rgb]
+    return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]
+
+
+def _contrast(a, b):
+    la, lb = sorted((_lum(a), _lum(b)), reverse=True)
+    return (la + 0.05) / (lb + 0.05)
+
+
+@rule("faint-mark", "runtime", "warn", "A small filled mark (a dot, a marker) with no outline is so close to the "
+      "background once its opacity is applied that it can hardly be seen (guitar's faint scale dots).",
+      "Part II, Colour", "raise its fill_opacity, brighten its colour, or give it an outline")
+def faint_mark(mon, ev, p):
+    if ev != "play":
+        return
+    import numpy as np
+    size = float(opt(mon, "mark_size", 0.5))
+    need = float(opt(mon, "mark_contrast", 1.5))
+    bg = np.asarray(M.ManimColor(getattr(mon.scene.camera, "background_color", None) or M.config.background_color).to_rgb())
+    def rgb(m):
+        return np.asarray(M.ManimColor(m.get_fill_color()).to_rgb())
+
+    drawn = []                                  # (mobject, exempt) in drawing order, text left out
+    def collect(ms, ok):
+        for m in ms:
+            here = ok | frozenset(getattr(m, "_vlint_ok", ()))
+            if isinstance(m, TEXTS()):
+                continue
+            if isinstance(m, M.VMobject) and m.has_points():
+                drawn.append((m, here))
+            collect(m.submobjects, here)
+    collect(mon.scene.mobjects, frozenset())
+    for i, (m, ok) in enumerate(drawn):
+        # round marks only: colour-bar and heatmap cells fade into the background on purpose
+        if "faint-mark" in ok or "*" in ok or not isinstance(m, M.Circle):
+            continue
+        a = float(m.get_fill_opacity())
+        # below half opacity a mark is a ghost, dimmed so it recedes
+        if a < 0.5 or (m.get_stroke_width() > 0 and float(m.get_stroke_opacity()) >= 0.05):
+            continue
+        x0, y0, x1, y1 = bbox(m)
+        if max(x1 - x0, y1 - y0) > size:
+            continue
+        cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
+        under, what = bg, "the background"
+        for b, _ in reversed(drawn[:i]):        # the topmost filled shape already drawn under the mark
+            ba = float(b.get_fill_opacity())
+            if ba < 0.3:
+                continue
+            bx0, by0, bx1, by1 = bbox(b)
+            if bx0 <= cx <= bx1 and by0 <= cy <= by1 and (bx1 - bx0) * (by1 - by0) > 4 * (x1 - x0) * (y1 - y0):
+                under, what = ba * rgb(b) + (1 - ba) * bg, f"the {type(b).__name__} under it"
+                break
+        r = _contrast(a * rgb(m) + (1 - a) * under, under)
+        if r < need:
+            yield id(m), f"{type(m).__name__} at ({cx:.2f}, {cy:.2f}) has contrast {r:.2f} against {what}"

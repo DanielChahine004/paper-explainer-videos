@@ -411,3 +411,50 @@ def quality_cap(s):
         if (isinstance(node, ast.Assign) and any(isinstance(t, ast.Attribute) and t.attr == "pixel_height" for t in node.targets)
                 and isinstance(node.value, ast.Constant) and isinstance(node.value.value, int) and node.value.value > 1080):
             yield node, f"pixel_height = {node.value.value}"
+
+
+@rule("gx-tex", "static", "error", "A Tex string ManimGX's Typst/mitex cannot set (common_gx maps the text macros "
+      "it can): two maths runs touching ($a$$b$) crash the render, and \\$ prints the word 'dollar'.",
+      "Part IV, ManimGX", "join the maths into one $...$; write 'USD' or a word")
+def gx_tex(s):
+    for node in ast.walk(s.tree):
+        if call_name(node) == "Tex":
+            for a in node.args:
+                v = s.resolve_str(a)
+                if not v:
+                    continue
+                if re.search(r"(?<!\\)\$\$", v):
+                    yield a, f"two maths runs touch: {v[:40]!r}"
+                if re.search(r"(?<!\\)\\\$", v):
+                    yield a, f"\\$ is set as the word 'dollar': {v[:40]!r}"
+
+
+@rule("fixed-frame-early", "static", "error", "add_fixed_in_frame_mobjects(x) puts x on screen at once, so a later "
+      "FadeIn/Write/Create of x plays over a frame where it is already shown (Neck3D's formula sat there before "
+      "its cue).", "Part IV, 3D scenes", "self.remove(x) right after add_fixed_in_frame_mobjects(x), then introduce it")
+def fixed_frame_early(s):
+    for fn in ast.walk(s.tree):
+        if not isinstance(fn, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            continue
+        calls = sorted((n for n in ast.walk(fn) if isinstance(n, ast.Call)), key=lambda n: (n.lineno, n.col_offset))
+        shown = {}                                  # fixed, not removed: key -> [the fixing call, time has passed]
+        for c in calls:
+            f = c.func
+            meth = f.attr if isinstance(f, ast.Attribute) else None
+            keys = [ast.dump(a.value if isinstance(a, ast.Starred) else a) for a in c.args]
+            if meth == "add_fixed_in_frame_mobjects":
+                for k in keys:
+                    shown[k] = [c, False]
+            elif meth == "remove":
+                for k in keys:
+                    shown.pop(k, None)
+            elif meth in ("play", "wait", "at", "wait_until_bookmark", "move_camera"):
+                # an intro in the very next play starts from nothing, so no frame shows it early
+                for n in ast.walk(c):
+                    if call_name(n) in INTRO and n.args and ast.dump(n.args[0]) in shown:
+                        add, late = shown.pop(ast.dump(n.args[0]))
+                        if late:
+                            yield n, f"{call_name(n)}({ast.get_source_segment(s.text, n.args[0])}) after it was " \
+                                     f"fixed in frame (line {add.lineno}) and shown during the wait in between"
+                for v in shown.values():
+                    v[1] = True

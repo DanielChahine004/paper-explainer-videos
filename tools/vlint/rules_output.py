@@ -3,14 +3,57 @@ there, fresh, and clean at runtime?); mode "final" runs on the joined file (reso
 gets an OutputCtx and yields (where, message), where is a scene name or a file name."""
 import json
 import shutil
+import struct
 import subprocess
 
 from .core import Finding, opt, rule, undump
 from .fingerprint import fingerprint
 
 
+def track_durations(path):
+    """{'vide': seconds, 'soun': seconds} from each track's mdhd box: what the container says each track lasts."""
+    def boxes(b, lo, hi):
+        while lo + 8 <= hi:
+            size, kind = struct.unpack(">I4s", b[lo:lo + 8])
+            head = 8
+            if size == 1:
+                size, head = struct.unpack(">Q", b[lo + 8:lo + 16])[0], 16
+            elif size == 0:
+                size = hi - lo
+            if size < head:
+                return
+            yield kind, lo + head, lo + size
+            lo += size
+    with open(path, "rb") as f:
+        b = f.read()
+    out = {}
+    for kind, lo, hi in boxes(b, 0, len(b)):
+        if kind != b"moov":
+            continue
+        for k2, lo2, hi2 in boxes(b, lo, hi):
+            if k2 != b"trak":
+                continue
+            for k3, lo3, hi3 in boxes(b, lo2, hi2):
+                if k3 != b"mdia":
+                    continue
+                dur = typ = None
+                for k4, lo4, hi4 in boxes(b, lo3, hi3):
+                    if k4 == b"mdhd":
+                        v = b[lo4]
+                        ts, du = (struct.unpack(">II", b[lo4 + 12:lo4 + 20]) if v == 0
+                                  else struct.unpack(">IQ", b[lo4 + 20:lo4 + 32]))
+                        dur = du / ts if ts else None
+                    elif k4 == b"hdlr":
+                        typ = b[lo4 + 8:lo4 + 12].decode("latin-1")
+                if dur is not None and typ and typ not in out:
+                    out[typ] = dur
+    return out
+
+
 def probe(path):
-    """{'video': seconds, 'audio': seconds, 'width', 'height'} from ffprobe."""
+    """{'video': seconds, 'audio': seconds, 'width', 'height'} from ffprobe. The video length is the longer of
+    ffprobe's stream duration and the track's own mdhd duration: after a concat join of ManimGX's variable-rate,
+    B-frame h264, ffprobe's stream duration comes out seconds short (i3m_pet: 452.7 s for a 454.9 s track)."""
     exe = shutil.which("ffprobe") or "ffprobe"
     r = subprocess.run([exe, "-v", "error", "-show_entries", "stream=codec_type,duration,width,height:format=duration",
                         "-of", "json", str(path)], capture_output=True, text=True, check=True)
@@ -22,6 +65,11 @@ def probe(path):
             out[t] = float(s.get("duration") or out["format"])
             if t == "video":
                 out["width"], out["height"] = int(s["width"]), int(s["height"])
+    if "video" in out and str(path).endswith(".mp4"):
+        try:
+            out["video"] = max(out["video"], track_durations(path).get("vide", 0))
+        except (OSError, struct.error):
+            pass
     return out
 
 

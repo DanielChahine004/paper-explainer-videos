@@ -1087,7 +1087,7 @@ class TimingWhy(Narrated):
             b[0].move_to(np.array([0.5, -2.2 - 0.6 * i, 0]), aligned_edge=LEFT)
             b[1].next_to(b[0], LEFT, buff=0.15)
             b[2].next_to(b[0], RIGHT, buff=0.1)
-        bl = Tex(r"uEXPLORER: $>$500\,000 crystals, $\sim$$10^{11}$ lines (Spencer 2021)", font_size=22, color=GREY_B).next_to(bars, UP, buff=0.15)
+        bl = Tex(r"uEXPLORER: $>$500\,000 crystals, $\sim 10^{11}$ lines (Spencer 2021)", font_size=22, color=GREY_B).next_to(bars, UP, buff=0.15)
         with self.voiceover(text="Timing next, and again the why first. <bookmark mark='l'/>The two photons from one annihilation fly "
                                  "in opposite directions <bookmark mark='d'/>and reach their detectors at slightly different times. "
                                  "<bookmark mark='t'/>That difference places the annihilation along the line: every hundred "

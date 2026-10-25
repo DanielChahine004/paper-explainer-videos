@@ -101,6 +101,28 @@ def frame_clip(mon, ev, p):
             yield id(m), f"{label(m)} is cut off by the frame edge (box x {x0:.2f}..{x1:.2f}, y {y0:.2f}..{y1:.2f})"
 
 
+@rule("frame-margin", "runtime", "warn", "An equation or large label ends a play within a hair of the bottom or side "
+      "edge. It fits here, but ManimGX's Typst sets maths a little larger than CE's LaTeX, so in the real render it "
+      "can be cut off (liquid_tc Solver).", "Part II, Layout (fit_frame)",
+      "keep ~0.3 from the edge: tighten the stack's buff, shrink it, or move it up")
+def frame_margin(mon, ev, p):
+    if ev != "play" or isinstance(mon.scene, M.ThreeDScene):
+        return
+    margin = float(opt(mon, "edge_margin", 0.2))
+    tall = float(opt(mon, "edge_min_height", 0.35))          # footnotes and credits may sit near the edge
+    X0, Y0, X1, Y1 = frame_box(mon.scene)
+    for m in leaves(mon.scene, "frame-margin"):
+        if not isinstance(m, TEXTS()) or visibility(m) < 0.05:
+            continue
+        x0, y0, x1, y1 = bbox(m)
+        if y1 - y0 < tall or x1 < X0 or x0 > X1 or y1 < Y0 or y0 > Y1:
+            continue
+        gaps = {"bottom": y0 - Y0, "left": x0 - X0, "right": X1 - x1}
+        side, g = min(gaps.items(), key=lambda kv: kv[1])
+        if -0.03 <= g < margin:
+            yield id(m), f"{label(m)} is {g:.2f} from the {side} edge (< {margin})"
+
+
 @rule("text-overlap", "runtime", "warn", "Two visible labels overlap at the end of a play.",
       "Part II, Layout; Part IV (two labels on one edge)", "move one, align them to opposite ends, or remove the old one")
 def text_overlap(mon, ev, p):
@@ -128,7 +150,10 @@ def text_overlap(mon, ev, p):
 
 def _flatten(anims):
     for a in anims:
-        if isinstance(a, M.AnimationGroup):
+        # TransformMatchingShapes/Tex fade their unmatched pieces in, then swap in the target: one animation, not intros
+        if type(a).__name__.startswith("TransformMatching"):
+            yield a
+        elif isinstance(a, M.AnimationGroup):
             yield from _flatten(a.animations)
         else:
             yield a
@@ -617,20 +642,34 @@ def faint_mark(mon, ev, p):
     def rgb(m):
         return np.asarray(M.ManimColor(m.get_fill_color()).to_rgb())
 
+    T, VM = TEXTS(), M.VMobject
+    seen = mon.state.setdefault("faint-mark", {})     # id -> (colour, opacity) last judged: unchanged marks are skipped
     drawn = []                                  # (mobject, exempt) in drawing order, text left out
     def collect(ms, ok):
         for m in ms:
             here = ok | frozenset(getattr(m, "_vlint_ok", ()))
-            if isinstance(m, TEXTS()):
+            if isinstance(m, T):
                 continue
-            if isinstance(m, M.VMobject) and m.has_points():
+            if isinstance(m, VM) and m.has_points():
                 drawn.append((m, here))
             collect(m.submobjects, here)
     collect(mon.scene.mobjects, frozenset())
+    # possible backdrops, boxed once per play (a box per mark per shape cost calib's FanScan 14 min)
+    backs = []
+    for i, (b, _) in enumerate(drawn):
+        ba = float(b.get_fill_opacity())
+        if ba >= 0.3 and not isinstance(b, M.ArrowTip):          # a dot on an arrow's own tip is not hidden
+            bx = bbox(b)
+            backs.append((i, bx, (bx[2] - bx[0]) * (bx[3] - bx[1]), ba, b))
     for i, (m, ok) in enumerate(drawn):
         # round marks only: colour-bar and heatmap cells fade into the background on purpose
         if "faint-mark" in ok or "*" in ok or not isinstance(m, M.Circle):
             continue
+        fr = getattr(m, "fill_rgbas", None)
+        state = fr.tobytes() if fr is not None else None
+        if state is not None and seen.get(id(m)) == state:
+            continue
+        seen[id(m)] = state
         a = float(m.get_fill_opacity())
         # below half opacity a mark is a ghost, dimmed so it recedes
         if a < 0.5 or (m.get_stroke_width() > 0 and float(m.get_stroke_opacity()) >= 0.05):
@@ -640,12 +679,10 @@ def faint_mark(mon, ev, p):
             continue
         cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
         under, what = bg, "the background"
-        for b, _ in reversed(drawn[:i]):        # the topmost filled shape already drawn under the mark
-            ba = float(b.get_fill_opacity())
-            if ba < 0.3:
+        for j, (bx0, by0, bx1, by1), area, ba, b in reversed(backs):   # the topmost filled shape drawn under the mark
+            if j >= i:
                 continue
-            bx0, by0, bx1, by1 = bbox(b)
-            if bx0 <= cx <= bx1 and by0 <= cy <= by1 and (bx1 - bx0) * (by1 - by0) > 4 * (x1 - x0) * (y1 - y0):
+            if bx0 <= cx <= bx1 and by0 <= cy <= by1 and area > 4 * (x1 - x0) * (y1 - y0):
                 under, what = ba * rgb(b) + (1 - ba) * bg, f"the {type(b).__name__} under it"
                 break
         r = _contrast(a * rgb(m) + (1 - a) * under, under)

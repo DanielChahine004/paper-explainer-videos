@@ -78,10 +78,18 @@ def output():
         r2 = run()
         rec.write_text(json.dumps({"fingerprint": fingerprint(d / "good_vo.py", "Intro"), "findings": []}))
         r3 = run()
+        log = d / "m_Intro.log"
+        log.write_text("layout: 1 problem\n  [1] t=2.5-3.0s (x.py:9)  a (MathTex 'x'): box runs through the text\n")
+        r3b = run()
+        log.write_text("layout: 1 problem\n  [1] t=67.7–6.2s (common_gx.py:148)  eq3 (MathTex 'x'): 0.03 past the bottom edge\n",
+                       encoding="utf-8")
+        r3c = run()
+        log.unlink()
         (d / "good_vo.py").write_text((d / "good_vo.py").read_text().replace("1.8", "1.9"))
         r4 = run()
         for name, got, want in [("missing", r1, ["missing-scene"]), ("stale", r2, ["stale-scene"]),
-                                ("fresh", r3, []), ("edited", r4, ["stale-scene"])]:
+                                ("fresh", r3, []), ("gx note", r3b, []), ("gx edge", r3c, ["gx-frame-edge"]),
+                                ("edited", r4, ["stale-scene"])]:
             if got != want:
                 ok = False
                 print(f"  output case {name}: expected {want}, got {got}")

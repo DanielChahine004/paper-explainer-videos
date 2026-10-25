@@ -115,6 +115,18 @@ concrete choices (what is computed, what is kept). Give derivations one line at 
   neuron equation), run it in numpy inside the scene and label the result "computed here".
 - **A short draft needs more explanation, not padding.** Under 5 minutes, find a mechanism the
   narration only names and give it its own scene (`mouse_pet` Motion).
+- **Show the algebra move by move**. When the narration substitutes, rearranges,
+  expands, factors, cancels or solves, the terms move on screen; one equation never fades out for the
+  next to appear. Map the parts by hand (split the MathTex into the pieces that move):
+  - substitute: light the symbol and its definition, then `TransformFromCopy(defn[k], new[j])` flies
+    the definition into the slot while the old symbol fades out, `ReplacementTransform` for the rest;
+  - expand, collect, rearrange, divide through: `TransformMatchingShapes(old, new)` (or
+    `TransformMatchingTex` when the parts carry the same strings), pulsing the terms that move first;
+  - factor: light the common factor in every term, then transform to the factored form;
+  - cancel: `Cross` the pair, then remove it;
+  - keep the earlier line on screen when the derivation is a stack (`TransformMatchingShapes(d2.copy(), d3)`).
+  In ManimGX, `key_map` together with a `TransformFromCopy` into the same target crashes: map the parts
+  explicitly instead (vlint: `algebra-shown` warns when such a block moves no term).
 
 ## 3. Make the physics visible
 
@@ -356,6 +368,10 @@ text the macros mitex prints as words or crashes on (`\quad`, `\,`, `~`, `\dots`
 `\textperiodcentered`, `\_`, ``` ``quotes'' ```). A LaTeX package mitex lacks fails the render. A 10-minute,
 15-scene video builds in under 2 minutes instead of 6, and 3D scenes render ~50× faster. ManimGL was ruled
 out: different API, no voiceover. GX gotchas, each of which cost a render:
+- Typst sets maths a little larger than CE's LaTeX, so a stack that just fits in the CE check can be
+  cut off in the render. Keep ~0.3 from the edges; vlint `frame-margin`
+  warns in the check, and `gx-frame-edge` refuses the join when ManimGX's own layout pass (the
+  "layout: N problems" list in m_<Scene>.log) finds anything past an edge.
 - `$a$$b$` (two maths runs touching) crashes Typst; `\$` prints "dollar" (vlint: `gx-tex`). A `\\`
   line break in Tex works.
 - A MathTex with several underbraces or repeated substrings can fail with "cannot tell these parts
@@ -363,6 +379,8 @@ out: different API, no voiceover. GX gotchas, each of which cost a render:
 - A wait that ends between frames is held as a frame sampled just inside the next animation, so the
   first stroke of a Write sat on screen for the whole pause. `Narrated.wait` snaps every wait to the
   frame grid; a scene not built on `Narrated` must do the same.
+- ManimGX writes each pause as one long frame (variable frame rate), which makes players stutter when
+  motion resumes; `render_lib.sh` re-encodes every scene to a constant frame rate before the join.
 - No scipy in a plain ManimGX install (write the numpy), no `rate_functions` module (common_gx gives a
   namespace), and a translucent fill can come out opaque (lower `fill_opacity`).
 

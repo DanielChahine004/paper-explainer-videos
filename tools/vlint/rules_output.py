@@ -2,6 +2,7 @@
 there, fresh, and clean at runtime?); mode "final" runs on the joined file (resolution, sync, length). Each rule
 gets an OutputCtx and yields (where, message), where is a scene name or a file name."""
 import json
+import re
 import shutil
 import struct
 import subprocess
@@ -134,6 +135,24 @@ def stale_scene(ctx):
         why = ctx.stale(s) if p.exists() else None
         if why and ctx.record(s) is not None:
             yield s, why
+
+
+_GX_EDGE = re.compile(r"\[\d+\] t=([\d.]+)\S*\s+\(.*?\)\s+(.*?past the \w+ edge)")
+
+
+@rule("gx-frame-edge", "output", "error", "ManimGX's own layout pass found something past the frame edge in the real "
+      "render. Typst sets maths a little larger than CE's LaTeX, so CE's frame-clip can pass what GX cuts off "
+      "(liquid_tc Solver's last equation).", "Part II, Layout (fit_frame)",
+      "move it in or shrink the stack (keep ~0.3 from the edge); the render log m_<Scene>.log lists each one")
+def gx_frame_edge(ctx):
+    if ctx.mode != "parts":
+        return
+    for s, p in ctx.parts.items():
+        log = ctx.video_dir / f"m_{s}.log"
+        if not p.exists() or not log.exists():
+            continue
+        for m in _GX_EDGE.finditer(log.read_bytes().decode("utf-8", "replace")):
+            yield s, f"t={float(m.group(1)):.1f}s: {m.group(2)}"
 
 
 @rule("unchecked-scene", "output", "warn", "A scene was rendered without the runtime monitor (old video, or a scene "

@@ -458,3 +458,26 @@ def fixed_frame_early(s):
                                      f"fixed in frame (line {add.lineno}) and shown during the wait in between"
                 for v in shown.values():
                     v[1] = True
+
+
+ALGEBRA = re.compile(r"\b(substitut\w*|plug(?:s|ging)? (?:it|this|that|them|in)|rearrang\w*|re-arrang\w*|"
+                     r"factor(?:s|ing|ise|ize|ised|ized|ed)? (?:out|it|this|that)|factori[sz]\w*|pull(?:s|ing)? out|"
+                     r"cancel(?:s|led|ling)? (?:out|each)|expand(?:s|ing|ed)? (?:it|this|that|the bracket|out)|"
+                     r"simplif\w*|both sides|solve (?:it )?for|collect(?:ing)? (?:the )?terms|"
+                     r"take the (?:log|logarithm) of)",
+                     re.I)
+MOVES = {"TransformMatchingTex", "TransformMatchingShapes", "TransformFromCopy", "ReplacementTransform", "Transform",
+         "FadeTransform", "FadeTransformPieces"}
+
+
+@rule("algebra-shown", "static", "warn", "The narration manipulates a formula (substitutes, rearranges, factors, "
+      "cancels, expands...) but the block moves no term on screen, so the step is told, not shown.",
+      "Part I §2, show the algebra move by move", "map the parts: TransformFromCopy the substituted term into its slot, "
+      "TransformMatchingTex/Shapes for a rearrangement, light the common factor then pull it out, Cross what cancels")
+def algebra_shown(s):
+    for vo in s.voiceovers:
+        if vo.text is None:
+            continue
+        said = sorted({m.group(0).lower() for m in ALGEBRA.finditer(vo.text)})
+        if said and not any(call_name(n) in MOVES | {"Cross"} for n in ast.walk(vo.node)):
+            yield vo.node, f"says {', '.join(repr(w) for w in said)} but no term moves (no Transform/Cross in the block)"

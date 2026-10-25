@@ -67,6 +67,8 @@ class Flash(Narrated):  # expect: shadows-manim
         self.remove(t2)
         self.play(FadeIn(t2), Write(t3))                # removed first, or introduced at once: fine
         self.play(Write(t1))  # expect: fixed-frame-early
+        with self.voiceover(text="Now we substitute the first result into the second."):  # expect: algebra-shown
+            self.play(FadeOut(t1), FadeIn(t3))
 
 
 class Circle(Narrated):  # expect: shadows-manim

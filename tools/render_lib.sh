@@ -86,6 +86,11 @@ if [ -n "$todo" ]; then
        p() { case "$GX_EXE" in *.exe) wslpath -w "$1" ;; *) echo "$1" ;; esac; }   # a Windows .exe takes Windows paths
        "$GX_EXE" render "$(p "$PWD/$SCRIPT")" "{}" -o "$(p "$PWD/$d/{}.mp4")" $GX_RES --crf 14 --preset slow \
          > "m_{}.log" 2>&1 || { echo "FAILED {} (see m_{}.log)"; kill $ck 2>/dev/null; exit 1; }
+       # ManimGX stores each pause as one frame lasting the whole pause (variable frame rate, ~18 fps on
+       # average); players stutter when motion resumes after such a frame, so re-encode to a constant rate
+       pixi run ffmpeg -loglevel error -y -i "$d/{}.mp4" -c:v libx264 -crf 14 -preset slow -fps_mode cfr \
+         -r '"${RES##*p}"' -c:a copy "$d/{}.cfr.mp4" && mv "$d/{}.cfr.mp4" "$d/{}.mp4" \
+         || { echo "FAILED {}: constant-rate re-encode"; kill $ck 2>/dev/null; exit 1; }
        wait $ck || { echo "FAILED {}: CE skip-mode check (see m_{}.check.log)"; exit 1; }
        rm -f "$d/{}".storyboard*.png; echo "done {}"
      else

@@ -21,3 +21,6 @@ class Intro(Narrated):
             self.at("n", FadeIn(lab))
         with self.voiceover(text="Now we <bookmark mark='i'/>point at it again."):
             self.at("i", Indicate(lab))
+        eq2 = MathTex(r"\tau", r"=", r"0.5")
+        with self.voiceover(text="We <bookmark mark='s'/>simplify the fraction, and a factor of two alone is not a step."):
+            self.at("s", TransformMatchingTex(eq, eq2))

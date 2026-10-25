@@ -111,6 +111,15 @@ on: the object, the shape of the effect and the key number. Neither repeats the 
 Naming a technique explains nothing. For any method that matters (a solver, a loss, a calibration,
 a reconstruction), show the problem, what the naive approach does and why it fails, and the fix as
 concrete choices (what is computed, what is kept). Give derivations one line at a time.
+- **Technical means the mechanism, not the algebra: lead with the picture.** A derivation shown step by
+  step can still leave the idea unseen (a viewer, after a video built two statistical bounds from their
+  derivations: "I still don't understand how they work, bit too much equations and maths; focus on the
+  intuition in the geometry and distributions"). Find the picture in which the method is obvious, and let
+  equations be at most one label on it. For statistics: an event is a dot, a hypothesis is a cloud of dots,
+  a test is a boundary, its error is the dots on the wrong side; a bound is a statement about how clouds
+  overlap (square-rooting Poisson counts makes every cloud round and the same size, so overlap is just
+  distance); an unknown parameter sliding is a path traced by the cloud's centre, and local versus global
+  bounds are "near the truth" versus "every rival on the path". Draw the distribution, not its formula.
 - **Why before how, then what it costs** (user, calibration video). Before a procedure, show the failure
   it prevents, as an animation with a live number (a gain error pushing the photopeak out of the window,
   "photopeak kept 10%"). Then show the procedure step by step. Then say how often it is redone and how

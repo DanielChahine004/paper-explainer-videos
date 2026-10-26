@@ -17,6 +17,11 @@ Each video should leave this file better than it found it, and this is part of f
   render time), find the rule that should have caught it. If the rule exists but did not fire,
   sharpen it. If none exists, add one aimed at the whole class of mistake.
 - **After something that worked**, add it where it belongs.
+- **Feedback from watching.** Leave timestamped notes in the catalog player; `python tools/feedback.py` lists
+  the open ones with the scene, the time inside it and a frame grab. Triage every note before fixing anything:
+  *incidental* (this video only), *design* (a class a reader must judge: add or sharpen a rule here), *vlint* (a class
+  a program can catch: add a rule with a planted bug), or *wontfix* with the reason. Close each one with
+  `feedback.py resolve <video> <nid> <kind> "<what changed>"`, so the record shows which notes became rules.
 - Prefer deepening a principle in Part I over adding a new rule. Rules carry a short example in
   brackets so a later reader can judge when they apply.
 - **If a program could have caught it, make the program catch it.** A rule here relies on someone remembering

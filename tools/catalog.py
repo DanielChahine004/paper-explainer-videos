@@ -10,6 +10,10 @@ falls back to the video's own first frames. Playback position is remembered per 
 
 Playlists live in playlists.json at the project root, {"name": ["folder", ...]} in viewing order. Each shows as its
 own row above the full list, counting the videos rendered so far; inside a playlist, the next video plays on its own.
+
+Feedback: in the player, Note (or the n key) pauses and saves a note at that moment into <video>/feedback.json, with
+the scene playing there and a frame grab in <video>/review/feedback/. tools/feedback.py lists the open notes for
+triage (an incidental fix, or a DESIGN/vlint rule for every future video).
 """
 import json
 import mimetypes
@@ -20,6 +24,8 @@ import struct
 import subprocess
 import sys
 import threading
+import time
+import uuid
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import unquote
@@ -29,6 +35,7 @@ CACHE = ROOT / ".catalog"
 PORT = int(os.environ.get("CATALOG_PORT", "8765"))
 FFMPEG = os.environ.get("FFMPEG", "/home/h/slab_render/.pixi/envs/default/bin/ffmpeg")   # inside WSL
 PLAYLISTS = ROOT / "playlists.json"
+RENDER = Path(os.environ.get("RENDER_ROOT", r"\\wsl.localhost\Ubuntu\home\h\slab_render"))   # the WSL render mirror
 SKIP = {"voice_ab"}                                      # voice tests, not explainers
 _meta, _lock = {}, threading.Lock()
 
@@ -80,7 +87,7 @@ def scan():
             with _lock:
                 _meta[key] = m
         small = max(folder.glob("*small*.mp4"), key=lambda p: p.stat().st_mtime, default=None)   # newest, if a stale one is left
-        out.append({"id": folder.name, "title": m["title"], "dur": m["dur"], "mtime": st.st_mtime,
+        out.append({"id": folder.name, "notes": sum(n.get("status") == "open" for n in load_notes(folder.name)), "title": m["title"], "dur": m["dur"], "mtime": st.st_mtime,
                     "size": st.st_size, "src": f"/v/{folder.name}/{full.name}",
                     "small": f"/v/{folder.name}/{small.name}" if small else None,
                     "thumb": f"/thumb/{folder.name}.jpg?{int(st.st_mtime)}"})
@@ -94,6 +101,71 @@ def playlists():
         return [{"name": k, "ids": [str(i) for i in v]} for k, v in d.items()]
     except (OSError, ValueError, AttributeError):
         return []
+
+
+def scene_spans(vid):
+    """[(scene, start, end)] in seconds of the joined video, from the render's scene list in the WSL mirror."""
+    out, t = [], 0.0
+    try:
+        for line in (RENDER / vid / "list.txt").read_text().splitlines():
+            m = re.match(r"file '/home/h/slab_render/(.+)'", line.strip())
+            if m:
+                f = RENDER / m.group(1)
+                d = duration(f)
+                out.append((f.stem, t, t + d))
+                t += d
+    except OSError:
+        return []
+    return out
+
+
+def scene_at(vid, t):
+    for name, a, b in scene_spans(vid):
+        if a <= t < b:
+            return name, round(t - a, 1)
+    return None, None
+
+
+_fb_lock = threading.Lock()
+
+
+def load_notes(vid):
+    try:
+        return json.loads((ROOT / vid / "feedback.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return []
+
+
+def save_notes(vid, notes):
+    (ROOT / vid / "feedback.json").write_text(json.dumps(notes, indent=1, ensure_ascii=False), encoding="utf-8")
+
+
+def grab(vid, t, nid):
+    """The frame a note is about, cut once (in the background) so it survives a re-render."""
+    full = next(iter((ROOT / vid).glob("*_narrated.mp4")), None)
+    if full is None:
+        return
+    out = ROOT / vid / "review" / "feedback" / f"{nid}.jpg"
+    out.parent.mkdir(parents=True, exist_ok=True)
+    cmd = [FFMPEG, "-loglevel", "error", "-y", "-ss", f"{t:.2f}", "-i", wsl_path(full), "-frames:v", "1",
+           "-vf", "scale=1280:-2", "-q:v", "3", wsl_path(out)]
+    try:
+        subprocess.run((["wsl"] if os.name == "nt" else []) + cmd, timeout=60, capture_output=True)
+    except (OSError, subprocess.TimeoutExpired):
+        pass
+
+
+def add_note(vid, t, text):
+    full = next(iter((ROOT / vid).glob("*_narrated.mp4")))
+    scene, local = scene_at(vid, t)
+    n = {"nid": uuid.uuid4().hex[:8], "t": round(t, 1), "scene": scene, "scene_t": local, "text": text.strip(),
+         "at": time.strftime("%Y-%m-%d %H:%M"), "render": int(full.stat().st_mtime), "status": "open"}
+    with _fb_lock:
+        notes = load_notes(vid)
+        notes.append(n)
+        save_notes(vid, notes)
+    threading.Thread(target=grab, args=(vid, t, n["nid"]), daemon=True).start()
+    return n
 
 
 def wsl_path(p):
@@ -136,6 +208,26 @@ class Handler(BaseHTTPRequestHandler):
         if self.command != "HEAD":
             self.wfile.write(body)
 
+    def do_POST(self):
+        path = unquote(self.path.split("?", 1)[0])
+        try:
+            body = json.loads(self.rfile.read(int(self.headers.get("Content-Length", 0) or 0)) or b"{}")
+            vid = str(body.get("id", ""))
+            if vid not in {v["id"] for v in scan()}:
+                return self.send(404, b"no such video", "text/plain")
+            if path == "/api/notes" and str(body.get("text", "")).strip():
+                n = add_note(vid, float(body.get("t", 0)), str(body["text"])[:4000])
+                return self.send(200, json.dumps(n).encode(), "application/json")
+            if path == "/api/notes/delete":
+                with _fb_lock:
+                    save_notes(vid, [n for n in load_notes(vid) if n["nid"] != body.get("nid")])
+                return self.send(200, b"{}", "application/json")
+            self.send(400, b"bad request", "text/plain")
+        except (ValueError, TypeError):
+            self.send(400, b"bad request", "text/plain")
+        except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
+            pass
+
     def do_HEAD(self):
         self.do_GET()
 
@@ -146,6 +238,11 @@ class Handler(BaseHTTPRequestHandler):
                 self.send(200, PAGE.encode(), "text/html; charset=utf-8", [("Cache-Control", "no-cache")])
             elif path == "/api/videos":
                 self.send(200, json.dumps(scan()).encode(), "application/json", [("Cache-Control", "no-cache")])
+            elif path == "/api/notes":
+                vid = unquote(self.path.split("id=", 1)[1]) if "id=" in self.path else ""
+                ok = vid in {v["id"] for v in scan()}
+                self.send(200, json.dumps(load_notes(vid) if ok else []).encode(), "application/json",
+                          [("Cache-Control", "no-cache")])
             elif path == "/api/playlists":
                 self.send(200, json.dumps(playlists()).encode(), "application/json", [("Cache-Control", "no-cache")])
             elif path.startswith("/thumb/"):
@@ -226,11 +323,30 @@ h2{font-size:17px;margin:22px 0 10px;font-weight:600}h2 .n{color:var(--mute);fon
 #pbar{display:flex;gap:10px;align-items:center;padding:10px 16px;background:#111}
 #pbar button{background:#222;color:var(--text);border:1px solid #333;border-radius:8px;padding:8px 14px;font:inherit;cursor:pointer}
 #ptitle{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#pbody{flex:1;display:flex;min-height:0}#pbody video{flex:1;min-width:0}
+#notes{width:min(340px,40vw);background:#14161c;border-left:1px solid #262a33;display:none;flex-direction:column;min-height:0}
+#notes.on{display:flex}#nlist{flex:1;overflow:auto;padding:8px}
+.note{display:flex;gap:8px;padding:8px;border-bottom:1px solid #222;font-size:14px}
+.note .ts{color:var(--acc);cursor:pointer;font-variant-numeric:tabular-nums;white-space:nowrap}
+.note .tx{flex:1;white-space:pre-wrap;word-break:break-word}.note .sc{color:var(--mute);font-size:12px}
+.note .x{background:none;border:0;color:var(--mute);cursor:pointer;font-size:16px}
+#nform{padding:10px;border-top:1px solid #262a33;display:none;flex-direction:column;gap:8px}#nform.on{display:flex}
+#nform textarea{background:#0e1015;color:var(--text);border:1px solid #333;border-radius:8px;padding:8px;font:inherit;min-height:90px;resize:vertical}
+#nform .row{display:flex;gap:8px;align-items:center}#nat{color:var(--acc);flex:1}
+#nform button,#notes .hd button{background:#222;color:var(--text);border:1px solid #333;border-radius:8px;padding:6px 12px;font:inherit;cursor:pointer}
+#notes .hd{display:flex;align-items:center;padding:10px;border-bottom:1px solid #262a33;gap:8px}#notes .hd b{flex:1}
+.nb{position:absolute;right:8px;top:8px;background:#e05d5d;color:#fff;padding:1px 7px;border-radius:4px;font-size:12px;font-weight:600}
+@media (max-width:700px){#pbody{flex-direction:column}#notes{width:100%;max-height:45vh;border-left:0;border-top:1px solid #262a33}}
 </style></head><body>
 <header><h1>Explainers</h1><span id="count"></span><input id="q" placeholder="Search" aria-label="Search"></header>
 <main id="grid"></main>
-<div id="player"><div id="pbar"><button id="back">&larr; Back</button><span id="ptitle"></span><button id="qual"></button></div>
-<video id="vid" controls playsinline preload="metadata"></video></div>
+<div id="player"><div id="pbar"><button id="back">&larr; Back</button><span id="ptitle"></span><button id="qual"></button>
+<button id="nbtn" title="Note at this moment (n)">Note</button><button id="ntog">Notes</button></div>
+<div id="pbody"><video id="vid" controls playsinline preload="metadata"></video>
+<div id="notes"><div class="hd"><b>Feedback</b><button id="nclose">Hide</button></div><div id="nlist"></div>
+<div id="nform"><div class="row"><span id="nat"></span></div>
+<textarea id="ntext" placeholder="What should change here? (Ctrl+Enter saves)"></textarea>
+<div class="row"><button id="nsave">Save</button><button id="ncancel">Cancel</button></div></div></div></div></div>
 <script>
 const grid=document.getElementById('grid'),vid=document.getElementById('vid'),player=document.getElementById('player');
 let list=[],pls=[],cur=null,curPl=null,small=false;
@@ -240,7 +356,7 @@ const save=(id,t)=>{try{localStorage.setItem('pos:'+id,t)}catch(e){}};
 function card(v,ep){
   const d=document.createElement('div');d.className='card';d.tabIndex=0;
   const age=(Date.now()/1000-v.mtime)/86400,p=pos(v.id);
-  d.innerHTML=`<div class="th"><img loading="lazy" alt=""><span class="dur">${fmt(v.dur)}</span>${ep?`<span class="ep">${ep}</span>`:''}${age<2?'<span class="new">NEW</span>':''}
+  d.innerHTML=`<div class="th"><img loading="lazy" alt=""><span class="dur">${fmt(v.dur)}</span>${ep?`<span class="ep">${ep}</span>`:''}${age<2?'<span class="new">NEW</span>':''}${v.notes?`<span class="nb">${v.notes} note${v.notes>1?'s':''}</span>`:''}
     ${p>5?`<div class="bar" style="width:${Math.min(100,100*p/v.dur)}%"></div>`:''}</div>
     <div class="meta"><div class="t"></div><div class="s">${new Date(v.mtime*1000).toLocaleDateString()} · ${(v.size/1048576).toFixed(0)} MB</div></div>`;
   d.querySelector('.t').textContent=v.title;
@@ -262,9 +378,35 @@ function next(){if(!cur||!curPl)return null;const p=pls.find(p=>p.name===curPl);
 function play(v,pl){cur=v;curPl=pl||null;document.getElementById('ptitle').textContent=v.title;
   document.getElementById('qual').style.display=v.small?'':'none';load(pos(v.id));player.classList.add('on');
   if(!history.state)history.pushState({p:1},'')}
-function load(t){vid.src=small&&cur.small?cur.small:cur.src;document.getElementById('qual').textContent=small?'Small':'HD';
+function load(t){loadNotes();vid.src=small&&cur.small?cur.small:cur.src;document.getElementById('qual').textContent=small?'Small':'HD';
   vid.addEventListener('loadedmetadata',()=>{if(t>5&&t<vid.duration-10)vid.currentTime=t;vid.play().catch(()=>{})},{once:true})}
-function close(){if(cur)save(cur.id,vid.currentTime);vid.pause();vid.removeAttribute('src');vid.load();player.classList.remove('on');cur=null;render()}
+const notesEl=document.getElementById('notes'),nform=document.getElementById('nform'),ntext=document.getElementById('ntext');
+let noteT=0,notes=[];
+async function loadNotes(){if(!cur)return;try{notes=await (await fetch('/api/notes?id='+encodeURIComponent(cur.id))).json()}catch(e){notes=[]}
+  const l=document.getElementById('nlist');l.replaceChildren(...notes.slice().sort((a,b)=>a.t-b.t).map(n=>{
+    const d=document.createElement('div');d.className='note';
+    d.innerHTML='<span class="ts"></span><div class="tx"></div><button class="x" title="Delete">&times;</button>';
+    const ts=d.querySelector('.ts');ts.textContent=fmt(n.t);ts.onclick=()=>{vid.currentTime=n.t;vid.pause()};
+    const tx=d.querySelector('.tx');tx.textContent=n.text;
+    if(n.scene){const s=document.createElement('div');s.className='sc';s.textContent=n.scene+' @ '+n.scene_t+' s';tx.append(s)}
+    d.querySelector('.x').onclick=async()=>{if(!confirm('Delete this note?'))return;
+      await fetch('/api/notes/delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:cur.id,nid:n.nid})});loadNotes()};
+    return d}));
+  document.getElementById('ntog').textContent='Notes'+(notes.length?' ('+notes.length+')':'')}
+function startNote(){if(!cur)return;vid.pause();noteT=vid.currentTime;notesEl.classList.add('on');nform.classList.add('on');
+  document.getElementById('nat').textContent='at '+fmt(noteT);ntext.value='';ntext.focus()}
+async function saveNote(){const text=ntext.value.trim();if(!text||!cur)return;
+  await fetch('/api/notes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:cur.id,t:noteT,text})});
+  nform.classList.remove('on');loadNotes()}
+document.getElementById('nbtn').onclick=startNote;
+document.getElementById('ntog').onclick=()=>notesEl.classList.toggle('on');
+document.getElementById('nclose').onclick=()=>notesEl.classList.remove('on');
+document.getElementById('nsave').onclick=saveNote;
+document.getElementById('ncancel').onclick=()=>nform.classList.remove('on');
+ntext.onkeydown=e=>{if(e.key==='Enter'&&(e.ctrlKey||e.metaKey))saveNote();if(e.key==='Escape')nform.classList.remove('on');e.stopPropagation()};
+document.addEventListener('keydown',e=>{const a=document.activeElement;
+  if(cur&&e.key==='n'&&a!==ntext&&a!==document.getElementById('q')){e.preventDefault();startNote()}});
+function close(){nform.classList.remove('on');if(cur)save(cur.id,vid.currentTime);vid.pause();vid.removeAttribute('src');vid.load();player.classList.remove('on');cur=null;render()}
 document.getElementById('qual').onclick=()=>{small=!small;load(vid.currentTime)};
 document.getElementById('back').onclick=()=>history.back();
 window.onpopstate=()=>{if(cur)close()};

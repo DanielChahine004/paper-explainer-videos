@@ -111,6 +111,10 @@ voice has moved on. Neither repeats the other. Every rule below serves one of th
   peak, a weight is the shading of the voxels a line crosses. A dashed line on the image shows where
   the profile runs. The narration word that names the property carries the cue (vlint: `property-cue`
   warns when "width", "edge", "contrast" and the like have no bookmark within 6 words before them).
+- **One thing that reports two readings is drawn once.** Two copies of the same detector, one shaded by
+  each reading, read as two detectors. Draw the one array, open up one element beside it (its pulse: the
+  height is the light caught, the crossing of a fixed level is when it fired), and show the second reading
+  across the array as an event on it (a ring spreading from the hit in firing order).
 - **A number sits on what it measures**. A value goes on its bar's end, a score on
   the distance it measures, a gain on an arrow from the old level up to the new top, a ratio as copies of the
   smaller bar laid end to end along the larger, a percentage of cells as a grid of cells. Where it cannot sit on
@@ -121,6 +125,9 @@ voice has moved on. Neither repeats the other. Every rule below serves one of th
   an angle an arc between its two rays, a window or threshold a tick on the axis it lives on (`pet_explorer`). If a
   spoken number has no place in the picture, say it without the unit or cut it (vlint: `number-undrawn` warns when
   a spoken number with a unit is nowhere on screen during its sentence).
+  A spec written as a line of text beside the drawing breaks the same rule. A count is the things themselves,
+  numbered as they appear; a size per item is a dimension line on one item; a thickness is a side view with the
+  dimension on it.
   A number that changes keeps the old value readable: say the old value on one bookmark and the change on the next,
   and when the comparison is the point, leave the old value on screen beside the new (user, `pet_nanocomposites`
   Composite: "the 1.02 -> 1.5 bar expansion happened too quickly, couldn't read 1.02"; it now shows a grey "plain"

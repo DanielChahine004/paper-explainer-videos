@@ -274,6 +274,9 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 .slide{position:relative;height:100%;scroll-snap-align:start;scroll-snap-stop:always;overflow:hidden;background:#000}
 .bg{position:absolute;inset:-30px;background-size:cover;background-position:center;filter:blur(26px) brightness(.45);transform:scale(1.1)}
 .stage{position:absolute;left:0;right:0;top:max(80px,calc(42% - 28vw));aspect-ratio:16/9}
+/* the picture never takes a touch: taps and holds go through to .tap (the rewind video sits above .tap, and a phone's
+   own long-press menu on a video offers to download it) */
+.stage{pointer-events:none;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
 .stage img,.stage video{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#000}
 .stage video{opacity:0;transition:opacity .15s;z-index:1}.slide.ready .stage video{opacity:1}
 .stage video.rv{z-index:2;opacity:0!important;transition:none}.stage video.rv.on{opacity:1!important}

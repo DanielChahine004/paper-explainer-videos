@@ -330,6 +330,8 @@ h2{font-size:17px;margin:22px 0 10px;font-weight:600}h2 .n{color:var(--mute);fon
 .note .ts{color:var(--acc);cursor:pointer;font-variant-numeric:tabular-nums;white-space:nowrap}
 .note .tx{flex:1;white-space:pre-wrap;word-break:break-word}.note .sc{color:var(--mute);font-size:12px}
 .note .x{background:none;border:0;color:var(--mute);cursor:pointer;font-size:16px}
+.note.done{opacity:.55}.note .rs{color:var(--mute);font-size:12px;margin-top:4px}.note .k{color:var(--acc);font-weight:600}
+#rtog{background:none;border:0;color:var(--mute);cursor:pointer;font:inherit;font-size:13px;padding:10px 8px;text-align:left;width:100%}
 #nform{padding:10px;border-top:1px solid #262a33;display:none;flex-direction:column;gap:8px}#nform.on{display:flex}
 #nform textarea{background:#0e1015;color:var(--text);border:1px solid #333;border-radius:8px;padding:8px;font:inherit;min-height:90px;resize:vertical}
 #nform .row{display:flex;gap:8px;align-items:center}#nat{color:var(--acc);flex:1}
@@ -381,18 +383,28 @@ function play(v,pl){cur=v;curPl=pl||null;document.getElementById('ptitle').textC
 function load(t){loadNotes();vid.src=small&&cur.small?cur.small:cur.src;document.getElementById('qual').textContent=small?'Small':'HD';
   vid.addEventListener('loadedmetadata',()=>{if(t>5&&t<vid.duration-10)vid.currentTime=t;vid.play().catch(()=>{})},{once:true})}
 const notesEl=document.getElementById('notes'),nform=document.getElementById('nform'),ntext=document.getElementById('ntext');
-let noteT=0,notes=[];
+let noteT=0,notes=[],showDone=false;
+// Open notes are the to-do list. Resolved ones stay in feedback.json as the record of what each led to, folded
+// away below them; one made on an earlier cut may point at a moment that has since moved.
+function noteRow(n){const d=document.createElement('div');d.className='note'+(n.status==='open'?'':' done');
+  d.innerHTML='<span class="ts"></span><div class="tx"></div><button class="x" title="Delete">&times;</button>';
+  const ts=d.querySelector('.ts');ts.textContent=fmt(n.t);ts.onclick=()=>{vid.currentTime=n.t;vid.pause()};
+  const tx=d.querySelector('.tx');tx.textContent=n.text;
+  if(n.scene){const s=document.createElement('div');s.className='sc';s.textContent=n.scene+' @ '+n.scene_t+' s'+
+    (n.status!=='open'&&n.render&&cur.mtime&&Math.abs(n.render-cur.mtime)>2?' · earlier cut':'');tx.append(s)}
+  if(n.resolution){const r=document.createElement('div');r.className='rs';const k=document.createElement('span');k.className='k';
+    k.textContent=(n.kind||'done')+': ';r.append(k,n.resolution);tx.append(r)}
+  d.querySelector('.x').onclick=async()=>{if(!confirm('Delete this note?'))return;
+    await fetch('/api/notes/delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:cur.id,nid:n.nid})});loadNotes()};
+  return d}
 async function loadNotes(){if(!cur)return;try{notes=await (await fetch('/api/notes?id='+encodeURIComponent(cur.id))).json()}catch(e){notes=[]}
-  const l=document.getElementById('nlist');l.replaceChildren(...notes.slice().sort((a,b)=>a.t-b.t).map(n=>{
-    const d=document.createElement('div');d.className='note';
-    d.innerHTML='<span class="ts"></span><div class="tx"></div><button class="x" title="Delete">&times;</button>';
-    const ts=d.querySelector('.ts');ts.textContent=fmt(n.t);ts.onclick=()=>{vid.currentTime=n.t;vid.pause()};
-    const tx=d.querySelector('.tx');tx.textContent=n.text;
-    if(n.scene){const s=document.createElement('div');s.className='sc';s.textContent=n.scene+' @ '+n.scene_t+' s';tx.append(s)}
-    d.querySelector('.x').onclick=async()=>{if(!confirm('Delete this note?'))return;
-      await fetch('/api/notes/delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:cur.id,nid:n.nid})});loadNotes()};
-    return d}));
-  document.getElementById('ntog').textContent='Notes'+(notes.length?' ('+notes.length+')':'')}
+  const by=(a,b)=>a.t-b.t,open=notes.filter(n=>n.status==='open').sort(by),done=notes.filter(n=>n.status!=='open').sort(by);
+  const rows=open.map(noteRow);
+  if(!open.length)rows.push(Object.assign(document.createElement('div'),{className:'sc',textContent:'No open notes.',style:'padding:8px'}));
+  if(done.length){const b=document.createElement('button');b.id='rtog';b.textContent=(showDone?'▾':'▸')+' Resolved ('+done.length+')';
+    b.onclick=()=>{showDone=!showDone;loadNotes()};rows.push(b);if(showDone)rows.push(...done.map(noteRow))}
+  document.getElementById('nlist').replaceChildren(...rows);
+  document.getElementById('ntog').textContent='Notes'+(open.length?' ('+open.length+')':'')}
 function startNote(){if(!cur)return;vid.pause();noteT=vid.currentTime;notesEl.classList.add('on');nform.classList.add('on');
   document.getElementById('nat').textContent='at '+fmt(noteT);ntext.value='';ntext.focus()}
 async function saveNote(){const text=ntext.value.trim();if(!text||!cur)return;

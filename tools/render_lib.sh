@@ -45,6 +45,9 @@ export STEM="${SCRIPT%.py}"
 # narration first: the last scene to finish is then a short one.
 order="$(pixi run python "$ROOT/tools/voice_prepass.py" --order "$SCRIPT" $SCENES 2>/dev/null | sed -n "s/^ORDER: //p")"
 order="${order:-$SCENES}"
+# Clear last run's markers here, not only in the pre-pass: it clears them after its imports, by which time a scene whose
+# narration changed could already have started on its stale marker and failed on the missing line (pet_explorer).
+for s in $SCENES; do rm -f "m_$s/voiceovers/.ready"; done
 pixi run python "$ROOT/tools/voice_prepass.py" "$SCRIPT" $order > voice.log 2>&1 &
 export VPID=$!
 trap 'kill $VPID 2>/dev/null || true' EXIT

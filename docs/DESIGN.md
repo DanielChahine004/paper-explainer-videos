@@ -89,6 +89,8 @@ voice has moved on. Neither repeats the other. Every rule below serves one of th
   | a physical mechanism | the event itself, animated (a photon converting, light spreading, a charge moving) | replay it in the mind |
   | a claim ("better", "fails", "converges") | the evidence that makes it true: the gap, the overlap, the residual, the curve flattening | check the claim with their own eyes |
 
+  The closing scene returns to the video's main picture rather than a bullet list of the claims: `pet_explorer`'s
+  takeaway pulses each claim's arrow on the count-budget ruler the viewer already knows, instead of five lines of text.
   Keep the picture alive across the scene and the video: build on it, transform it into the next form,
   and keep one colour per concept, so the viewer's picture accumulates and is never replaced by a fresh
   one. Test: mute the sound and freeze any frame. A viewer should be able to say what is being discussed,
@@ -390,7 +392,10 @@ labelled illustrative/schematic.
   own centre instead (`m.add_updater(lambda m, dt: m.rotate(0.15 * dt, axis=OUT, about_point=C))`) and keep the
   camera still (Intro).
 - A label or overlay that sits inside a solid is hidden by the depth test: put it on an outer face
-  or fix it in frame.
+  or fix it in frame. Under ManimGX even a fixed-in-frame label is covered where a solid's screen footprint lies
+  over it, so keep fixed labels clear of the solid on screen (`pet_explorer` Scanner: the block hid its own spec label).
+- Put the face the narration names towards the camera: a readout drawn under a block seen from above is invisible
+  (`pet_explorer` Scanner moved the SiPMs to the top face).
 - When a title moves down, content placed at fixed y values can collide with it; place content with
   `top_at()` instead.
 - Small marks need contrast against what lies under them; a dot dimmed below half opacity is a ghost

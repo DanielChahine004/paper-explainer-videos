@@ -347,7 +347,7 @@ h2{font-size:17px;margin:22px 0 10px;font-weight:600}h2 .n{color:var(--mute);fon
 <div id="pbody"><video id="vid" controls playsinline preload="metadata"></video>
 <div id="notes"><div class="hd"><b>Feedback</b><button id="nclose">Hide</button></div><div id="nlist"></div>
 <div id="nform"><div class="row"><span id="nat"></span></div>
-<textarea id="ntext" placeholder="What should change here? (Ctrl+Enter saves)"></textarea>
+<textarea id="ntext" placeholder="What should change here? (Enter saves, Shift+Enter for a new line)"></textarea>
 <div class="row"><button id="nsave">Save</button><button id="ncancel">Cancel</button></div></div></div></div></div>
 <script>
 const grid=document.getElementById('grid'),vid=document.getElementById('vid'),player=document.getElementById('player');
@@ -415,7 +415,7 @@ document.getElementById('ntog').onclick=()=>notesEl.classList.toggle('on');
 document.getElementById('nclose').onclick=()=>notesEl.classList.remove('on');
 document.getElementById('nsave').onclick=saveNote;
 document.getElementById('ncancel').onclick=()=>nform.classList.remove('on');
-ntext.onkeydown=e=>{if(e.key==='Enter'&&(e.ctrlKey||e.metaKey))saveNote();if(e.key==='Escape')nform.classList.remove('on');e.stopPropagation()};
+ntext.onkeydown=e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.isComposing){e.preventDefault();saveNote()}if(e.key==='Escape')nform.classList.remove('on');e.stopPropagation()};
 document.addEventListener('keydown',e=>{const a=document.activeElement;
   if(cur&&e.key==='n'&&a!==ntext&&a!==document.getElementById('q')){e.preventDefault();startNote()}});
 function close(){nform.classList.remove('on');if(cur)save(cur.id,vid.currentTime);vid.pause();vid.removeAttribute('src');vid.load();player.classList.remove('on');cur=null;render()}

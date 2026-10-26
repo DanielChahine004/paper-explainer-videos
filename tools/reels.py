@@ -229,7 +229,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 .bg{position:absolute;inset:-30px;background-size:cover;background-position:center;filter:blur(26px) brightness(.45);transform:scale(1.1)}
 .stage{position:absolute;left:0;right:0;top:max(80px,calc(42% - 28vw));aspect-ratio:16/9}
 .stage img,.stage video{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#000}
-.stage video{opacity:0;transition:opacity .15s}.slide.ready .stage video{opacity:1}
+.stage video{opacity:0;transition:opacity .15s;z-index:1}.slide.ready .stage video{opacity:1}
 .tap{position:absolute;inset:0;z-index:1}
 .side{position:absolute;right:8px;bottom:110px;display:flex;flex-direction:column;align-items:center;gap:18px;z-index:2}
 .side button,.side a{display:flex;flex-direction:column;align-items:center;font-size:12px;gap:3px;color:#fff;text-decoration:none;text-shadow:0 1px 3px #000}

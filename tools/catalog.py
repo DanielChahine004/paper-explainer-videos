@@ -11,6 +11,9 @@ falls back to the video's own first frames. Playback position is remembered per 
 Playlists live in playlists.json at the project root, {"name": ["folder", ...]} in viewing order. Each shows as its
 own row above the full list, counting the videos rendered so far; inside a playlist, the next video plays on its own.
 
+Reels (/reels, linked from the header): every scene as a swipe-through clip for phones, each video an account;
+see tools/reels.py.
+
 Feedback: in the player, Note (or the n key) pauses and saves a note at that moment into <video>/feedback.json, with
 the scene playing there and a frame grab in <video>/review/feedback/. tools/feedback.py lists the open notes for
 triage (an incidental fix, or a DESIGN/vlint rule for every future video).
@@ -29,6 +32,8 @@ import uuid
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import unquote
+
+import reels
 
 ROOT = Path(__file__).resolve().parent.parent
 CACHE = ROOT / ".catalog"
@@ -243,6 +248,23 @@ class Handler(BaseHTTPRequestHandler):
                 ok = vid in {v["id"] for v in scan()}
                 self.send(200, json.dumps(load_notes(vid) if ok else []).encode(), "application/json",
                           [("Cache-Control", "no-cache")])
+            elif path == "/reels":
+                self.send(200, reels.PAGE.encode(), "text/html; charset=utf-8", [("Cache-Control", "no-cache")])
+            elif path == "/api/reels":
+                self.send(200, json.dumps(reels.index(scan(), RENDER)).encode(), "application/json",
+                          [("Cache-Control", "no-cache")])
+            elif path.startswith("/rthumb/") or path.startswith("/avatar/"):
+                vid, _, rest = path.split("/", 2)[2].partition("/")
+                ok = vid.removesuffix(".jpg") in {v["id"] for v in scan()}
+                t = None
+                if ok and path.startswith("/avatar/"):
+                    t = reels.avatar(FFMPEG, vid.removesuffix(".jpg"))
+                elif ok and rest.removesuffix(".jpg").isdigit():
+                    t = reels.poster(FFMPEG, RENDER, vid, int(rest.removesuffix(".jpg")))
+                if t is None:
+                    self.send(404, b"", "text/plain")
+                else:
+                    self.send(200, t.read_bytes(), "image/jpeg", [("Cache-Control", "max-age=86400")])
             elif path == "/api/playlists":
                 self.send(200, json.dumps(playlists()).encode(), "application/json", [("Cache-Control", "no-cache")])
             elif path.startswith("/thumb/"):
@@ -304,7 +326,7 @@ PAGE = r"""<!doctype html>
 :root{--bg:#0e1015;--card:#171a21;--line:#262a33;--text:#e8e6e1;--mute:#9a9ca3;--acc:#e8915a}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:15px/1.4 system-ui,-apple-system,sans-serif}
 header{padding:20px 16px 8px;max-width:1200px;margin:auto;display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
-h1{font-size:22px;margin:0;font-weight:600}#count{color:var(--mute)}
+h1{font-size:22px;margin:0;font-weight:600}#reels{color:var(--acc);text-decoration:none;font-weight:600}#count{color:var(--mute)}
 #q{margin-left:auto;background:var(--card);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:8px 10px;
   font:inherit;width:min(260px,100%)}
 main{max-width:1200px;margin:auto;padding:0 16px 40px}
@@ -340,7 +362,7 @@ h2{font-size:17px;margin:22px 0 10px;font-weight:600}h2 .n{color:var(--mute);fon
 .nb{position:absolute;right:8px;top:8px;background:#e05d5d;color:#fff;padding:1px 7px;border-radius:4px;font-size:12px;font-weight:600}
 @media (max-width:700px){#pbody{flex-direction:column}#notes{width:100%;max-height:45vh;border-left:0;border-top:1px solid #262a33}}
 </style></head><body>
-<header><h1>Explainers</h1><span id="count"></span><input id="q" placeholder="Search" aria-label="Search"></header>
+<header><h1>Explainers</h1><span id="count"></span><a id="reels" href="/reels">Reels &rsaquo;</a><input id="q" placeholder="Search" aria-label="Search"></header>
 <main id="grid"></main>
 <div id="player"><div id="pbar"><button id="back">&larr; Back</button><span id="ptitle"></span><button id="qual"></button>
 <button id="nbtn" title="Note at this moment (n)">Note</button><button id="ntog">Notes</button></div>
@@ -426,8 +448,11 @@ vid.ontimeupdate=()=>{if(cur&&Math.floor(vid.currentTime)%5===0)save(cur.id,vid.
 vid.onended=()=>{if(!cur)return;save(cur.id,0);const n=next();if(n)play(n,curPl)};
 document.getElementById('q').oninput=render;
 async function refresh(){try{const [n,p]=await Promise.all([fetch('/api/videos').then(r=>r.json()),fetch('/api/playlists').then(r=>r.json())]);
-  if(JSON.stringify([n,p])!==JSON.stringify([list,pls])){list=n;pls=p;if(!cur)render()}}catch(e){}}
-refresh();setInterval(refresh,20000);
+  if(JSON.stringify([n,p])!==JSON.stringify([list,pls])){list=n;pls=p;if(!cur)render()}}catch(e){}
+  const m=location.hash.match(/^#v=([^&]+)&t=(\d+)/);   // from a reel's Full button: open that video at that moment
+  if(m){const v=list.find(x=>x.id===decodeURIComponent(m[1]));history.replaceState(null,'',location.pathname);
+    if(v){save(v.id,+m[2]);play(v)}}}
+refresh();setInterval(refresh,20000);window.addEventListener('hashchange',refresh);
 </script></body></html>"""
 
 
@@ -442,6 +467,7 @@ def lan_ip():
 
 if __name__ == "__main__":
     srv = ThreadingHTTPServer(("0.0.0.0", PORT), Handler)
+    threading.Thread(target=lambda: reels.warm(FFMPEG, RENDER, reels.index(scan(), RENDER)), daemon=True).start()
     print(f"{len(scan())} videos; open http://{lan_ip()}:{PORT} on any device on this network", flush=True)
     try:
         srv.serve_forever()

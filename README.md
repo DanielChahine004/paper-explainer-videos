@@ -112,6 +112,8 @@ failed sentences, how to clone a voice.
 | `tools/voice_prepass.py` | voices all narration before rendering, two model copies sharing the GPU |
 | `tools/vlint/` | the checks: rules, planted-bug tests, how to add a rule |
 | `tools/sheet.sh` | 3×3 contact sheets for reviewing scenes |
+| `tools/catalog.py`, `tools/reels.py` | streams the rendered videos to phones and TVs on the home network, with timestamped feedback notes; `/reels` plays every scene as a swipe-through clip, each video an account |
+| `tools/timelog.py` | how long each video took, phase by phase (renders log themselves) |
 | `tools/wsl_render.sh` | renders from the WSL filesystem (much faster than `/mnt/c`) |
 | `videos/_template/` | a two-scene starting point |
 | `videos/laser_rt/`, `videos/calib/` | two worked examples (scripts only; videos are on the release) |

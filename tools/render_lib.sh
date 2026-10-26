@@ -27,6 +27,8 @@ export PATH="$HOME/.local/bin:$PATH"
 pixi install
 
 export QUALITY="${QUALITY:--qh}"
+# How long renders take, per video (tools/timelog.py report)
+python3 "$ROOT/tools/timelog.py" event . "render_start $QUALITY" 2>/dev/null || true
 # ManimGX when it is installed (GX_EXE, or manimgx on PATH; a Windows manimgx.exe works from WSL), else Manim CE
 GX_EXE="${GX_EXE:-$(command -v manimgx || true)}"
 if [ -z "${ENGINE:-}" ]; then [ -n "$GX_EXE" ] && ENGINE=gx || ENGINE=ce; fi
@@ -128,6 +130,7 @@ pixi run ffmpeg -loglevel error -y -f concat -safe 0 -i list.txt -c:v copy \
 echo "== vlint: joined video"
 pixi run $VLINT final "$OUT" --script "$SCRIPT" --res "$RES" $SCENES
 echo "wrote $OUT"
+python3 "$ROOT/tools/timelog.py" event . render_end 2>/dev/null || true
 if [ "$RES" = 1080p60 ]; then
   # A smaller copy for upload limits: same 1080p, stronger compression (never a downscale).
   SMALL="${OUT%_narrated.mp4}"; SMALL="${SMALL%.mp4}_small.mp4"

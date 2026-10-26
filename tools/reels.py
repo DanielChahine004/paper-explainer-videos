@@ -316,7 +316,9 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 .cm .bd{flex:1;min-width:0}.cm .sn{font-size:12px;color:var(--mute)}.cm .st{color:#8bd17c;margin-left:6px}
 .cm .tx{margin-top:2px;white-space:pre-wrap;overflow-wrap:anywhere}
 #cform{display:flex;gap:8px;padding:10px 12px;border-top:1px solid #2a2b31}
-#cin{flex:1;min-width:0;background:#2a2b31;border:0;border-radius:18px;color:var(--text);padding:9px 14px;font:16px system-ui,sans-serif;outline:none}
+/* a textarea, not a form input: an iPhone puts its AutoFill bar (passwords, cards, places) over form fields */
+#cin{flex:1;min-width:0;background:#2a2b31;border:0;border-radius:18px;color:var(--text);padding:9px 14px;font:16px/1.3 system-ui,sans-serif;
+  outline:none;resize:none;height:40px;max-height:96px}
 #cform button{color:var(--acc);font-weight:700;padding:0 6px}
 .top{position:absolute;top:0;left:0;right:0;z-index:4;display:flex;justify-content:center;align-items:center;gap:18px;
   padding:calc(10px + env(safe-area-inset-top)) 12px 10px;background:linear-gradient(#0009,#0000);pointer-events:none}
@@ -369,7 +371,7 @@ h3{font-size:14px;color:var(--mute);font-weight:600;margin:14px 12px 8px;text-tr
  <a href="/" data-v="cat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8"/></svg>Catalogue</a>
 </nav>
 <div id="sheet"><div class="dim"></div><div class="pan"><div class="hd"><span id="shd"></span><button class="x" aria-label="Close">&times;</button></div>
- <div id="clist"></div><form id="cform"><input id="cin" enterkeyhint="send" autocomplete="off"><button>Post</button></form></div></div>
+ <div id="clist"></div><div id="cform"><textarea id="cin" rows="1" enterkeyhint="send" autocomplete="off" autocorrect="on"></textarea><button id="cpost">Post</button></div></div></div>
 </div><div id="toast"></div>
 <script>
 const $=s=>document.querySelector(s),esc=s=>String(s).replace(/[&<>"']/g,c=>'&#'+c.charCodeAt(0)+';');
@@ -504,9 +506,16 @@ $('#sheet .dim').onclick=$('#sheet .x').onclick=()=>closeSheet();
 $('#clist').onclick=e=>{const b=e.target.closest('.ts');if(!b)return;const t=+b.dataset.t,s=sheetSl;closeSheet(true);
   if(s===curSl&&inReel({t},cur)){V.currentTime=t;userPaused=false;s.classList.remove('paused');V.play().catch(()=>{})}
   else{jumpT=t;setTimeout(()=>{jumpT=null},3000);location.hash='#/@'+encodeURIComponent(s._r.vid)+'/'+b.dataset.n}};
-$('#cform').onsubmit=async e=>{e.preventDefault();const s=sheetSl,text=$('#cin').value.trim();if(!s||!text)return;
+async function post(){const s=sheetSl,text=$('#cin').value.trim();if(!s||!text)return;
   const ok=await fetch('/api/notes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:s._r.vid,t:sheetT,text})}).then(x=>x.ok).catch(()=>false);
-  if(!ok)return toast('Could not post the comment');$('#cin').value='';await loadNotes(s._r.vid);if(sheetSl===s)renderSheet()};
+  if(!ok)return toast('Could not post the comment');$('#cin').value='';grow();await loadNotes(s._r.vid);if(sheetSl===s)renderSheet()}
+const grow=()=>{const c=$('#cin');c.style.height='40px';c.style.height=Math.min(96,c.scrollHeight)+'px'};
+$('#cpost').onclick=post;$('#cin').oninput=grow;
+$('#cin').onkeydown=e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();post()}};
+// the phone keyboard covers the bottom of the page without resizing it: lift the sheet to sit on top of the keyboard
+if(window.visualViewport){const vv=visualViewport,fit=()=>{const p=$('#sheet .pan'),kb=Math.max(0,innerHeight-vv.height-vv.offsetTop);
+    p.style.bottom=kb+'px';p.style.height=kb?Math.min(vv.height*.64,vv.height-40)+'px':''};
+  vv.addEventListener('resize',fit);vv.addEventListener('scroll',fit)}
 function toast(t){const e=$('#toast');e.textContent=t;e.style.display='block';clearTimeout(e._t);e._t=setTimeout(()=>e.style.display='none',1600)}
 function activate(s){if(curSl===s)return;if(curSl){curSl.classList.remove('ready','paused')}curSl=s;cur=s._r;userPaused=false;
   const a=by[cur.vid],src=a.small||a.src;s.querySelector('.stage').prepend(V);

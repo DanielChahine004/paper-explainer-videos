@@ -30,7 +30,10 @@ def _accents(s, math=False):
 _TEXT_MACROS = [(re.compile(p), r) for p, r in (
     (r"\\textperiodcentered\b\s*", "·"), (r"\\checkmark\b\s*", "✓"), (r"\\l?dots\b\s*", "…"),
     (r"\\qquad\b\s*", "\u2003\u2003"), (r"\\quad\b\s*", "\u2003"), (r"\\,", "\u2009"), (r"(?<!\\)~", "\u00a0"),
-    (r"\\_", "_"), (r"``", "“"), (r"''", "”"), (r"(?<![\w\\])`", "‘"))]
+    (r"\\_", "_"), (r"``", "“"), (r"''", "”"), (r"(?<![\w\\])`", "‘"),
+    # Typst reads "+ " or "- " opening a line as a list item ("+ heated grains" showed as "1. heated grains",
+    # pet_hetero_nanocomposites); a zero-width space in front keeps it text
+    (r"(?m)^([+\-]) ", "​" + r"\1 "))]
 
 
 def _text_mode(parts):

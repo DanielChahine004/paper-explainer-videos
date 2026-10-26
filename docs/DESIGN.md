@@ -52,27 +52,47 @@ time on the taxonomy.
 
 ## 1. The voice explains; the screen shows
 
-Narration carries the argument. The picture carries what the eye must hold while the voice moves
-on: the object, the shape of the effect and the key number. Neither repeats the other.
+Narration carries the argument. The picture does two jobs the voice can't: it shows the viewer
+**where to look**, and it gives them **a way to picture the idea**, a form they can think with after the
+voice has moved on. Neither repeats the other. Every rule below serves one of those two jobs.
 - **Draw, don't write.** Text on screen is a label or a **bold number**, never prose. That means
   about 3 short lines per scene besides titles and diagram labels. A spec list becomes a drawing of
-  the object with dimension arrows. A pipeline becomes shapes joined by arrows. A list of ideas
-  becomes a row of icons, each with one word. A timeline carries pictograms. Specs that differ in
-  kind become tiles, each an icon plus a number. Any `Tex` holding more than about 3 words is a
-  candidate for a shape (vlint: `long-text` warns past 8 prose words; numbers and units don't count).
-- **Every visual does work**. Choose what to draw by what you will do with it.
-  You can:
-  - point at a property of it (its width, its peak, the part that moves, the term that matters);
-  - change it while the voice says what changes (a parameter sweeping, a curve deforming, a cloud sharpening);
-  - measure on it (a number sitting on the length it is, a double arrow across the gap).
+  the object with dimension arrows. A pipeline becomes the data passing through its stages. Specs that
+  differ in kind become tiles, each a picture of the thing plus a number. Any `Tex` holding more than
+  about 3 words is a candidate for a shape (vlint: `long-text` warns past 8 prose words; numbers and
+  units don't count).
+- **Every visual does work: draw the form the viewer should think in**.
+  Before a scene, decide what mental picture the viewer should leave with, then draw that picture and use
+  it. A visual earns its place when the narration acts on it:
+  - **point at a property** of it (its width, its peak, the part that moves, the term that matters);
+  - **change it** while the voice says what changes (a parameter sweeping, a curve deforming, a cloud sharpening);
+  - **measure on it** (a number on the length it is, a double arrow across the gap).
 
-  If no sentence will touch it, it is an icon standing in for a word: drop it and let the label stand, or draw
-  the real object whose behaviour is the point. A row of pictograms labelled "field, loss, steps" (`flow_match`
-  Intro) or "blend, regress, integrate" (Recipe) says nothing the words don't. The same row earns its place
-  when each picture is the real thing at work: the actual field turning as t runs, the real loss curve
-  falling, the same samples sharpening as the step count grows. Test before building a scene: for every drawn
-  object, name the sentence where it is pointed at, changed or measured (vlint: `icon-idle` warns when a
-  small labelled drawing is shown and then only faded out).
+  If no sentence will touch it, it is an icon standing in for a word: drop it and let the label stand, or
+  draw the real object at work. A row of pictograms labelled "field, loss, steps" (`flow_match` Intro) says
+  nothing the words don't; the actual field turning as t runs, the real loss curve falling and the same
+  samples sharpening as the step count grows do (vlint: `icon-idle`). Choose the form by the kind of
+  information:
+
+  | The narration is about | Draw it as | So the viewer can |
+  |---|---|---|
+  | a quantity | a length, area or count on the thing it measures | see its size, and what it is the size of |
+  | a comparison | both on one scale, side by side or overlaid, the difference drawn as the gap | see which is bigger and by how much |
+  | a dependence (X affects Y) | X moved on screen, Y responding live | feel the direction and steepness |
+  | a process or algorithm | the data passing through it, inputs → box → outputs; one item slowly, then many | follow what each stage takes and gives |
+  | uncertainty or a distribution | a cloud of samples, a spread, the overlap of two clouds | see how likely and how separable |
+  | an abstract space (parameters, features, channels) | each case a point, similarity a distance, a family a curve or sheet | reason about it as geometry |
+  | a constraint or an optimisation | the allowed region as a shape, the landscape and the path down it | see why the answer lands where it does |
+  | an equation | each term tied to the part of the picture it describes (same colour, pointed at as read) | read the maths as the picture |
+  | a structure (taxonomy, hierarchy, design space) | a layout whose position means something: axes, nesting, branches | locate each item by its properties |
+  | a sequence in time | left to right at real durations, with the moment in question marked | see order and proportion |
+  | a physical mechanism | the event itself, animated (a photon converting, light spreading, a charge moving) | replay it in the mind |
+  | a claim ("better", "fails", "converges") | the evidence that makes it true: the gap, the overlap, the residual, the curve flattening | check the claim with their own eyes |
+
+  Keep the picture alive across the scene and the video: build on it, transform it into the next form,
+  and keep one colour per concept, so the viewer's picture accumulates and is never replaced by a fresh
+  one. Test: mute the sound and freeze any frame. A viewer should be able to say what is being discussed,
+  point at it, and guess what would change if the quantity changed.
 - **No words pointing at words.** A flow diagram whose nodes are text boxes ("sinogram → OSEM → CNN →
   image") explains nothing the narration doesn't. Each node is a picture of the thing with a one-word
   label under it: the sinogram as a thumbnail, the reconstruction as a detector ring with lines, a network

@@ -197,6 +197,16 @@ def front_page(h=6.4, name="front.png"):
     im = ImageMobject(str(here / "assets" / name)).set_height(h)
     return Group(im, Rectangle(width=im.width, height=im.height, stroke_color=GREY_B, stroke_width=1.5).move_to(im))
 
+
+def px_box(im, box, size, color, sw=4):
+    """A frame around a region of an image, the region given in the source image's pixels (size = its (w, h)):
+    the title or author line on front_page(), or a structure on a reused figure."""
+    (x0, y0, x1, y1), (W, H) = box, size
+    ul = im.get_corner(UL)
+    a = ul + np.array([x0 / W * im.width, -y0 / H * im.height, 0])
+    b = ul + np.array([x1 / W * im.width, -y1 / H * im.height, 0])
+    return Rectangle(width=b[0] - a[0], height=a[1] - b[1], color=color, stroke_width=sw).move_to((a + b) / 2)
+
 def point(scene, m, color=WHITE):
     """The term marker: a box that moves onto whichever part of an equation the voice is naming, so the eye
     always knows which symbol is being read (docs/DESIGN.md §1). Returns the animation; the first call draws the box.

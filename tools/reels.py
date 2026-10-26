@@ -324,6 +324,9 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 .top a.on{color:#fff;border-bottom:2px solid #fff}.top .back{position:absolute;left:12px;font-size:22px;color:#fff}
 .top .ttl{font-weight:700}.top .auto{position:absolute;right:12px;font-size:12px;color:#fffc;border:1px solid #fff6;border-radius:12px;padding:2px 8px}
 .top .auto.on{background:#fff;color:#000}
+#gate{position:absolute;inset:0;z-index:6;display:none;flex-direction:column;align-items:center;justify-content:center;gap:14px;
+  background:#0008;font-weight:700;font-size:17px;text-shadow:0 1px 3px #000}
+#gate svg{width:84px;height:84px;fill:#fff;background:#fff3;border-radius:50%;padding:20px 16px 20px 24px}
 .pz{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:2;pointer-events:none;opacity:0;transition:opacity .15s}
 .pz svg{width:72px;height:72px;fill:#fffb}.slide.paused .pz{opacity:1}
 .heart{position:absolute;z-index:3;pointer-events:none;width:90px;height:90px;fill:var(--acc);animation:pop .7s forwards}
@@ -354,7 +357,8 @@ h3{font-size:14px;color:var(--mute);font-weight:600;margin:14px 12px 8px;text-tr
 .btns a.alt{background:#2a2b31}
 .empty{color:var(--mute);padding:30px 16px;text-align:center}
 </style></head><body><div id="app">
-<div id="v-feed" class="view"><div id="feed"></div><div class="top" id="ftop"></div></div>
+<div id="v-feed" class="view"><div id="feed"></div><div class="top" id="ftop"></div>
+ <button id="gate"><svg viewBox="0 0 24 24"><path d="M7 4v16l13-8z"/></svg>Tap to play</button></div>
 <div id="v-search" class="view"><div class="page"><div class="bar"><input id="q" type="search" placeholder="Search accounts and reels" autocomplete="off"></div><div id="sres"></div></div></div>
 <div id="v-liked" class="view"><div class="page"><div class="bar"><b style="font-size:17px">Liked</b></div><div id="lres"></div></div></div>
 <div id="v-prof" class="view"><div class="page" id="pres"></div></div>
@@ -391,6 +395,11 @@ let revD=0;
 // sound is on from the start; a browser that refuses to autoplay with sound gets the reel silent, and the first tap
 // turns the sound on for the rest of the visit
 let list=[],mode='',cur=null,curSl=null,userPaused=false,soundOn=true,jumpT=null;
+// a fresh visit opens on a tap-to-play cover: a browser plays sound only once the page has been touched, so with the
+// cover the first reel starts with its sound rather than silent, and every reel after it plays with sound by itself
+let gated=!(navigator.userActivation&&navigator.userActivation.hasBeenActive);
+$('#gate').onclick=()=>{gated=false;$('#gate').style.display='none';soundOn=true;V.muted=false;userPaused=false;
+  if(curSl)curSl.classList.remove('paused','blocked');start()};
 // the reel on screen: the observer, and the scroll position once scrolling stops (a backgrounded tab may skip the observer)
 function settle(){const f=$('#feed'),s=f.children[Math.round(f.scrollTop/(f.clientHeight||1))];if(s)activate(s)}
 $('#feed').addEventListener('scroll',()=>{clearTimeout(settle._t);settle._t=setTimeout(settle,150)},{passive:true});
@@ -430,7 +439,7 @@ function slide(r,k){const a=by[r.vid],s=document.createElement('section');s.clas
   const tp=s.querySelector('.tap');
   tp.onclick=e=>{if(held){held=false;return}const now=Date.now(),dbl=now-last<300;last=dbl?0:now;
     if(dbl){if(toggled)toggle(s);toggled=false;like(s,true,e);return}
-    if(!soundOn){soundOn=true;V.muted=false}           // a reel left silent by the browser gets its sound with the first tap
+    if(V.muted){soundOn=true;V.muted=false}           // a reel playing silent gets its sound with the first tap
     toggled=true;toggle(s)};
   // press and hold: the right half plays at 2x, the left half rewinds, until the finger lifts (a swipe cancels it)
   tp.addEventListener('pointerdown',e=>{held=false;if(s!==curSl)return;
@@ -459,7 +468,7 @@ function hydrate(s){if(s&&!s._h){s._h=1;s.querySelector('.bg').style.backgroundI
 function toggle(s){if(V.paused){userPaused=false;s.classList.remove('blocked');V.play().catch(()=>{})}else{userPaused=true;V.pause()}
   s.classList.toggle('paused',userPaused)}
 // start the reel: muted autoplay is allowed everywhere; if even that is refused, show the play button and wait for a tap
-function start(){const s=curSl;V.play().then(()=>s&&s.classList.remove('blocked')).catch(()=>{
+function start(){const s=curSl;if(gated)return;V.play().then(()=>s&&s.classList.remove('blocked')).catch(()=>{
   if(!V.muted){V.muted=true;soundOn=false;return start()}
   if(s===curSl){s.classList.add('paused','blocked')}})}
 function like(s,burst,e){const k=key(s._r),b=s.querySelector('.lk');
@@ -513,11 +522,15 @@ function activate(s){if(curSl===s)return;if(curSl){curSl.classList.remove('ready
   else{V.currentTime=t0;start()}
   ls.set('reels:pos:'+mode,s._k);if(s._k>list.length-4&&mode==='foryou')more()}
 function inScene(){return cur&&V.currentTime>=cur.a-.3&&V.currentTime<=cur.b}
-// once at the scene, turn the sound on; a browser that will not play with sound without a tap pauses or refuses,
-// and the reel then carries on silent
+// once at the scene, turn the sound on, but only after the visitor has touched the page: before that a phone pauses
+// a video whose sound is switched on (iPhone does it after play() has already succeeded, so nothing would restart
+// it), and a freshly opened link would sit still until tapped. Until then the reel plays silent
+const touched=()=>!navigator.userActivation||navigator.userActivation.hasBeenActive;
 V.addEventListener('seeked',()=>{const d=curSl&&curSl._drag;if(d&&Math.abs(V.currentTime-d.t)>.15)V.currentTime=d.t;   // catch up with the finger
   if(!curSl||!inScene())return;curSl.classList.add('ready');
-  if(V.muted&&soundOn){V.muted=false;if(!V.paused)V.play().catch(()=>{V.muted=true;soundOn=false;V.play().catch(()=>{})})}});
+  if(V.muted&&soundOn&&touched()){V.muted=false;if(V.paused)return;
+    const s=curSl,back=()=>{V.muted=true;soundOn=false;if(s===curSl&&!userPaused)V.play().catch(()=>{})};
+    V.play().catch(back);setTimeout(()=>{if(V.paused&&!V.muted&&s===curSl&&!userPaused&&!s._drag&&!sheetSl&&!s.classList.contains('rew'))back()},400)}});
 V.addEventListener('playing',()=>{if(curSl&&inScene())curSl.classList.add('ready')});
 // keep the clip inside its scene: every frame while visible, and on timeupdate as a backstop
 function shown(t){const e=curSl.querySelector('.tm'),v=fmt(Math.min(cur.b,Math.max(cur.a,t))-cur.a);if(e.textContent!==v)e.textContent=v;
@@ -535,7 +548,7 @@ function more(){const add=shuffled(),f=$('#feed');add.forEach(r=>{const s=slide(
 function showFeed(m,items,start,top){if(mode!==m||!list.length||m.startsWith('@')||m==='liked'){mode=m;list=items;curSl=null;cur=null;
     const f=$('#feed');io.disconnect();f.replaceChildren(...list.map((r,k)=>slide(r,k)));f.querySelectorAll('.slide').forEach(s=>io.observe(s));
     setTimeout(()=>{f.scrollTop=(start||0)*f.clientHeight;settle()})}
-  else if(curSl&&!userPaused)V.play().catch(()=>{});
+  else if(curSl&&!userPaused&&!gated)V.play().catch(()=>{});
   $('#ftop').innerHTML=top;const au=$('#ftop .auto');if(au)au.onclick=()=>{auto=!auto;ls.set('reels:auto',auto);au.classList.toggle('on',auto)}}
 const autoBtn=()=>`<button class="auto${auto?' on':''}">Auto &darr;</button>`;
 function tile(r,href,label){return `<a class="tile" href="${href}" style="background-image:url('${r.thumb}')"><em>${fmt(r.b-r.a)}</em><div class="nm">${label}</div></a>`}
@@ -558,7 +571,7 @@ function profile(a){const tot=a.reels.reduce((s,r)=>s+r.b-r.a,0);
    <div class="grid">${a.reels.map(r=>tile(r,'#/@'+encodeURIComponent(a.id)+'/'+(r.n-1),r.n+' &middot; '+esc(r.name))).join('')}</div>`;
   $('#pres').scrollTop=0}
 function show(v){document.querySelectorAll('.view').forEach(e=>e.classList.toggle('on',e.id==='v-'+v));
-  closeSheet(true);if(v!=='feed'){V.pause()}}
+  $('#gate').style.display=gated&&v==='feed'?'flex':'none';closeSheet(true);if(v!=='feed'){V.pause()}}
 function route(){const h=decodeURIComponent(location.hash.slice(1)||'/');let m,nav='feed';
   if(h==='/'||h==='/latest'){const lat=h==='/latest';show('feed');
     const items=lat?accs.flatMap(a=>a.reels.map(r=>r)):null;

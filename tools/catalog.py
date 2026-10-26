@@ -275,6 +275,13 @@ class Handler(BaseHTTPRequestHandler):
                     self.send(200, t.read_bytes(), "image/jpeg", [("Cache-Control", "max-age=86400")])
             elif path.startswith("/v/"):
                 self.video(path[3:])
+            elif path.startswith("/rev/"):
+                vid = path[5:].removesuffix(".mp4")
+                f = reels.reverse(FFMPEG, vid) if vid in {v["id"] for v in scan()} else None
+                if f is None:
+                    self.send(404, b"not ready", "text/plain")
+                else:
+                    self.stream(f)
             else:
                 self.send(404, b"not found", "text/plain")
         except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
@@ -286,7 +293,9 @@ class Handler(BaseHTTPRequestHandler):
         allowed = {v["src"][3:] for v in vs} | {v["small"][3:] for v in vs if v["small"]}
         if rel not in allowed:
             return self.send(404, b"not found", "text/plain")
-        f = ROOT / rel
+        self.stream(ROOT / rel)
+
+    def stream(self, f):
         size = f.stat().st_size
         a, b = 0, size - 1
         m = re.match(r"bytes=(\d*)-(\d*)", self.headers.get("Range", ""))

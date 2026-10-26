@@ -2,7 +2,7 @@
 catalog.py at /reels (linked from the catalogue's header). A video is an account (@folder, its paper's front page as
 the avatar, the video's title as the name) and each scene is a reel that account posted. A reel is the scene's span
 of the published mp4 (the small copy when there is one), played in place, so nothing is cut or stored apart from
-small poster frames in .catalog/reels/.
+small poster frames and one rewind copy per video (the picture backwards, for smooth hold-to-rewind) in .catalog/reels/.
 
 Scene spans come from the render's list.txt in the WSL mirror, timed from each scene file's mp4 header. Captions are
 the first sentence a scene's narration speaks; tapping one adds the scene class's docstring from <video>/*_vo.py
@@ -135,7 +135,8 @@ def index(videos, render_root):
                           "doc": doc if said else "", "words": full.lower(), "thumb": f"/rthumb/{v['id']}/{i}.jpg?{int(v['mtime'])}"})
         if reels:
             out.append({"id": v["id"], "title": v["title"], "mtime": v["mtime"], "dur": v["dur"], "src": v["src"],
-                        "small": v["small"], "avatar": f"/avatar/{v['id']}.jpg?{int(v['mtime'])}", "reels": reels})
+                        "small": v["small"], "avatar": f"/avatar/{v['id']}.jpg?{int(v['mtime'])}",
+                        "rev": f"/rev/{v['id']}.mp4?{int(v['mtime'])}", "reels": reels})
     return out
 
 
@@ -192,8 +193,50 @@ def avatar(ffmpeg, vid):
     return _ffmpeg(ffmpeg, args + ["-q:v", "4"], out)
 
 
+_rev_busy, _rev_one = set(), threading.Lock()
+
+
+def reverse(ffmpeg, vid, wait=False):
+    """The rewind copy (tools/reels_reverse.sh: the picture backwards, 640 px, no sound), made once per render. Until
+    it exists this starts it in the background and returns None, and the page rewinds by seeking instead."""
+    full = _full(vid)
+    if full is None:
+        return None
+    out = CACHE / f"rev_{vid}_{int(full.stat().st_mtime)}.mp4"
+    if out.exists():
+        return out
+    if wait:
+        _make_rev(ffmpeg, vid, full, out)
+    else:
+        threading.Thread(target=_make_rev, args=(ffmpeg, vid, full, out), daemon=True).start()
+    return out if out.exists() else None
+
+
+def _make_rev(ffmpeg, vid, full, out):
+    """Build one rewind copy; a second request for the same video while it is being made does nothing."""
+    with _lock:
+        if vid in _rev_busy:
+            return
+        _rev_busy.add(vid)
+    try:
+        with _rev_one:                                   # one at a time: each runs ffmpeg flat out for ~30 s
+            if out.exists():
+                return
+            out.parent.mkdir(parents=True, exist_ok=True)
+            src = max(full.parent.glob("*small*.mp4"), key=lambda p: p.stat().st_mtime, default=full)
+            script = Path(__file__).resolve().parent / "reels_reverse.sh"
+            subprocess.run((["wsl"] if os.name == "nt" else []) + ["bash", wsl_path(script), ffmpeg, wsl_path(src),
+                           wsl_path(out)], timeout=1800, capture_output=True)
+    except (OSError, subprocess.TimeoutExpired):
+        pass
+    finally:
+        with _lock:
+            _rev_busy.discard(vid)
+
+
 def warm(ffmpeg, render_root, accounts):
-    """Cut every missing poster and avatar in the background, so profile grids fill in fast; drop stale ones."""
+    """Cut every missing poster and avatar in the background, so profile grids fill in fast, then make the rewind
+    copies; drop stale ones."""
     keep = set()
     for acc in accounts:
         if (p := avatar(ffmpeg, acc["id"])) is not None:
@@ -201,7 +244,10 @@ def warm(ffmpeg, render_root, accounts):
         for r in acc["reels"]:
             if (p := poster(ffmpeg, render_root, acc["id"], r["i"])) is not None:
                 keep.add(p.name)
-    for f in CACHE.glob("*.jpg"):
+    for acc in accounts:
+        if (p := reverse(ffmpeg, acc["id"], wait=True)) is not None:
+            keep.add(p.name)
+    for f in [*CACHE.glob("*.jpg"), *CACHE.glob("rev_*.mp4")]:
         if f.name not in keep:
             f.unlink(missing_ok=True)
 
@@ -230,6 +276,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 .stage{position:absolute;left:0;right:0;top:max(80px,calc(42% - 28vw));aspect-ratio:16/9}
 .stage img,.stage video{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#000}
 .stage video{opacity:0;transition:opacity .15s;z-index:1}.slide.ready .stage video{opacity:1}
+.stage video.rv{z-index:2;opacity:0!important;transition:none}.stage video.rv.on{opacity:1!important}
 .tap{position:absolute;inset:0;z-index:1;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:pan-y}
 .spd{position:absolute;top:calc(96px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);z-index:3;display:none;
   background:#000a;border:1px solid #fff3;border-radius:16px;padding:5px 14px;font-weight:600;pointer-events:none;white-space:nowrap}
@@ -307,6 +354,12 @@ const ICON={heart:'<svg viewBox="0 0 24 24" fill="#fff" stroke="#fff" stroke-wid
 // only one stream is ever loading
 const V=document.createElement('video');V.playsInline=true;V.muted=true;V.preload='auto';
 for(const k of ['playsinline','webkit-playsinline','muted'])V.setAttribute(k,'');
+// the rewind copy: the same picture played backwards (made by the server, tools/reels_reverse.sh), shown over V and
+// played forwards at 3x while the left half is held; a moment t of the video is revD - t in it
+const R=document.createElement('video');R.className='rv';R.playsInline=true;R.muted=true;R.preload='auto';
+for(const k of ['playsinline','webkit-playsinline','muted'])R.setAttribute(k,'');
+R.onerror=()=>{R.dataset.src=''};                       // not made yet: ask again on the next reel
+let revD=0;
 let list=[],mode='',cur=null,curSl=null,userPaused=false,soundOn=false;
 // the reel on screen: the observer, and the scroll position once scrolling stops (a backgrounded tab may skip the observer)
 function settle(){const f=$('#feed'),s=f.children[Math.round(f.scrollTop/(f.clientHeight||1))];if(s)activate(s)}
@@ -345,9 +398,16 @@ function slide(r,k){const a=by[r.vid],s=document.createElement('section');s.clas
 let rew=null,holdPaused=false;
 function startHold(s,right){holdPaused=V.paused;s.classList.add(right?'fast':'rew');
   if(right){V.playbackRate=2;V.play().catch(()=>{})}
-  else{V.pause();rew=setInterval(()=>{if(!V.seeking&&cur)V.currentTime=Math.max(cur.a,V.currentTime-.6)},100)}}   // seeks finish slowly: about 2-3x backwards
+  else{V.pause();const D=R.duration;
+    if(R.readyState>=2&&isFinite(D)&&Math.abs(D-V.duration)<2){revD=D;R.currentTime=Math.max(0,D-V.currentTime);
+      R.addEventListener('seeked',()=>{if(!s.classList.contains('rew'))return;R.classList.add('on');R.playbackRate=3;R.play().catch(()=>{})},{once:true})}
+    else{revD=0;if(R.readyState<1)R.play().then(()=>R.pause()).catch(()=>{});   // fallback: step back by seeking
+      rew=setInterval(()=>{if(!V.seeking&&cur)V.currentTime=Math.max(cur.a,V.currentTime-.6)},100)}}}
 function stopHold(s){if(!s.classList.contains('fast')&&!s.classList.contains('rew'))return;
-  s.classList.remove('fast','rew');V.playbackRate=1;clearInterval(rew);rew=null;holdPaused?V.pause():V.play().catch(()=>{})}
+  const back=s.classList.contains('rew')&&revD;s.classList.remove('fast','rew');V.playbackRate=1;clearInterval(rew);rew=null;
+  if(back){V.currentTime=Math.max(cur.a,revD-R.currentTime);R.pause();revD=0;   // keep the rewind frame up until V is there
+    V.addEventListener('seeked',()=>R.classList.remove('on'),{once:true})}
+  holdPaused?V.pause():V.play().catch(()=>{})}
 // posters only for the reel on screen and its neighbours: a phone opens few connections to the server, and a
 // screenful of poster requests would hold up the video itself
 function hydrate(s){if(s&&!s._h){s._h=1;s.querySelector('.bg').style.backgroundImage=`url('${s._r.thumb}')`;s.querySelector('.stage img').src=s._r.thumb}}
@@ -371,6 +431,7 @@ async function note(s){const r=s._r,t=s===curSl?V.currentTime:r.a;V.pause();
 function toast(t){const e=$('#toast');e.textContent=t;e.style.display='block';clearTimeout(e._t);e._t=setTimeout(()=>e.style.display='none',1600)}
 function activate(s){if(curSl===s)return;if(curSl){curSl.classList.remove('ready','paused')}curSl=s;cur=s._r;userPaused=false;
   const a=by[cur.vid],src=a.small||a.src;s.querySelector('.stage').prepend(V);
+  R.classList.remove('on');revD=0;s.querySelector('.stage').append(R);if(R.dataset.src!==a.rev){R.dataset.src=a.rev;R.src=a.rev;R.load()}
   let n=s;hydrate(s);for(let i=0;i<3&&n;i++){n=n.nextElementSibling;hydrate(n)}hydrate(s.previousElementSibling);
   // a new file: start it at once (an iPhone loads nothing until play() is called), silent until it has jumped to
   // the scene, then seek when its length is known
@@ -382,7 +443,10 @@ function inScene(){return cur&&V.currentTime>=cur.a-.3&&V.currentTime<=cur.b}
 V.addEventListener('seeked',()=>{if(!curSl||!inScene())return;V.muted=!soundOn;curSl.classList.add('ready')});
 V.addEventListener('playing',()=>{if(curSl&&inScene())curSl.classList.add('ready')});
 // keep the clip inside its scene: every frame while visible, and on timeupdate as a backstop
-function check(){if(cur&&curSl&&!V.seeking&&V.readyState>1){const t=V.currentTime;
+function check(){
+  if(revD&&cur&&curSl&&R.classList.contains('on')){const t=revD-R.currentTime;if(t<=cur.a)R.pause();   // rewinding: stop at the scene's start
+    curSl.querySelector('.prog i').style.width=Math.max(0,Math.min(100,100*(t-cur.a)/(cur.b-cur.a)))+'%';return}
+  if(cur&&curSl&&!V.seeking&&V.readyState>1){const t=V.currentTime;
     if(t>=cur.b-.06||t<cur.a-1){if(auto&&t>=cur.b-.06&&curSl.nextElementSibling){V.pause();curSl.nextElementSibling.scrollIntoView({behavior:'smooth'})}else V.currentTime=cur.a}
     curSl.querySelector('.prog i').style.width=Math.min(100,100*(t-cur.a)/(cur.b-cur.a))+'%'}}
 V.addEventListener('timeupdate',check);(function tick(){check();requestAnimationFrame(tick)})();

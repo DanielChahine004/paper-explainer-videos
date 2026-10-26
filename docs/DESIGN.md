@@ -121,6 +121,11 @@ voice has moved on. Neither repeats the other. Every rule below serves one of th
   an angle an arc between its two rays, a window or threshold a tick on the axis it lives on (`pet_explorer`). If a
   spoken number has no place in the picture, say it without the unit or cut it (vlint: `number-undrawn` warns when
   a spoken number with a unit is nowhere on screen during its sentence).
+  A number that changes keeps the old value readable: say the old value on one bookmark and the change on the next,
+  and when the comparison is the point, leave the old value on screen beside the new (user, `pet_nanocomposites`
+  Composite: "the 1.02 -> 1.5 bar expansion happened too quickly, couldn't read 1.02"; it now shows a grey "plain"
+  bar under which the "with grains" bar grows). vlint: `number-flash` warns when a number is replaced or removed
+  less than 1.5 s after it appeared.
 - **Name every colour series on screen.** When two or more colours mean different things (two scanners, two methods,
   measured and simulated), each gets its name on screen as it appears: a label beside the curve, or a key entry (a
   short swatch of the line and its name). Colour named only by the voice is lost as soon as the voice moves on.
@@ -420,6 +425,12 @@ labelled illustrative/schematic.
   down the bore, for a ring's diameter. Lay the dimension and its label in that plane, and turn a label on an
   oblique view to face the camera. A detail too small for the scale (a 2.5 mm gap on a 2 m scanner) gets a
   magnified inset joined to its spot by a leader (`pet_explorer` Scanner).
+- **Aim the camera at the relation the scene is about, fill the frame with it, and hold still while it is measured**
+  (user, `zzb_slab` OffSurface: "the angle of viewing in this scene is very awkward"). A point "just off a sheet" seen
+  from above sits on the sheet; a small sheet turning all scene long keeps flipping its apparent bend, and the
+  distance lines vanish into the cloud. Before choosing phi and theta, name the one direction the narration measures
+  (off the sheet, along the bore) and put it across the screen, usually up; keep a little tilt for depth; zoom until
+  the subject spans about half the width. Rotate only to show the shape, and stop before the first distance is drawn.
 - **Set draw order between plays, never before a cue.** Adding something to fix the order (back arcs, body, front
   arcs) and introducing it on a later cue shows it whole until the cue, then the intro restarts it from nothing.
   Re-add at the cue, in the same step as the play: `self.remove(front); self.play(FadeIn(body), Animation(front))`

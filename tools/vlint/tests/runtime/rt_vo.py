@@ -8,7 +8,7 @@ from manim import *
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 from vlint.runtime import Checked, vlint_ok  # noqa: E402
 
-EXPECT = {"frame-clip": 1, "text-overlap": 1, "vanished-after-intro": 1, "bookmark-unfired": 2, "indicate-image": 1, "text-chain": 1, "arrow-over-label": 1, "layout-crowded": 1, "layout-balance": 1, "arrow-skew": 1, "title-margin": 1, "line-over-label": 1, "redraw-jitter": 1, "shape-overlap": 1, "title-gap": 1, "faint-mark": 2, "frame-margin": 1, "icon-idle": 1, "intro-of-visible": 1, "number-undrawn": 1, "image-edge-cut": 1, "front-box-cut": 1}
+EXPECT = {"frame-clip": 1, "text-overlap": 1, "vanished-after-intro": 1, "bookmark-unfired": 2, "indicate-image": 1, "text-chain": 1, "arrow-over-label": 1, "layout-crowded": 1, "layout-balance": 1, "arrow-skew": 1, "title-margin": 1, "line-over-label": 1, "redraw-jitter": 1, "shape-overlap": 1, "title-gap": 1, "faint-mark": 2, "frame-margin": 1, "icon-idle": 1, "intro-of-visible": 1, "number-undrawn": 1, "image-edge-cut": 1, "front-box-cut": 1, "number-flash": 1}
 
 
 class Fixture(Checked, Scene):
@@ -125,10 +125,22 @@ class Fixture(Checked, Scene):
         self.play(FadeIn(quick), run_time=0.2)                                      # no frame between: fine
         self.play(FadeOut(early), FadeOut(late), FadeOut(quick), run_time=0.2)
         self.vlint.event("vo_open", text="It is twenty two centimetres wide and tilts fifty seven degrees.")
-        spec = Text("22 cm", font_size=30).move_to(RIGHT * 4 + DOWN * 2.6)
+        spec = vlint_ok(Text("22 cm", font_size=30), "number-flash").move_to(RIGHT * 4 + DOWN * 2.6)
         self.play(FadeIn(spec), run_time=0.2)                                       # 22 drawn: fine
         self.vlint.event("vo_close")                                                # number-undrawn (57)
         self.play(FadeOut(spec), run_time=0.2)
+        self.vlint.event("vo_open", text="It reaches one hundred and fifteen picoseconds.")
+        mark = Square(0.6).move_to(RIGHT * 4 + DOWN * 2.6)                         # where spec was: balanced
+        mark._shows = (115,)                                                      # marks 115 on a page: fine
+        self.play(Create(mark), run_time=0.2)
+        self.vlint.event("vo_close")
+        self.play(FadeOut(mark), run_time=0.2)
+        was = Text("1.02", font_size=30).move_to(RIGHT * 4 + DOWN * 2.6)
+        now = Text("1.5", font_size=30).move_to(RIGHT * 4 + DOWN * 2.6)
+        self.play(FadeIn(was), run_time=0.2)
+        self.play(ReplacementTransform(was, now), run_time=0.2)                  # number-flash
+        self.wait(1.6)
+        self.play(FadeOut(now), run_time=0.2)                                       # read for 1.6 s: fine
         grow = ValueTracker(10.0)
         readout = always_redraw(lambda: DecimalNumber(grow.get_value(), num_decimal_places=0).move_to(DOWN * 2.6))
         self.add(readout)

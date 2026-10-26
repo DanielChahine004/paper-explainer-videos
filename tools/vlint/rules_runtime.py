@@ -863,6 +863,9 @@ def _shown_numbers(scene):
             elif isinstance(x, TEXTS()) and visibility(x) > 0.2:
                 s = str(getattr(x, "tex_string", "") or getattr(x, "original_text", "") or getattr(x, "text", ""))
                 vals |= {round(float(v), 3) for v in re.findall(r"\d+(?:\.\d+)?", s)}
+            if getattr(x, "_shows", None) and visibility(x) > 0.2:
+                # a highlight on a page of the paper, marking a number printed there (`pet_hetero_nanocomposites`)
+                vals |= {round(float(v), 3) for v in x._shows}
     return vals
 
 
@@ -941,3 +944,37 @@ def front_box_cut(mon, ev, p):
                            ("bottom", ink[Y1, X0:X1])):
             if line.size and line.mean() > 0.03:
                 yield (id(m), side), f"a frame on the front page crosses text along its {side} edge"
+
+
+_REPLACERS = {"Transform", "ReplacementTransform", "TransformMatchingTex", "TransformMatchingShapes", "FadeTransform",
+              "FadeTransformPieces", "ClockwiseTransform", "CounterclockwiseTransform", "TransformFromCopy"}
+
+
+@rule("number-flash", "runtime", "warn", "A number is shown and then replaced or removed so soon that it cannot be "
+      "read: a value that morphs into the next one the moment it lands (a bar's 1.02 growing into 1.5 at once, "
+      "pet_nanocomposites).", "Part I §1, numbers on things",
+      "give it its own cue: say the old value on one bookmark and the change on the next, or keep the old value on "
+      "screen beside the new one")
+def number_flash(mon, ev, p):
+    shown = mon.state.setdefault("number-flash", {})
+    if ev == "play":
+        T, now = TEXTS(), mon.time()
+        for a in _flatten(p.get("anims", ())):
+            m = getattr(a, "mobject", None)
+            if m is None or not getattr(a, "is_introducer", lambda: False)() or getattr(a, "remover", False):
+                continue
+            for t, ok in walk([m]):
+                if isinstance(t, T) and "number-flash" not in ok and "*" not in ok and re.search(r"\d", label(t)):
+                    shown.setdefault(id(t), now)
+        return
+    if ev != "pre_play":
+        return
+    now, least = mon.time(), float(opt(mon, "number_min_s", 1.5))
+    for a in _flatten(p.get("anims", ())):
+        m = getattr(a, "mobject", None)
+        if m is None or not (getattr(a, "remover", False) or type(a).__name__ in _REPLACERS):
+            continue
+        for t in m.get_family():
+            t0 = shown.pop(id(t), None)
+            if t0 is not None and now - t0 < least:
+                yield id(t), f"{label(t)} was on screen {now - t0:.1f} s before {type(a).__name__} took it away"

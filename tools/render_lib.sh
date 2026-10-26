@@ -93,7 +93,7 @@ if [ -n "$todo" ]; then
          > "m_{}.log" 2>&1 || { echo "FAILED {} (see m_{}.log)"; kill $ck 2>/dev/null; exit 1; }
        # ManimGX stores each pause as one frame lasting the whole pause (variable frame rate, ~18 fps on
        # average); players stutter when motion resumes after such a frame, so re-encode to a constant rate
-       pixi run ffmpeg -loglevel error -y -i "$d/{}.mp4" -c:v libx264 -crf 14 -preset slow -fps_mode cfr \
+       pixi run ffmpeg -nostdin -loglevel error -y -i "$d/{}.mp4" -c:v libx264 -crf 14 -preset slow -fps_mode cfr \
          -r '"${RES##*p}"' -c:a copy "$d/{}.cfr.mp4" && mv "$d/{}.cfr.mp4" "$d/{}.mp4" \
          || { echo "FAILED {}: constant-rate re-encode"; kill $ck 2>/dev/null; exit 1; }
        wait $ck || { echo "FAILED {}: CE skip-mode check (see m_{}.check.log)"; exit 1; }
@@ -123,8 +123,9 @@ pixi run $VLINT parts . --script "$SCRIPT" --res "$RES" $SCENES
 for s in $SCENES; do echo "file '$PWD/m_$s/videos/$STEM/$RES/$s.mp4'" >> list.txt; done
 # Each scene's audio ends ~1 s before its video (the closing fade is silent). A stream copy stores each gap
 # as one AAC packet stretched to ~1 s, which most players play as 21 ms, so the narration drifts ahead scene
-# by scene; re-encoding the audio fills the gaps with real silence.
-pixi run ffmpeg -loglevel error -y -f concat -safe 0 -i list.txt -c:v copy \
+# by scene; re-encoding the audio fills the gaps with real silence. Every ffmpeg here runs with -nostdin: run from a
+# background job it otherwise reads the terminal for keys and can spin forever (pet_nanocomposites, 2026-10-26).
+pixi run ffmpeg -nostdin -loglevel error -y -f concat -safe 0 -i list.txt -c:v copy \
   -af aresample=async=1:first_pts=0 -c:a aac -b:a 192k -movflags +faststart "$OUT"
 
 echo "== vlint: joined video"
@@ -139,9 +140,9 @@ if [ "$RES" = 1080p60 ]; then
   # audio; in the background while AFTER_JOIN (run_v.sh: the review sheets) runs.
   ( echo $SCENES | tr ' ' '\n' | RES=$RES xargs -P "$(nproc)" -I{} sh -c \
       'f="m_{}/videos/$STEM/$RES/{}.mp4"; s="m_{}/small.mp4"; [ -f "$s" ] && [ "$s" -nt "$f" ] && exit 0
-       pixi run ffmpeg -loglevel error -y -i "$f" -an -c:v libx264 -crf 26 -preset slow "$s.tmp.mp4" && mv "$s.tmp.mp4" "$s"'
+       pixi run ffmpeg -nostdin -loglevel error -y -i "$f" -an -c:v libx264 -crf 26 -preset slow "$s.tmp.mp4" && mv "$s.tmp.mp4" "$s"'
     : > list_small.txt; for s in $SCENES; do echo "file '$PWD/m_$s/small.mp4'" >> list_small.txt; done
-    pixi run ffmpeg -loglevel error -y -f concat -safe 0 -i list_small.txt -i "$OUT" -map 0:v -map 1:a -c:v copy \
+    pixi run ffmpeg -nostdin -loglevel error -y -f concat -safe 0 -i list_small.txt -i "$OUT" -map 0:v -map 1:a -c:v copy \
       -c:a aac -b:a 128k -movflags +faststart "$SMALL" ) & SP=$!
 fi
 [ -n "${AFTER_JOIN:-}" ] && { eval "$AFTER_JOIN" || echo "AFTER_JOIN failed (the video is fine)"; }

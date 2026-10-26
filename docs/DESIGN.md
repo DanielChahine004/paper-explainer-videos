@@ -475,6 +475,29 @@ labelled illustrative/schematic.
 - Anything holding an image is a `Group`, not a `VGroup`, including inside `fit_frame` (vlint:
   `vgroup-non-vmobject`).
 
+## Walking through the paper (a trial format, `pet_hetero_nanocomposites`)
+The user asked for a video that goes "through every page of the paper ... so by the end the viewer has seen the paper
+and knows where to look for information". It is laid out like this:
+- **The page stays on the left (about 7.4 tall), and the right-hand half explains it.** A yellow highlighter stroke
+  marks the passage the voice is reading. A frame marks a figure or an equation. The page turns (slides off left)
+  on the sentence that moves to it. Boxes live in `regions.py` in 300 dpi page pixels. `src/crops.py` snaps text
+  boxes to whole lines, so a highlight never cuts a line in half, and writes the crops. Helpers `hl`, `lift` and
+  `turn` take the cue as their first argument; vlint counts them as cues (a helper that forwards its argument to
+  `self.at`).
+- **Lift a piece off the page only when the enlargement shows something the highlight cannot**: a figure whose
+  dots the voice follows, an equation whose terms it points at, a reference the viewer should be able to read (user, `pet_hetero_nanocomposites` Intro: "'Here is that last sentence up close' didn't really
+  have a purpose"; the sentence had already been highlighted and read aloud). A highlighted sentence that the voice
+  reads aloud needs no enlargement. Give the right-hand side a drawing of what the sentence says instead: the
+  abstract's four steps became four small cells (grains in plastic, bright, stacked with BGO, 115 ps).
+- **A methods passage gets drawn as well as highlighted** (user, `pet_hetero_nanocomposites` Methods: "a
+  visualisation would've been good here"). Draw each step by what goes in, what is done and what comes out. The
+  recipe became three rows: raw grains into an oven at 950 °C for 2 h and out rounder; syrup spread by a doctor
+  blade into a 100 μm film; layers stacked by hand into a reflector-lined Teflon cube. In this format, every page
+  the voice spends a sentence on needs a picture on the right, not only a highlight on the left.
+- **Close on the paper as a map** (user, `pet_hetero_nanocomposites` Takeaway: "i like this paper as a map at the
+  end"): all pages as thumbnails, each labelled with what it holds, with a box moving over the groups as the voice
+  sums up where the story, the material, the device, the result and the recipe are.
+
 ---
 
 # Part III: Workflow

@@ -302,7 +302,8 @@ const ICON={heart:'<svg viewBox="0 0 24 24" fill="#fff" stroke="#fff" stroke-wid
   play:'<svg viewBox="0 0 24 24"><path d="M7 4v16l13-8z"/></svg>'};
 // one <video> for the whole page, moved into whichever reel is on screen: a phone unlocks sound once for it, and
 // only one stream is ever loading
-const V=document.createElement('video');V.playsInline=true;V.setAttribute('playsinline','');V.muted=true;V.preload='auto';
+const V=document.createElement('video');V.playsInline=true;V.muted=true;V.preload='auto';
+for(const k of ['playsinline','webkit-playsinline','muted'])V.setAttribute(k,'');
 let list=[],mode='',cur=null,curSl=null,userPaused=false,soundOn=false;
 // the reel on screen: the observer, and the scroll position once scrolling stops (a backgrounded tab may skip the observer)
 function settle(){const f=$('#feed'),s=f.children[Math.round(f.scrollTop/(f.clientHeight||1))];if(s)activate(s)}
@@ -323,14 +324,23 @@ function slide(r,k){const a=by[r.vid],s=document.createElement('section');s.clas
   s.querySelector('.nt').onclick=()=>note(s);
   s.querySelector('.fl').onclick=e=>{e.preventDefault();location.href='/#v='+encodeURIComponent(r.vid)+'&t='+Math.floor(s===curSl?V.currentTime:r.a)};
   let last=0,timer=null;
-  s.querySelector('.tap').onclick=e=>{const now=Date.now();
-    if(now-last<300){clearTimeout(timer);last=0;like(s,true,e);return}last=now;
-    timer=setTimeout(()=>{if(!soundOn){unmute();return}userPaused=!V.paused;userPaused?V.pause():V.play().catch(()=>{});s.classList.toggle('paused',userPaused)},300)};
+  // act on the tap itself, never after a timer: a phone only lets play() and sound through inside the tap's handler.
+  // A second tap within 300 ms undoes the first one's pause or play and likes the reel instead
+  let toggled=false;
+  s.querySelector('.tap').onclick=e=>{const now=Date.now(),dbl=now-last<300;last=dbl?0:now;
+    if(dbl){if(toggled)toggle(s);toggled=false;like(s,true,e);return}
+    toggled=soundOn&&!s.classList.contains('blocked');if(toggled)toggle(s);else unmute()};
   return s}
 // posters only for the reel on screen and its neighbours: a phone opens few connections to the server, and a
 // screenful of poster requests would hold up the video itself
 function hydrate(s){if(s&&!s._h){s._h=1;s.querySelector('.bg').style.backgroundImage=`url('${s._r.thumb}')`;s.querySelector('.stage img').src=s._r.thumb}}
-function unmute(){soundOn=true;V.muted=false;$('#hint').style.display='none';V.play().catch(()=>{})}
+function unmute(){soundOn=true;V.muted=false;$('#hint').style.display='none';userPaused=false;
+  if(curSl)curSl.classList.remove('paused','blocked');V.play().catch(()=>{})}
+function toggle(s){if(V.paused){userPaused=false;V.play().catch(()=>{})}else{userPaused=true;V.pause()}s.classList.toggle('paused',userPaused)}
+// start the reel: muted autoplay is allowed everywhere; if even that is refused, show the play button and wait for a tap
+function start(){const s=curSl;V.play().then(()=>s&&s.classList.remove('blocked')).catch(()=>{
+  if(!V.muted){V.muted=true;soundOn=false;$('#hint').style.display='block';return start()}
+  if(s===curSl){s.classList.add('paused','blocked')}})}
 function like(s,burst,e){const k=key(s._r),b=s.querySelector('.lk');
   if(burst){const h=document.createElementNS('http://www.w3.org/2000/svg','svg');h.setAttribute('viewBox','0 0 24 24');h.setAttribute('class','heart');
     h.innerHTML=ICON.heart.replace(/^<svg[^>]*>|<\/svg>$/g,'');h.style.left=e.clientX-s.getBoundingClientRect().left+'px';
@@ -345,10 +355,15 @@ function toast(t){const e=$('#toast');e.textContent=t;e.style.display='block';cl
 function activate(s){if(curSl===s)return;if(curSl){curSl.classList.remove('ready','paused')}curSl=s;cur=s._r;userPaused=false;
   const a=by[cur.vid],src=a.small||a.src;s.querySelector('.stage').prepend(V);
   let n=s;hydrate(s);for(let i=0;i<3&&n;i++){n=n.nextElementSibling;hydrate(n)}hydrate(s.previousElementSibling);
-  const go=()=>{V.currentTime=cur.a+.01;V.play().catch(()=>{if(!V.muted){V.muted=true;soundOn=false;$('#hint').style.display='block';V.play().catch(()=>{})}})};
-  if(V.dataset.src!==src){V.dataset.src=src;V.src=src;V.addEventListener('loadedmetadata',go,{once:true})}else go();
+  // a new file: start it at once (an iPhone loads nothing until play() is called), silent until it has jumped to
+  // the scene, then seek when its length is known
+  if(V.dataset.src!==src){V.dataset.src=src;V.src=src;V.muted=true;V.load();
+    V.addEventListener('loadedmetadata',()=>{V.currentTime=cur.a+.01},{once:true});start()}
+  else{V.currentTime=cur.a+.01;start()}
   ls.set('reels:pos:'+mode,s._k);if(s._k>list.length-4&&mode==='foryou')more()}
-V.addEventListener('seeked',()=>curSl&&curSl.classList.add('ready'));V.addEventListener('playing',()=>curSl&&curSl.classList.add('ready'));
+function inScene(){return cur&&V.currentTime>=cur.a-.3&&V.currentTime<=cur.b}
+V.addEventListener('seeked',()=>{if(!curSl||!inScene())return;V.muted=!soundOn;curSl.classList.add('ready')});
+V.addEventListener('playing',()=>{if(curSl&&inScene())curSl.classList.add('ready')});
 // keep the clip inside its scene: every frame while visible, and on timeupdate as a backstop
 function check(){if(cur&&curSl&&!V.seeking&&V.readyState>1){const t=V.currentTime;
     if(t>=cur.b-.06||t<cur.a-1){if(auto&&t>=cur.b-.06&&curSl.nextElementSibling){V.pause();curSl.nextElementSibling.scrollIntoView({behavior:'smooth'})}else V.currentTime=cur.a}

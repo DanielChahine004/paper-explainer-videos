@@ -286,19 +286,41 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 .side svg{width:34px;height:34px;filter:drop-shadow(0 1px 2px #000a)}
 .av{width:46px;height:46px;border-radius:50%;border:2px solid #fff;background:#333 center/cover}
 .liked svg{fill:var(--acc);stroke:var(--acc)}
-.cap{position:absolute;left:12px;right:72px;bottom:22px;z-index:2;text-shadow:0 1px 3px #000}
+.cap{position:absolute;left:12px;right:72px;bottom:28px;z-index:2;text-shadow:0 1px 3px #000}
 .who{font-weight:700;font-size:16px;color:#fff;text-decoration:none}
 .txt{margin-top:6px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}.txt.open{-webkit-line-clamp:unset}.doc{display:none;color:#bbb;font-size:13px}.txt.open .doc{display:block;margin-top:6px}
 .meta{margin-top:7px;font-size:13px;color:#ddd;display:flex;gap:6px;align-items:center}
-.prog{position:absolute;left:0;right:0;bottom:0;height:3px;background:#ffffff26;z-index:2}.prog i{display:block;height:100%;width:0;background:#fff}
+/* the progress bar: a thin line with a finger-sized grab strip; dragging it scrubs through the reel */
+.prog{position:absolute;left:0;right:0;bottom:0;height:24px;z-index:3;touch-action:none;cursor:pointer}
+.prog b{position:absolute;left:0;right:0;bottom:0;height:3px;background:#ffffff26;transition:height .1s}
+.prog i{position:relative;display:block;height:100%;width:0;background:#fff}
+.prog i::after{content:'';position:absolute;right:-7px;top:50%;width:14px;height:14px;margin-top:-7px;border-radius:50%;background:#fff;display:none}
+.slide.drag .prog b{height:6px}.slide.drag .prog i::after{display:block}
+.scrub{position:absolute;left:50%;bottom:64px;transform:translateX(-50%);z-index:3;font-size:28px;font-weight:700;text-shadow:0 1px 4px #000;
+  display:none;pointer-events:none;white-space:nowrap}
+.slide.drag .scrub{display:block}.slide.drag .cap,.slide.drag .side{opacity:0}
+/* notes, shown like comments */
+#sheet{position:absolute;inset:0;z-index:8;display:none}#sheet.on{display:block}
+#sheet .dim{position:absolute;inset:0;background:#0007}
+#sheet .pan{position:absolute;left:0;right:0;bottom:0;height:64%;background:#1a1b20;border-radius:14px 14px 0 0;display:flex;flex-direction:column;
+  padding-bottom:env(safe-area-inset-bottom)}
+#sheet .hd{text-align:center;font-weight:700;font-size:14px;padding:14px 44px 10px;position:relative}
+#sheet .x{position:absolute;right:14px;top:6px;font-size:26px;color:#aaa}
+#clist{flex:1;overflow-y:auto;padding:0 14px}
+#clist h4{margin:12px 0 2px;font-size:12px;color:var(--mute);font-weight:600}
+.cm{display:flex;gap:10px;padding:9px 0}.cm.done{opacity:.55}
+.cm .ts{flex:none;align-self:flex-start;background:#2a2b31;color:var(--acc2);border-radius:10px;padding:2px 8px;font-size:12px;font-weight:600}
+.cm .bd{flex:1;min-width:0}.cm .sn{font-size:12px;color:var(--mute)}.cm .st{color:#8bd17c;margin-left:6px}
+.cm .tx{margin-top:2px;white-space:pre-wrap;overflow-wrap:anywhere}
+#cform{display:flex;gap:8px;padding:10px 12px;border-top:1px solid #2a2b31}
+#cin{flex:1;min-width:0;background:#2a2b31;border:0;border-radius:18px;color:var(--text);padding:9px 14px;font:16px system-ui,sans-serif;outline:none}
+#cform button{color:var(--acc);font-weight:700;padding:0 6px}
 .top{position:absolute;top:0;left:0;right:0;z-index:4;display:flex;justify-content:center;align-items:center;gap:18px;
   padding:calc(10px + env(safe-area-inset-top)) 12px 10px;background:linear-gradient(#0009,#0000);pointer-events:none}
 .top>*{pointer-events:auto}.top a{color:#ffffffa8;text-decoration:none;font-weight:600;font-size:16px;padding-bottom:3px}
 .top a.on{color:#fff;border-bottom:2px solid #fff}.top .back{position:absolute;left:12px;font-size:22px;color:#fff}
 .top .ttl{font-weight:700}.top .auto{position:absolute;right:12px;font-size:12px;color:#fffc;border:1px solid #fff6;border-radius:12px;padding:2px 8px}
 .top .auto.on{background:#fff;color:#000}
-#hint{position:absolute;left:50%;top:calc(58px + env(safe-area-inset-top));transform:translateX(-50%);z-index:4;background:#000a;
-  border:1px solid #fff3;border-radius:16px;padding:5px 12px;font-size:13px;display:none}
 .pz{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:2;pointer-events:none;opacity:0;transition:opacity .15s}
 .pz svg{width:72px;height:72px;fill:#fffb}.slide.paused .pz{opacity:1}
 .heart{position:absolute;z-index:3;pointer-events:none;width:90px;height:90px;fill:var(--acc);animation:pop .7s forwards}
@@ -329,7 +351,7 @@ h3{font-size:14px;color:var(--mute);font-weight:600;margin:14px 12px 8px;text-tr
 .btns a.alt{background:#2a2b31}
 .empty{color:var(--mute);padding:30px 16px;text-align:center}
 </style></head><body><div id="app">
-<div id="v-feed" class="view"><div id="feed"></div><div class="top" id="ftop"></div><div id="hint">Tap for sound</div></div>
+<div id="v-feed" class="view"><div id="feed"></div><div class="top" id="ftop"></div></div>
 <div id="v-search" class="view"><div class="page"><div class="bar"><input id="q" type="search" placeholder="Search accounts and reels" autocomplete="off"></div><div id="sres"></div></div></div>
 <div id="v-liked" class="view"><div class="page"><div class="bar"><b style="font-size:17px">Liked</b></div><div id="lres"></div></div></div>
 <div id="v-prof" class="view"><div class="page" id="pres"></div></div>
@@ -338,7 +360,10 @@ h3{font-size:14px;color:var(--mute);font-weight:600;margin:14px 12px 8px;text-tr
  <a href="#/search" data-v="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></svg>Search</a>
  <a href="#/liked" data-v="liked"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-7.5-4.6-9.6-9.2C.9 8.4 3 4.5 6.7 4.5c2.2 0 3.6 1.2 4.3 2.4h2c.7-1.2 2.1-2.4 4.3-2.4 3.7 0 5.8 3.9 4.3 7.3C19.5 16.4 12 21 12 21z"/></svg>Liked</a>
  <a href="/" data-v="cat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8"/></svg>Catalogue</a>
-</nav></div><div id="toast"></div>
+</nav>
+<div id="sheet"><div class="dim"></div><div class="pan"><div class="hd"><span id="shd"></span><button class="x" aria-label="Close">&times;</button></div>
+ <div id="clist"></div><form id="cform"><input id="cin" enterkeyhint="send" autocomplete="off"><button>Post</button></form></div></div>
+</div><div id="toast"></div>
 <script>
 const $=s=>document.querySelector(s),esc=s=>String(s).replace(/[&<>"']/g,c=>'&#'+c.charCodeAt(0)+';');
 const fmt=s=>{s=Math.max(0,Math.round(s));return Math.floor(s/60)+':'+String(s%60).padStart(2,'0')};
@@ -360,7 +385,9 @@ const R=document.createElement('video');R.className='rv';R.playsInline=true;R.mu
 for(const k of ['playsinline','webkit-playsinline','muted'])R.setAttribute(k,'');
 R.onerror=()=>{R.dataset.src=''};                       // not made yet: ask again on the next reel
 let revD=0;
-let list=[],mode='',cur=null,curSl=null,userPaused=false,soundOn=false;
+// sound is on from the start; a browser that refuses to autoplay with sound gets the reel silent, and the first tap
+// turns the sound on for the rest of the visit
+let list=[],mode='',cur=null,curSl=null,userPaused=false,soundOn=true,jumpT=null;
 // the reel on screen: the observer, and the scroll position once scrolling stops (a backgrounded tab may skip the observer)
 function settle(){const f=$('#feed'),s=f.children[Math.round(f.scrollTop/(f.clientHeight||1))];if(s)activate(s)}
 $('#feed').addEventListener('scroll',()=>{clearTimeout(settle._t);settle._t=setTimeout(settle,150)},{passive:true});
@@ -374,8 +401,22 @@ function slide(r,k){const a=by[r.vid],s=document.createElement('section');s.clas
     <a class="fl" href="#">${ICON.full}<span>Full</span></a></div>
    <div class="cap"><a class="who" href="#/@${encodeURIComponent(r.vid)}">@${esc(r.vid)}</a>
     <div class="txt">${esc(r.cap||r.name)}${r.doc?`<span class="doc"> ${esc(r.doc)}</span>`:''}</div>
-    <div class="meta">&#9835; ${esc(r.name)} &middot; ${r.n}/${a.reels.length} &middot; ${fmt(r.b-r.a)}</div></div><div class="prog"><i></i></div>`;
+    <div class="meta">&#9835; ${esc(r.name)} &middot; ${r.n}/${a.reels.length} &middot; <span class="tm">0:00</span> / ${fmt(r.b-r.a)}</div></div>
+   <div class="prog"><b><i></i></b></div><div class="scrub"></div>`;
+  if(notes[r.vid])noteCount(s);
   s.querySelector('.txt').onclick=e=>e.currentTarget.classList.toggle('open');
+  // drag the bar to a moment of the reel: the picture follows the finger, and play carries on from there on release
+  const pg=s.querySelector('.prog');
+  const scrubTo=e=>{const rc=pg.getBoundingClientRect(),f=Math.max(0,Math.min(1,(e.clientX-rc.left)/rc.width)),t=r.a+f*(r.b-r.a);
+    s._drag.t=Math.min(t,r.b-.1);pg.querySelector('i').style.width=f*100+'%';
+    s.querySelector('.scrub').textContent=fmt(t-r.a)+' / '+fmt(r.b-r.a);s.querySelector('.tm').textContent=fmt(t-r.a);
+    if(!V.seeking)V.currentTime=s._drag.t};
+  pg.addEventListener('pointerdown',e=>{if(s!==curSl)return;e.preventDefault();e.stopPropagation();pg.setPointerCapture(e.pointerId);
+    s._drag={was:V.paused,t:V.currentTime};V.pause();s.classList.add('drag');scrubTo(e)});
+  pg.addEventListener('pointermove',e=>{if(s._drag)scrubTo(e)});
+  const drop=()=>{const d=s._drag;if(!d)return;s._drag=null;s.classList.remove('drag');V.currentTime=d.t;
+    if(!d.was&&!userPaused)V.play().catch(()=>{})};
+  pg.addEventListener('pointerup',drop);pg.addEventListener('pointercancel',drop);pg.onclick=e=>e.stopPropagation();
   s.querySelector('.lk').onclick=()=>like(s,false);
   s.querySelector('.nt').onclick=()=>note(s);
   s.querySelector('.fl').onclick=e=>{e.preventDefault();location.href='/#v='+encodeURIComponent(r.vid)+'&t='+Math.floor(s===curSl?V.currentTime:r.a)};
@@ -411,12 +452,12 @@ function stopHold(s){if(!s.classList.contains('fast')&&!s.classList.contains('re
 // posters only for the reel on screen and its neighbours: a phone opens few connections to the server, and a
 // screenful of poster requests would hold up the video itself
 function hydrate(s){if(s&&!s._h){s._h=1;s.querySelector('.bg').style.backgroundImage=`url('${s._r.thumb}')`;s.querySelector('.stage img').src=s._r.thumb}}
-function unmute(){soundOn=true;V.muted=false;$('#hint').style.display='none';userPaused=false;
+function unmute(){soundOn=true;V.muted=false;userPaused=false;
   if(curSl)curSl.classList.remove('paused','blocked');V.play().catch(()=>{})}
 function toggle(s){if(V.paused){userPaused=false;V.play().catch(()=>{})}else{userPaused=true;V.pause()}s.classList.toggle('paused',userPaused)}
 // start the reel: muted autoplay is allowed everywhere; if even that is refused, show the play button and wait for a tap
 function start(){const s=curSl;V.play().then(()=>s&&s.classList.remove('blocked')).catch(()=>{
-  if(!V.muted){V.muted=true;soundOn=false;$('#hint').style.display='block';return start()}
+  if(!V.muted){V.muted=true;soundOn=false;return start()}
   if(s===curSl){s.classList.add('paused','blocked')}})}
 function like(s,burst,e){const k=key(s._r),b=s.querySelector('.lk');
   if(burst){const h=document.createElementNS('http://www.w3.org/2000/svg','svg');h.setAttribute('viewBox','0 0 24 24');h.setAttribute('class','heart');
@@ -424,10 +465,36 @@ function like(s,burst,e){const k=key(s._r),b=s.querySelector('.lk');
     h.style.top=e.clientY-s.getBoundingClientRect().top+'px';s.append(h);setTimeout(()=>h.remove(),800);likes.add(k)}
   else likes.has(k)?likes.delete(k):likes.add(k);
   b.classList.toggle('liked',likes.has(k));ls.set('reels:likes',[...likes])}
-async function note(s){const r=s._r,t=s===curSl?V.currentTime:r.a;V.pause();
-  const text=prompt('Note at '+fmt(t)+' ('+r.name+')');if(!userPaused)V.play().catch(()=>{});if(!text||!text.trim())return;
-  const ok=await fetch('/api/notes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:r.vid,t,text})}).then(x=>x.ok).catch(()=>false);
-  toast(ok?'Note saved':'Could not save the note')}
+// notes read like comments: the sheet lists this reel's notes, then the rest of the video's, each with the moment it
+// is about (tap it to go there), and a box to add one at the moment the reel was paused on
+const notes={};      // video id -> its notes from feedback.json, fetched when one of its reels first comes up
+const inReel=(n,r)=>n.t>=r.a&&n.t<r.b;
+async function loadNotes(vid){try{notes[vid]=await (await fetch('/api/notes?id='+encodeURIComponent(vid))).json()}catch(e){notes[vid]=notes[vid]||[]}
+  document.querySelectorAll('.slide').forEach(s=>{if(s._r.vid===vid)noteCount(s)})}
+function noteCount(s){const k=(notes[s._r.vid]||[]).filter(n=>inReel(n,s._r)).length;s.querySelector('.nt span').textContent=k||'Notes'}
+let sheetSl=null,sheetT=0,sheetWas=false;
+async function note(s){const r=s._r;sheetSl=s;sheetT=s===curSl?V.currentTime:r.a;sheetWas=V.paused;if(s===curSl)V.pause();
+  $('#cin').placeholder='Add a note at '+fmt(sheetT-r.a)+'…';$('#sheet').classList.add('on');renderSheet();
+  await loadNotes(r.vid);if(sheetSl===s)renderSheet()}
+function renderSheet(){const r=sheetSl._r,a=by[r.vid],ns=(notes[r.vid]||[]).slice().sort((x,y)=>x.t-y.t);
+  const reelOf=t=>a.reels.find(q=>t>=q.a&&t<q.b)||a.reels[a.reels.length-1];
+  const row=n=>{const q=reelOf(n.t),done=n.status!=='open';return `<div class="cm${done?' done':''}">
+     <button class="ts" data-n="${q.n-1}" data-t="${n.t}">${fmt(n.t-q.a)}</button>
+     <div class="bd"><div class="sn">${esc(q.name)}${done?'<span class="st">&#10003; resolved</span>':''}</div><div class="tx">${esc(n.text)}</div>
+     ${done&&n.resolution?`<div class="sn">&rarr; ${esc(n.resolution)}</div>`:''}</div></div>`};
+  const mine=ns.filter(n=>inReel(n,r)),rest=ns.filter(n=>!inReel(n,r));
+  $('#shd').textContent=ns.length+(ns.length===1?' note':' notes');
+  $('#clist').innerHTML=(mine.length?mine.map(row).join(''):'<div class="empty" style="padding:18px">No notes on this reel yet.</div>')+
+    (rest.length?`<h4>Elsewhere in @${esc(r.vid)}</h4>`+rest.map(row).join(''):'')}
+function closeSheet(jump){if(!sheetSl)return;const s=sheetSl;sheetSl=null;$('#sheet').classList.remove('on');$('#cin').blur();
+  if(!jump&&s===curSl&&!sheetWas&&!userPaused)V.play().catch(()=>{})}
+$('#sheet .dim').onclick=$('#sheet .x').onclick=()=>closeSheet();
+$('#clist').onclick=e=>{const b=e.target.closest('.ts');if(!b)return;const t=+b.dataset.t,s=sheetSl;closeSheet(true);
+  if(s===curSl&&inReel({t},cur)){V.currentTime=t;userPaused=false;s.classList.remove('paused');V.play().catch(()=>{})}
+  else{jumpT=t;setTimeout(()=>{jumpT=null},3000);location.hash='#/@'+encodeURIComponent(s._r.vid)+'/'+b.dataset.n}};
+$('#cform').onsubmit=async e=>{e.preventDefault();const s=sheetSl,text=$('#cin').value.trim();if(!s||!text)return;
+  const ok=await fetch('/api/notes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:s._r.vid,t:sheetT,text})}).then(x=>x.ok).catch(()=>false);
+  if(!ok)return toast('Could not save the note');$('#cin').value='';await loadNotes(s._r.vid);if(sheetSl===s)renderSheet()};
 function toast(t){const e=$('#toast');e.textContent=t;e.style.display='block';clearTimeout(e._t);e._t=setTimeout(()=>e.style.display='none',1600)}
 function activate(s){if(curSl===s)return;if(curSl){curSl.classList.remove('ready','paused')}curSl=s;cur=s._r;userPaused=false;
   const a=by[cur.vid],src=a.small||a.src;s.querySelector('.stage').prepend(V);
@@ -435,20 +502,30 @@ function activate(s){if(curSl===s)return;if(curSl){curSl.classList.remove('ready
   let n=s;hydrate(s);for(let i=0;i<3&&n;i++){n=n.nextElementSibling;hydrate(n)}hydrate(s.previousElementSibling);
   // a new file: start it at once (an iPhone loads nothing until play() is called), silent until it has jumped to
   // the scene, then seek when its length is known
+  // a note's moment to start at: kept until its reel comes up, since the rebuilt feed may pass the first reel on the way
+  const t0=jumpT!=null&&inReel({t:jumpT},cur)?jumpT:cur.a+.01;if(t0===jumpT)jumpT=null;
+  if(notes[cur.vid])noteCount(s);else loadNotes(cur.vid);
   if(V.dataset.src!==src){V.dataset.src=src;V.src=src;V.muted=true;V.load();
-    V.addEventListener('loadedmetadata',()=>{V.currentTime=cur.a+.01},{once:true});start()}
-  else{V.currentTime=cur.a+.01;start()}
+    V.addEventListener('loadedmetadata',()=>{V.currentTime=t0},{once:true});start()}
+  else{V.currentTime=t0;start()}
   ls.set('reels:pos:'+mode,s._k);if(s._k>list.length-4&&mode==='foryou')more()}
 function inScene(){return cur&&V.currentTime>=cur.a-.3&&V.currentTime<=cur.b}
-V.addEventListener('seeked',()=>{if(!curSl||!inScene())return;V.muted=!soundOn;curSl.classList.add('ready')});
+// once at the scene, turn the sound on; a browser that will not play with sound without a tap pauses or refuses,
+// and the reel then carries on silent
+V.addEventListener('seeked',()=>{const d=curSl&&curSl._drag;if(d&&Math.abs(V.currentTime-d.t)>.15)V.currentTime=d.t;   // catch up with the finger
+  if(!curSl||!inScene())return;curSl.classList.add('ready');
+  if(V.muted&&soundOn){V.muted=false;if(!V.paused)V.play().catch(()=>{V.muted=true;soundOn=false;V.play().catch(()=>{})})}});
 V.addEventListener('playing',()=>{if(curSl&&inScene())curSl.classList.add('ready')});
 // keep the clip inside its scene: every frame while visible, and on timeupdate as a backstop
+function shown(t){const e=curSl.querySelector('.tm'),v=fmt(Math.min(cur.b,Math.max(cur.a,t))-cur.a);if(e.textContent!==v)e.textContent=v;
+  curSl.querySelector('.prog i').style.width=Math.max(0,Math.min(100,100*(t-cur.a)/(cur.b-cur.a)))+'%'}
 function check(){
+  if(curSl&&curSl._drag)return;                                                              // the finger has the bar
   if(revD&&cur&&curSl&&R.classList.contains('on')){const t=revD-R.currentTime;if(t<=cur.a)R.pause();   // rewinding: stop at the scene's start
-    curSl.querySelector('.prog i').style.width=Math.max(0,Math.min(100,100*(t-cur.a)/(cur.b-cur.a)))+'%';return}
+    shown(t);return}
   if(cur&&curSl&&!V.seeking&&V.readyState>1){const t=V.currentTime;
     if(t>=cur.b-.06||t<cur.a-1){if(auto&&t>=cur.b-.06&&curSl.nextElementSibling){V.pause();curSl.nextElementSibling.scrollIntoView({behavior:'smooth'})}else V.currentTime=cur.a}
-    curSl.querySelector('.prog i').style.width=Math.min(100,100*(t-cur.a)/(cur.b-cur.a))+'%'}}
+    shown(t)}}
 V.addEventListener('timeupdate',check);(function tick(){check();requestAnimationFrame(tick)})();
 function shuffled(){const a=all.slice();for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]]}return a}
 function more(){const add=shuffled(),f=$('#feed');add.forEach(r=>{const s=slide(r,list.length);list.push(r);f.append(s);io.observe(s)})}
@@ -456,8 +533,7 @@ function showFeed(m,items,start,top){if(mode!==m||!list.length||m.startsWith('@'
     const f=$('#feed');io.disconnect();f.replaceChildren(...list.map((r,k)=>slide(r,k)));f.querySelectorAll('.slide').forEach(s=>io.observe(s));
     setTimeout(()=>{f.scrollTop=(start||0)*f.clientHeight;settle()})}
   else if(curSl&&!userPaused)V.play().catch(()=>{});
-  $('#ftop').innerHTML=top;const au=$('#ftop .auto');if(au)au.onclick=()=>{auto=!auto;ls.set('reels:auto',auto);au.classList.toggle('on',auto)};
-  $('#hint').style.display=soundOn?'none':'block'}
+  $('#ftop').innerHTML=top;const au=$('#ftop .auto');if(au)au.onclick=()=>{auto=!auto;ls.set('reels:auto',auto);au.classList.toggle('on',auto)}}
 const autoBtn=()=>`<button class="auto${auto?' on':''}">Auto &darr;</button>`;
 function tile(r,href,label){return `<a class="tile" href="${href}" style="background-image:url('${r.thumb}')"><em>${fmt(r.b-r.a)}</em><div class="nm">${label}</div></a>`}
 function accRow(a){return `<a class="acc" href="#/@${encodeURIComponent(a.id)}"><div class="av" style="background-image:url('${a.avatar}')"></div>
@@ -479,7 +555,7 @@ function profile(a){const tot=a.reels.reduce((s,r)=>s+r.b-r.a,0);
    <div class="grid">${a.reels.map(r=>tile(r,'#/@'+encodeURIComponent(a.id)+'/'+(r.n-1),r.n+' &middot; '+esc(r.name))).join('')}</div>`;
   $('#pres').scrollTop=0}
 function show(v){document.querySelectorAll('.view').forEach(e=>e.classList.toggle('on',e.id==='v-'+v));
-  if(v!=='feed'){V.pause()}}
+  closeSheet(true);if(v!=='feed'){V.pause()}}
 function route(){const h=decodeURIComponent(location.hash.slice(1)||'/');let m,nav='feed';
   if(h==='/'||h==='/latest'){const lat=h==='/latest';show('feed');
     const items=lat?accs.flatMap(a=>a.reels.map(r=>r)):null;

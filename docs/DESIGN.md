@@ -193,6 +193,12 @@ concrete choices (what is computed, what is kept). Give derivations one line at 
   for a velocity, a cloud for noise). When two methods are compared, compare their inputs and outputs
   side by side (flow matching outputs a velocity; a diffusion model, given the same input, outputs the
   noise).
+- **A whole process is one picture that grows, not icons joined by arrows.** When a scene runs through a
+  chain of steps (detector hit → readout → algorithm → answer), build it in one place: draw the detector,
+  show the hit, let the readout light up beneath it, carry those readout values into the network (each
+  value moving to its input node), and land the answer back in the detector next to the true hit. Each
+  step adds to what is already on screen. Draw the real readout geometry the paper uses (an 8 × 8 sensor
+  grid with its row and column sums), never a generic bar distribution standing in for "the signals".
 - **Method before result.** Name the simulation code and settings, the detector model, the
   reconstruction and its update equation, and the standard test (NEMA etc.), with the numbers that
   define them. Results come after the method that produced them.

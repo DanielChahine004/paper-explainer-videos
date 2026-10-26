@@ -230,7 +230,10 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 .stage{position:absolute;left:0;right:0;top:max(80px,calc(42% - 28vw));aspect-ratio:16/9}
 .stage img,.stage video{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#000}
 .stage video{opacity:0;transition:opacity .15s;z-index:1}.slide.ready .stage video{opacity:1}
-.tap{position:absolute;inset:0;z-index:1}
+.tap{position:absolute;inset:0;z-index:1;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:pan-y}
+.spd{position:absolute;top:calc(96px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);z-index:3;display:none;
+  background:#000a;border:1px solid #fff3;border-radius:16px;padding:5px 14px;font-weight:600;pointer-events:none;white-space:nowrap}
+.slide.fast .spd,.slide.rew .spd{display:block}.slide.fast .spd::after{content:'2\00d7  \25b6\25b6'}.slide.rew .spd::after{content:'\25c0\25c0  Rewind'}
 .side{position:absolute;right:8px;bottom:110px;display:flex;flex-direction:column;align-items:center;gap:18px;z-index:2}
 .side button,.side a{display:flex;flex-direction:column;align-items:center;font-size:12px;gap:3px;color:#fff;text-decoration:none;text-shadow:0 1px 3px #000}
 .side svg{width:34px;height:34px;filter:drop-shadow(0 1px 2px #000a)}
@@ -311,7 +314,7 @@ $('#feed').addEventListener('scroll',()=>{clearTimeout(settle._t);settle._t=setT
 const io=new IntersectionObserver(es=>{for(const e of es)if(e.isIntersecting)activate(e.target)},{root:$('#feed'),threshold:.6});
 function slide(r,k){const a=by[r.vid],s=document.createElement('section');s.className='slide';s._r=r;s._k=k;
   s.innerHTML=`<div class="bg"></div><div class="stage"><img alt=""></div>
-   <div class="tap"></div><div class="pz">${ICON.play}</div>
+   <div class="tap"></div><div class="pz">${ICON.play}</div><div class="spd"></div>
    <div class="side"><a class="av" href="#/@${encodeURIComponent(r.vid)}" style="background-image:url('${a.avatar}')" aria-label="Account"></a>
     <button class="lk${likes.has(key(r))?' liked':''}">${ICON.heart}<span>Like</span></button>
     <button class="nt">${ICON.note}<span>Note</span></button>
@@ -323,14 +326,28 @@ function slide(r,k){const a=by[r.vid],s=document.createElement('section');s.clas
   s.querySelector('.lk').onclick=()=>like(s,false);
   s.querySelector('.nt').onclick=()=>note(s);
   s.querySelector('.fl').onclick=e=>{e.preventDefault();location.href='/#v='+encodeURIComponent(r.vid)+'&t='+Math.floor(s===curSl?V.currentTime:r.a)};
-  let last=0,timer=null;
+  let last=0;
   // act on the tap itself, never after a timer: a phone only lets play() and sound through inside the tap's handler.
   // A second tap within 300 ms undoes the first one's pause or play and likes the reel instead
-  let toggled=false;
-  s.querySelector('.tap').onclick=e=>{const now=Date.now(),dbl=now-last<300;last=dbl?0:now;
+  let toggled=false,hold=null,held=false;
+  const tp=s.querySelector('.tap');
+  tp.onclick=e=>{if(held){held=false;return}const now=Date.now(),dbl=now-last<300;last=dbl?0:now;
     if(dbl){if(toggled)toggle(s);toggled=false;like(s,true,e);return}
     toggled=soundOn&&!s.classList.contains('blocked');if(toggled)toggle(s);else unmute()};
+  // press and hold: the right half plays at 2x, the left half rewinds, until the finger lifts (a swipe cancels it)
+  tp.addEventListener('pointerdown',e=>{held=false;if(s!==curSl)return;
+    const right=e.clientX-s.getBoundingClientRect().left>s.clientWidth/2;
+    hold={x:e.clientX,y:e.clientY,t:setTimeout(()=>{held=true;startHold(s,right)},350)}});
+  tp.addEventListener('pointermove',e=>{if(hold&&!held&&Math.hypot(e.clientX-hold.x,e.clientY-hold.y)>12){clearTimeout(hold.t);hold=null}});
+  for(const k of ['pointerup','pointercancel','pointerleave'])tp.addEventListener(k,()=>{if(hold){clearTimeout(hold.t);hold=null}if(held)stopHold(s)});
+  tp.oncontextmenu=e=>e.preventDefault();
   return s}
+let rew=null,holdPaused=false;
+function startHold(s,right){holdPaused=V.paused;s.classList.add(right?'fast':'rew');
+  if(right){V.playbackRate=2;V.play().catch(()=>{})}
+  else{V.pause();rew=setInterval(()=>{if(!V.seeking&&cur)V.currentTime=Math.max(cur.a,V.currentTime-.6)},100)}}   // seeks finish slowly: about 2-3x backwards
+function stopHold(s){if(!s.classList.contains('fast')&&!s.classList.contains('rew'))return;
+  s.classList.remove('fast','rew');V.playbackRate=1;clearInterval(rew);rew=null;holdPaused?V.pause():V.play().catch(()=>{})}
 // posters only for the reel on screen and its neighbours: a phone opens few connections to the server, and a
 // screenful of poster requests would hold up the video itself
 function hydrate(s){if(s&&!s._h){s._h=1;s.querySelector('.bg').style.backgroundImage=`url('${s._r.thumb}')`;s.querySelector('.stage img').src=s._r.thumb}}

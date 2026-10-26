@@ -538,3 +538,16 @@ def equation_talked_over(s):
                         and n.args[0].id not in cued):
                     yield n, (f"{n.args[0].id} ({eqs[n.args[0].id]} parts) is written whole and none of its parts is "
                               "cued while the voice reads it")
+
+
+@rule("front-page", "static", "warn", "The video credits a paper (an 'et al.' citation) but never shows the paper's "
+      "front page, so a viewer who knows the paper cannot recognise it (user, pet_explorer).", "Part I §1, opening",
+      "tools/front_page.sh <video> writes assets/front.png; show front_page() in the first scene while the voice names "
+      "the paper, its authors and its journal")
+def front_page_shown(s):
+    if any(call_name(n) == "front_page" for n in ast.walk(s.tree)):
+        return
+    for node in ast.walk(s.tree):
+        if isinstance(node, ast.Constant) and isinstance(node.value, str) and re.search(r"\bet al\b", node.value):
+            yield node, "cites a paper but never shows its front page (front_page())"
+            return

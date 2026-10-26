@@ -387,6 +387,10 @@ labelled illustrative/schematic.
   a live test in ECMWF's quest." (vlint: `narration-appendage`).
 - Use short sentences and avoid a bare "l". After the draft, read the Whisper check, which catches
   real mispronunciations ("Poisson" was heard as "Hwasong").
+- **Name the subject again when a scene opens**. A pronoun or a back-reference ("each caught pair", "their",
+  "this") points only at something said in the last sentence or two; after a cut, a new title or a pause, say the
+  thing in full: "When an annihilation sends its two photons into the ring, the two detectors they strike define a
+  line", not "Each caught pair defines a line".
 
 ## 3D, when it is used
 - **Draw order is by face centre, and flat objects are drawn after all 3D faces.** Don't mix the
@@ -428,6 +432,12 @@ labelled illustrative/schematic.
   and may recede (vlint: `faint-mark`).
 
 ## Reusing a figure
+- **Open on the paper's front page**: a video that explains a paper or a resource shows page 1 in its first
+  seconds, so a viewer who has seen the paper recognises it. `tools/front_page.sh <video>` writes
+  `assets/front.png` from the first `src/*.pdf`, and `front_page()` (common) frames it. The voice names the journal,
+  the year and the authors while a box marks the author line, then the box moves to the title as the voice says
+  what the paper reports (vlint: `front-page`, a warning, fires when a script credits an "et al." paper and
+  never calls `front_page()`).
 - **Any figure in a paper you were given may be shown** when the videos are for private viewing: then the licence
   never forces a redraw, and the per-figure choice in §4 decides (real data and dense plots reused, mechanisms
   redrawn). For a public video, check the licence first. Credit each reused figure on screen while it shows

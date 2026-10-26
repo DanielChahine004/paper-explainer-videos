@@ -188,6 +188,15 @@ def fit_frame(m, margin=0.3):
 def fade_all(scene):
     scene.play(*[FadeOut(m) for m in scene.mobjects])
 
+
+def front_page(h=6.4, name="front.png"):
+    """Page 1 of the paper the video explains (tools/front_page.sh writes <video>/assets/front.png), framed, for the
+    opening seconds: the viewer recognises the paper before the explaining starts (docs/DESIGN.md §1, vlint: front-page)."""
+    import inspect
+    here = Path(inspect.stack()[1].filename).resolve().parent
+    im = ImageMobject(str(here / "assets" / name)).set_height(h)
+    return Group(im, Rectangle(width=im.width, height=im.height, stroke_color=GREY_B, stroke_width=1.5).move_to(im))
+
 def point(scene, m, color=WHITE):
     """The term marker: a box that moves onto whichever part of an equation the voice is naming, so the eye
     always knows which symbol is being read (docs/DESIGN.md §1). Returns the animation; the first call draws the box.

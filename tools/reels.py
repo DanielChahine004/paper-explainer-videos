@@ -512,10 +512,16 @@ async function post(){const s=sheetSl,text=$('#cin').value.trim();if(!s||!text)r
 const grow=()=>{const c=$('#cin');c.style.height='40px';c.style.height=Math.min(96,c.scrollHeight)+'px'};
 $('#cpost').onclick=post;$('#cin').oninput=grow;
 $('#cin').onkeydown=e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();post()}};
-// the phone keyboard covers the bottom of the page without resizing it: lift the sheet to sit on top of the keyboard
-if(window.visualViewport){const vv=visualViewport,fit=()=>{const p=$('#sheet .pan'),kb=Math.max(0,innerHeight-vv.height-vv.offsetTop);
-    p.style.bottom=kb+'px';p.style.height=kb?Math.min(vv.height*.64,vv.height-40)+'px':''};
-  vv.addEventListener('resize',fit);vv.addEventListener('scroll',fit)}
+// the phone keyboard covers the bottom of the page without resizing it, and an iPhone also scrolls the page under it
+// (and may report innerHeight already shrunk): fit the sheet to exactly the part of the page still in view, so its
+// bottom edge, with the comment box, is the top of the keyboard. The keyboard animates in, so measure again later too
+if(window.visualViewport){const vv=visualViewport,fit=()=>{const sh=$('#sheet'),p=$('#sheet .pan'),
+    kb=document.documentElement.clientHeight-vv.height>80;
+  sh.style.top=vv.offsetTop+'px';sh.style.height=vv.height+'px';sh.style.bottom='auto';
+  p.style.height=kb?Math.max(150,vv.height-50)+'px':''};
+  vv.addEventListener('resize',fit);vv.addEventListener('scroll',fit);
+  $('#cin').addEventListener('focus',()=>{fit();for(const ms of [150,350,700])setTimeout(fit,ms)});
+  $('#cin').addEventListener('blur',()=>setTimeout(fit,350))}
 function toast(t){const e=$('#toast');e.textContent=t;e.style.display='block';clearTimeout(e._t);e._t=setTimeout(()=>e.style.display='none',1600)}
 function activate(s){if(curSl===s)return;if(curSl){curSl.classList.remove('ready','paused')}curSl=s;cur=s._r;userPaused=false;
   const a=by[cur.vid],src=a.small||a.src;s.querySelector('.stage').prepend(V);

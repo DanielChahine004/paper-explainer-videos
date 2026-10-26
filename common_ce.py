@@ -157,13 +157,16 @@ def px_box(im, box, size, color, sw=4):
     return r
 
 
-def ink_box(page, y0, y1, color, pad=8, sw=3):
+def ink_box(page, y0, y1, color, pad=8, sw=3, x0=0, x1=None):
     """A frame around the text between rows y0 and y1 of front_page()'s image (its own pixels), fitted to the ink:
-    it grows to whole lines and spans the longest one, so it never cuts a letter (vlint: front-box-cut)."""
+    it grows to whole lines and spans the longest one, so it never cuts a letter (vlint: front-box-cut). Only
+    columns x0..x1 are read: give them when a margin rule or a sidebar runs beside the text (a PMC cover page)."""
     from PIL import Image
     im = page[0]
     ink = np.asarray(Image.open(im._src).convert("L")) < 128
     H, W = ink.shape
+    ink[:, :x0] = False
+    ink[:, x1 or W:] = False
     rows = ink.any(1)
     while y0 > 0 and rows[y0 - 1]:
         y0 -= 1

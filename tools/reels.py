@@ -254,7 +254,7 @@ def warm(ffmpeg, render_root, accounts):
 
 PAGE = r"""<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,interactive-widget=resizes-content">
 <meta name="theme-color" content="#000"><meta name="apple-mobile-web-app-capable" content="yes">
 <title>Reels</title>
 <style>
@@ -405,6 +405,9 @@ $('#gate').onclick=()=>{gated=false;$('#gate').style.display='none';soundOn=true
 // the reel on screen: the observer, and the scroll position once scrolling stops (a backgrounded tab may skip the observer)
 function settle(){const f=$('#feed'),s=f.children[Math.round(f.scrollTop/(f.clientHeight||1))];if(s)activate(s)}
 $('#feed').addEventListener('scroll',()=>{clearTimeout(settle._t);settle._t=setTimeout(settle,150)},{passive:true});
+// an Android keyboard shrinks the page (interactive-widget=resizes-content, so the comment box sits on it), and every
+// reel with it: keep the reel on screen in place, and change reels only while no comment sheet is open
+addEventListener('resize',()=>{if(curSl)$('#feed').scrollTop=curSl.offsetTop});
 const io=new IntersectionObserver(es=>{for(const e of es)if(e.isIntersecting)activate(e.target)},{root:$('#feed'),threshold:.6});
 function slide(r,k){const a=by[r.vid],s=document.createElement('section');s.className='slide';s._r=r;s._k=k;
   s.innerHTML=`<div class="bg"></div><div class="stage"><img alt=""></div>
@@ -523,7 +526,7 @@ if(window.visualViewport){const vv=visualViewport,fit=()=>{const sh=$('#sheet'),
   $('#cin').addEventListener('focus',()=>{fit();for(const ms of [150,350,700])setTimeout(fit,ms)});
   $('#cin').addEventListener('blur',()=>setTimeout(fit,350))}
 function toast(t){const e=$('#toast');e.textContent=t;e.style.display='block';clearTimeout(e._t);e._t=setTimeout(()=>e.style.display='none',1600)}
-function activate(s){if(curSl===s)return;if(curSl){curSl.classList.remove('ready','paused')}curSl=s;cur=s._r;userPaused=false;
+function activate(s){if(curSl===s||sheetSl)return;if(curSl){curSl.classList.remove('ready','paused')}curSl=s;cur=s._r;userPaused=false;
   const a=by[cur.vid],src=a.small||a.src;s.querySelector('.stage').prepend(V);
   R.classList.remove('on');revD=0;s.querySelector('.stage').append(R);if(R.dataset.src!==a.rev){R.dataset.src=a.rev;R.src=a.rev;R.load()}
   let n=s;hydrate(s);for(let i=0;i<3&&n;i++){n=n.nextElementSibling;hydrate(n)}hydrate(s.previousElementSibling);

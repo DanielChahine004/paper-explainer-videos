@@ -8,8 +8,10 @@ reach it (WSL2's network sits behind NAT):
 Thumbnails are cut by ffmpeg (through WSL, from the render env) into .catalog/ and cached; without ffmpeg the page
 falls back to the video's own first frames. Playback position is remembered per device.
 
-Playlists live in playlists.json at the project root, {"name": ["folder", ...]} in viewing order. Each shows as its
-own row above the full list, counting the videos rendered so far; inside a playlist, the next video plays on its own.
+Playlists live in playlists.json at the project root, {"name": ["folder", ...]}. Each shows as its own row above the
+full list, newest paper first (the videos have no watch order), counting the videos rendered so far; inside a playlist,
+the card after the one playing plays on its own. NEW marks a paper started in the last day and not yet opened on this
+device; a re-render does not make an old one new.
 
 Reels (/reels, linked from the header): every scene as a swipe-through clip for phones, each video an account;
 see tools/reels.py.
@@ -76,6 +78,13 @@ def title(folder):
     return folder.name.replace("_", " ")
 
 
+def born(folder):
+    """When a video was started: its folder's creation time (Windows keeps it as st_ctime), which a re-render does
+    not touch, so NEW and a playlist's newest-first order follow new papers, not fresh re-renders."""
+    st = folder.stat()
+    return getattr(st, "st_birthtime", st.st_ctime)
+
+
 def scan():
     """All explainers, newest first: one entry per folder, its full render plus the small copy if there is one."""
     out = []
@@ -93,6 +102,7 @@ def scan():
                 _meta[key] = m
         small = max(folder.glob("*small*.mp4"), key=lambda p: p.stat().st_mtime, default=None)   # newest, if a stale one is left
         out.append({"id": folder.name, "notes": sum(n.get("status") == "open" for n in load_notes(folder.name)), "title": m["title"], "dur": m["dur"], "mtime": st.st_mtime,
+                    "born": born(folder),
                     "size": st.st_size, "src": f"/v/{folder.name}/{full.name}",
                     "small": f"/v/{folder.name}/{small.name}" if small else None,
                     "thumb": f"/thumb/{folder.name}.jpg?{int(st.st_mtime)}"})
@@ -341,7 +351,6 @@ h1{font-size:22px;margin:0;font-weight:600}#reels{color:var(--acc);text-decorati
 main{max-width:1200px;margin:auto;padding:0 16px 40px}
 h2{font-size:17px;margin:22px 0 10px;font-weight:600}h2 .n{color:var(--mute);font-weight:400;margin-left:8px;font-size:14px}
 .grid{display:grid;gap:16px;grid-template-columns:repeat(auto-fill,minmax(260px,1fr))}
-.ep{position:absolute;left:8px;bottom:8px;background:#000c;padding:1px 6px;border-radius:4px;font-size:12px}
 .card{background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden;cursor:pointer;transition:transform .15s}
 .card:hover{transform:translateY(-2px)}.card:focus-visible{outline:2px solid var(--acc)}
 .th{position:relative;aspect-ratio:16/9;background:#000}.th img,.th video{width:100%;height:100%;object-fit:cover;display:block}
@@ -386,29 +395,33 @@ let list=[],pls=[],cur=null,curPl=null,small=false;
 const fmt=s=>{s=Math.round(s);return Math.floor(s/60)+':'+String(s%60).padStart(2,'0')};
 const pos=id=>{try{return +localStorage.getItem('pos:'+id)||0}catch(e){return 0}};
 const save=(id,t)=>{try{localStorage.setItem('pos:'+id,t)}catch(e){}};
-function card(v,ep){
+const seen=id=>{try{return localStorage.getItem('seen:'+id)!==null}catch(e){return true}};
+const markSeen=id=>{try{localStorage.setItem('seen:'+id,1)}catch(e){}};
+function card(v){
   const d=document.createElement('div');d.className='card';d.tabIndex=0;
-  const age=(Date.now()/1000-v.mtime)/86400,p=pos(v.id);
-  d.innerHTML=`<div class="th"><img loading="lazy" alt=""><span class="dur">${fmt(v.dur)}</span>${ep?`<span class="ep">${ep}</span>`:''}${age<2?'<span class="new">NEW</span>':''}${v.notes?`<span class="nb">${v.notes} note${v.notes>1?'s':''}</span>`:''}
+  const age=(Date.now()/1000-v.born)/86400,p=pos(v.id);
+  d.innerHTML=`<div class="th"><img loading="lazy" alt=""><span class="dur">${fmt(v.dur)}</span>${age<1&&!seen(v.id)&&!p?'<span class="new">NEW</span>':''}${v.notes?`<span class="nb">${v.notes} note${v.notes>1?'s':''}</span>`:''}
     ${p>5?`<div class="bar" style="width:${Math.min(100,100*p/v.dur)}%"></div>`:''}</div>
     <div class="meta"><div class="t"></div><div class="s">${new Date(v.mtime*1000).toLocaleDateString()} · ${(v.size/1048576).toFixed(0)} MB</div></div>`;
   d.querySelector('.t').textContent=v.title;
   const img=d.querySelector('img');img.src=v.thumb;
   img.onerror=()=>{const f=document.createElement('video');f.src=v.src+'#t=20';f.muted=true;f.preload='metadata';f.playsInline=true;img.replaceWith(f)};
-  d.onclick=()=>play(v,ep&&d.dataset.pl);d.onkeydown=e=>{if(e.key==='Enter')play(v,ep&&d.dataset.pl)};
+  d.onclick=()=>play(v,d.dataset.pl);d.onkeydown=e=>{if(e.key==='Enter')play(v,d.dataset.pl)};
   return d}
 function section(name,n,cards){const s=document.createElement('section'),h=document.createElement('h2'),g=document.createElement('div');
   h.textContent=name;if(n){const c=document.createElement('span');c.className='n';c.textContent=n;h.append(c)}
   g.className='grid';g.append(...cards);s.append(h,g);return s}
 function render(){const q=document.getElementById('q').value.toLowerCase(),by=Object.fromEntries(list.map(v=>[v.id,v]));
   const hit=v=>v.title.toLowerCase().includes(q)||v.id.includes(q),out=[];
-  for(const p of pls){const cards=[];p.ids.forEach((id,i)=>{const v=by[id];if(v&&hit(v)){const c=card(v,(i+1)+' / '+p.ids.length);c.dataset.pl=p.name;cards.push(c)}});
+  for(const p of pls){const cards=[];order(p).forEach(v=>{if(hit(v)){const c=card(v);c.dataset.pl=p.name;cards.push(c)}});
     const have=p.ids.filter(id=>by[id]).length;if(cards.length)out.push(section(p.name,have+' of '+p.ids.length+' ready',cards))}
   const shown=list.filter(hit).map(v=>card(v));if(shown.length)out.push(section(pls.length?'All videos':'',null,shown));
   grid.replaceChildren(...out);document.getElementById('count').textContent=list.length+' videos'}
+// a playlist's rendered videos, newest paper first
+function order(p){const by=Object.fromEntries(list.map(v=>[v.id,v]));return p.ids.map(id=>by[id]).filter(Boolean).sort((a,b)=>b.born-a.born)}
 function next(){if(!cur||!curPl)return null;const p=pls.find(p=>p.name===curPl);if(!p)return null;
-  const by=Object.fromEntries(list.map(v=>[v.id,v]));const rest=p.ids.slice(p.ids.indexOf(cur.id)+1).map(id=>by[id]).filter(Boolean);return rest[0]||null}
-function play(v,pl){cur=v;curPl=pl||null;document.getElementById('ptitle').textContent=v.title;
+  const o=order(p),i=o.findIndex(v=>v.id===cur.id);return i>=0&&o[i+1]||null}
+function play(v,pl){cur=v;curPl=pl||null;markSeen(v.id);document.getElementById('ptitle').textContent=v.title;
   document.getElementById('qual').style.display=v.small?'':'none';load(pos(v.id));player.classList.add('on');
   if(!history.state)history.pushState({p:1},'')}
 function load(t){loadNotes();vid.src=small&&cur.small?cur.small:cur.src;document.getElementById('qual').textContent=small?'Small':'HD';

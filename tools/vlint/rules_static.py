@@ -514,6 +514,23 @@ def algebra_shown(s):
             yield vo.node, f"says {', '.join(repr(w) for w in said)} but no term moves (no Transform/Cross in the block)"
 
 
+ORDER = re.compile(r"\b(?:previous|next|last|earlier|later|following|coming|upcoming|preceding)\s+(?:video|episode|part)s?\b|"
+                   r"\bvideo (?:before|after) (?:this|that)\b", re.I)
+
+
+@rule("watch-order", "static", "warn", "The narration points at the previous or next video, but the videos have no "
+      "watch order (the catalogue, the reels feed and the playlists all shuffle or skip), so the pointer is wrong "
+      "for most viewers.", "Narration, no watch order", "name the other paper instead, or say it 'has a video of "
+      "its own' / 'is covered in another video'")
+def watch_order(s):
+    for vo in s.voiceovers:
+        if vo.text is None:
+            continue
+        said = sorted({m.group(0).lower() for m in ORDER.finditer(vo.text)})
+        if said:
+            yield vo.node, f"says {', '.join(repr(w) for w in said)}"
+
+
 @rule("equation-talked-over", "static", "warn", "A multi-part equation is written whole inside a voiceover and none "
       "of its parts is cued in that block, so the voice reads its terms while the eye hunts for them.",
       "Part I §1, appear as it is named (equations)", "write it part by part on the words that name them, or keep "

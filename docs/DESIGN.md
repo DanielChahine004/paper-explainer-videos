@@ -392,6 +392,9 @@ labelled illustrative/schematic.
   a live test in ECMWF's quest." (vlint: `narration-appendage`).
 - Use short sentences and avoid a bare "l". After the draft, read the Whisper check, which catches
   real mispronunciations ("Poisson" was heard as "Hwasong").
+- **No watch order**. Never say "the previous video" or "the next video": viewers arrive from the catalogue, a
+  playlist or the reels feed in any order. Name the other paper, or say it "has a video of its own" (vlint:
+  `watch-order`).
 - **Name the subject again when a scene opens**. A pronoun or a back-reference ("each caught pair", "their",
   "this") points only at something said in the last sentence or two; after a cut, a new title or a pause, say the
   thing in full: "When an annihilation sends its two photons into the ring, the two detectors they strike define a

@@ -83,6 +83,8 @@ class Flash(Narrated):  # expect: shadows-manim
         self.play(Write(t1))  # expect: fixed-frame-early
         with self.voiceover(text="Now we substitute the first result into the second."):  # expect: algebra-shown
             self.play(FadeOut(t1), FadeIn(t3))
+        with self.voiceover(text="Reference four is the paper of the previous video."):  # expect: watch-order
+            self.play(FadeOut(t1), FadeIn(t3))
         eq = MathTex(r"P", r"=", r"\tfrac12\sum", r"\min(p_A, p_B)")
         with self.voiceover(text="Its <bookmark mark='e'/>error is half the summed overlap of the two."):
             self.at("e", Write(eq))  # expect: equation-talked-over

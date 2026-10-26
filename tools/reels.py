@@ -427,7 +427,8 @@ function slide(r,k){const a=by[r.vid],s=document.createElement('section');s.clas
   const tp=s.querySelector('.tap');
   tp.onclick=e=>{if(held){held=false;return}const now=Date.now(),dbl=now-last<300;last=dbl?0:now;
     if(dbl){if(toggled)toggle(s);toggled=false;like(s,true,e);return}
-    toggled=soundOn&&!s.classList.contains('blocked');if(toggled)toggle(s);else unmute()};
+    if(!soundOn){soundOn=true;V.muted=false}           // a reel left silent by the browser gets its sound with the first tap
+    toggled=true;toggle(s)};
   // press and hold: the right half plays at 2x, the left half rewinds, until the finger lifts (a swipe cancels it)
   tp.addEventListener('pointerdown',e=>{held=false;if(s!==curSl)return;
     const right=e.clientX-s.getBoundingClientRect().left>s.clientWidth/2;
@@ -452,9 +453,8 @@ function stopHold(s){if(!s.classList.contains('fast')&&!s.classList.contains('re
 // posters only for the reel on screen and its neighbours: a phone opens few connections to the server, and a
 // screenful of poster requests would hold up the video itself
 function hydrate(s){if(s&&!s._h){s._h=1;s.querySelector('.bg').style.backgroundImage=`url('${s._r.thumb}')`;s.querySelector('.stage img').src=s._r.thumb}}
-function unmute(){soundOn=true;V.muted=false;userPaused=false;
-  if(curSl)curSl.classList.remove('paused','blocked');V.play().catch(()=>{})}
-function toggle(s){if(V.paused){userPaused=false;V.play().catch(()=>{})}else{userPaused=true;V.pause()}s.classList.toggle('paused',userPaused)}
+function toggle(s){if(V.paused){userPaused=false;s.classList.remove('blocked');V.play().catch(()=>{})}else{userPaused=true;V.pause()}
+  s.classList.toggle('paused',userPaused)}
 // start the reel: muted autoplay is allowed everywhere; if even that is refused, show the play button and wait for a tap
 function start(){const s=curSl;V.play().then(()=>s&&s.classList.remove('blocked')).catch(()=>{
   if(!V.muted){V.muted=true;soundOn=false;return start()}

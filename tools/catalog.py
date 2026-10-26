@@ -349,7 +349,7 @@ h1{font-size:22px;margin:0;font-weight:600}#reels{color:var(--acc);text-decorati
 #q{margin-left:auto;background:var(--card);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:8px 10px;
   font:inherit;width:min(260px,100%)}
 main{max-width:1200px;margin:auto;padding:0 16px 40px}
-h2{font-size:17px;margin:22px 0 10px;font-weight:600}h2 .n{color:var(--mute);font-weight:400;margin-left:8px;font-size:14px}
+h2{font-size:17px;margin:22px 0 10px;font-weight:600;cursor:pointer;user-select:none}h2::before{content:'▾';display:inline-block;width:18px;color:var(--mute)}section.fold h2::before{content:'▸'}section.fold .grid{display:none}h2 .n{color:var(--mute);font-weight:400;margin-left:8px;font-size:14px}
 .grid{display:grid;gap:16px;grid-template-columns:repeat(auto-fill,minmax(260px,1fr))}
 .card{background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden;cursor:pointer;transition:transform .15s}
 .card:hover{transform:translateY(-2px)}.card:focus-visible{outline:2px solid var(--acc)}
@@ -408,8 +408,12 @@ function card(v){
   img.onerror=()=>{const f=document.createElement('video');f.src=v.src+'#t=20';f.muted=true;f.preload='metadata';f.playsInline=true;img.replaceWith(f)};
   d.onclick=()=>play(v,d.dataset.pl);d.onkeydown=e=>{if(e.key==='Enter')play(v,d.dataset.pl)};
   return d}
+// a row folds away on a tap of its heading, remembered per device; a search shows every row open
+const folded=k=>{try{return localStorage.getItem('fold:'+k)==='1'}catch(e){return false}};
 function section(name,n,cards){const s=document.createElement('section'),h=document.createElement('h2'),g=document.createElement('div');
-  h.textContent=name;if(n){const c=document.createElement('span');c.className='n';c.textContent=n;h.append(c)}
+  h.textContent=name||'All videos';if(n){const c=document.createElement('span');c.className='n';c.textContent=n;h.append(c)}
+  const k=name||'All videos';if(folded(k)&&!document.getElementById('q').value)s.className='fold';
+  h.onclick=()=>{const f=s.classList.toggle('fold');try{localStorage.setItem('fold:'+k,f?'1':'0')}catch(e){}};
   g.className='grid';g.append(...cards);s.append(h,g);return s}
 function render(){const q=document.getElementById('q').value.toLowerCase(),by=Object.fromEntries(list.map(v=>[v.id,v]));
   const hit=v=>v.title.toLowerCase().includes(q)||v.id.includes(q),out=[];

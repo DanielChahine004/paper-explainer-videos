@@ -440,6 +440,9 @@ labelled illustrative/schematic.
   never calls `front_page()`).
   Make those boxes with `ink_box(page, y0, y1, color)`, not a hand-set `px_box`: it grows the
   rows to whole lines and spans the widest one, so no letter sits on the frame (vlint: `front-box-cut`).
+  Say the authors in one short clause: the first author or the group, never a list of
+  names and institutions. The front page already shows them all (vlint: `authors-brief`, a warning, fires on an
+  author sentence in the first scene longer than 20 words or naming three or more people).
 - **Any figure in a paper you were given may be shown** when the videos are for private viewing: then the licence
   never forces a redraw, and the per-figure choice in §4 decides (real data and dense plots reused, mechanisms
   redrawn). For a public video, check the licence first. Credit each reused figure on screen while it shows

@@ -540,6 +540,32 @@ def equation_talked_over(s):
                               "cued while the voice reads it")
 
 
+_AUTHORS = re.compile(r"\b(authors?|led by|colleagues|team|group)\b", re.I)
+_PERSON = re.compile(r"\b[A-Z][a-z]+(?: [A-Z][a-z]+)* [A-Z][a-z]+\b")
+
+
+@rule("authors-brief", "static", "warn", "The opening narration spends a long sentence on the authors (a list of names, "
+      "their institutions) before the video says anything about the work (user, pet_recon_free: 'no need to speak "
+      "about the authors for too long').", "Part I §1, opening",
+      "one short clause: the first author or the group, and the journal; the front page shows the full list")
+def authors_brief(s):
+    first = next((c for c in s.tree.body if isinstance(c, ast.ClassDef)
+                  and any(getattr(b, "id", None) == "Narrated" for b in c.bases)), None)
+    if first is None:
+        return
+    most = int(opt(s, "author_sentence_words", 20))
+    for vo in s.voiceovers:
+        if vo.text is None or not first.lineno <= vo.node.lineno <= first.end_lineno:
+            continue
+        for sen in _sentences(vo.text):
+            if not _AUTHORS.search(sen):
+                continue
+            n, names = len(sen.split()), len(_PERSON.findall(sen))
+            if n > most or names >= 3:
+                yield vo.node, f"{n} words and {names} names on the authors: {sen[:70]!r}"
+                break
+
+
 @rule("front-page", "static", "warn", "The video credits a paper (an 'et al.' citation) but never shows the paper's "
       "front page, so a viewer who knows the paper cannot recognise it (user, pet_explorer).", "Part I §1, opening",
       "tools/front_page.sh <video> writes assets/front.png; show front_page() in the first scene while the voice names "

@@ -117,6 +117,16 @@ voice has moved on. Neither repeats the other. Every rule below serves one of th
   the thing, a leader line joins them. A number in a corner, or a "+30%" floating over a group of bars, is a
   caption, and the eye has to guess what it refers to. Test: cover the narration; can the viewer still point at
   what each number is the size of?
+  Every number the voice says with a unit is drawn while it is said: a length is a dimension line with end ticks,
+  an angle an arc between its two rays, a window or threshold a tick on the axis it lives on (`pet_explorer`). If a
+  spoken number has no place in the picture, say it without the unit or cut it (vlint: `number-undrawn` warns when
+  a spoken number with a unit is nowhere on screen during its sentence).
+- **Name every colour series on screen.** When two or more colours mean different things (two scanners, two methods,
+  measured and simulated), each gets its name on screen as it appears: a label beside the curve, or a key entry (a
+  short swatch of the line and its name). Colour named only by the voice is lost as soon as the voice moves on.
+- **Animate the event, not a pulse on its picture.** When the voice says something happens (photons fly apart, most
+  escape, a bolus moves), show it happening: dots travelling along their paths, the escaping ones leaving through
+  the gap (`pet_explorer` Acceptance). A `Wiggle` or `Indicate` on a static drawing says "this", never "this happens".
 - **Appear as it is named; pulse it when it is named again.** Each thing arrives on the word that names it
   and not before. When the narration names something already on screen (a crystal, a detector pair, a
   number), it gets an `Indicate` or `Circumscribe` on that word, so the eye always knows where to look. When a
@@ -279,7 +289,7 @@ labelled illustrative/schematic.
   computed here and on what assumptions.
 - **Real data stays real.** Reuse the paper's own figure for real data (photos, reconstructions,
   measured maps or spectra), for dense plots that would be slow to rebuild faithfully, and for the
-  result the paper is known for, licence permitting. Redraw mechanisms and schematics, and pull out
+  result the paper is known for. Redraw mechanisms and schematics, and pull out
   the 2–4 numbers that matter from busy figures and tables. Decide this per figure, in the plan.
   Use about 2–4 reused figures per video, each highlighted and given time to read.
 
@@ -401,15 +411,31 @@ labelled illustrative/schematic.
   over it, so keep fixed labels clear of the solid on screen (`pet_explorer` Scanner: the block hid its own spec label).
 - Put the face the narration names towards the camera: a readout drawn under a block seen from above is invisible
   (`pet_explorer` Scanner moved the SiPMs to the top face).
+- **Draw a length where the camera sees it at true length.** A dimension seen edge on or foreshortened reads as a
+  smaller number. Move the camera so the length lies across the view: side on for lengths along an axis, face on,
+  down the bore, for a ring's diameter. Lay the dimension and its label in that plane, and turn a label on an
+  oblique view to face the camera. A detail too small for the scale (a 2.5 mm gap on a 2 m scanner) gets a
+  magnified inset joined to its spot by a leader (`pet_explorer` Scanner).
+- **Set draw order between plays, never before a cue.** Adding something to fix the order (back arcs, body, front
+  arcs) and introducing it on a later cue shows it whole until the cue, then the intro restarts it from nothing.
+  Re-add at the cue, in the same step as the play: `self.remove(front); self.play(FadeIn(body), Animation(front))`
+  puts the body between the halves with no frame between (vlint: `intro-of-visible`, an error, fires when a frame
+  showed the thing before its intro). Split a ring into two contiguous arcs, behind and in front of the axis;
+  points picked by a sign test from one loop join across the gap with a chord.
 - When a title moves down, content placed at fixed y values can collide with it; place content with
   `top_at()` instead.
 - Small marks need contrast against what lies under them; a dot dimmed below half opacity is a ghost
   and may recede (vlint: `faint-mark`).
 
 ## Reusing a figure
-- **Licence first.** "All rights reserved" means redraw (`liquid_tc`, Moliner 2012). CC BY means
-  reuse with an on-screen credit ("Fig. 3: Sun et al., IEEE JBHI 2025 (CC BY 4.0)"). CC BY-NC-ND forbids
-  adapted material, so a crop counts as one: redraw. Your own manuscripts are fine to reuse.
+- **Any figure in a paper you were given may be shown** when the videos are for private viewing: then the licence
+  never forces a redraw, and the per-figure choice in §4 decides (real data and dense plots reused, mechanisms
+  redrawn). For a public video, check the licence first. Credit each reused figure on screen while it shows
+  ("Fig. 3: Badawi et al., J Nucl Med 2019").
+- **Cut the printed labels off a reused panel and draw them** (times, doses, panel letters): a `Tex` under each
+  panel matches the video's type, can carry the accent colour and a cue, and is visible to vlint's number checks
+  (`pet_explorer` Figs. 3 and 7, cropped in `src/crop.py`). Outline a region with a frame placed in the source
+  image's pixels.
 - **Redrawing a bar chart:** measure each bar's end in a 300 dpi render against the axis tick rows (a short numpy
   scan by colour), keep the values in `src/compute.py` with their figure, and check them against every gain the
   text states before using them (`subseasonal_pbc`: "+26–37 %" and "0.023" both matched). Credit "redrawn from …".

@@ -1,5 +1,6 @@
 """Runtime rules: called by the Monitor inside a rendering scene. Each gets (monitor, event, payload) and yields
-(key, message); a key is reported once per scene. Events: "play" (after each play, payload anims), "vo_open"
+(key, message); a key is reported once per scene. Events: "pre_play" (before each play, payload anims), "play" (after
+each play, payload anims), "vo_open"
 (text), "cue" (mark), "vo_close", "end". They read the real mobjects, so they catch what the script can't show:
 where things ended up and whether they can be seen."""
 import re
@@ -745,3 +746,138 @@ def icon_idle(mon, ev, p):
             if not ids & st["acted"]:
                 yield k, f"{type(m).__name__} at ({m.get_center()[0]:+.1f}, {m.get_center()[1]:+.1f}) is an icon " \
                          "that is shown and never pointed at, changed or measured"
+
+
+@rule("intro-of-visible", "runtime", "error", "An introducing animation (FadeIn, Create, Write, GrowArrow...) starts on "
+      "a mobject that is already on screen, usually because it was self.add()ed earlier to fix the draw order. It shows "
+      "at once, then blinks out as the intro restarts it from nothing, then draws in: a visible flicker.",
+      "Part IV, Manim 0.19", "don't add it before its cue: add it hidden (set_opacity(0), then FadeIn / animate the "
+      "opacity) or add it in order at the cue, or use Indicate if it should stay")
+def intro_of_visible(mon, ev, p):
+    # Only a flicker if a frame showed it first: compare with what was on screen at the last rendered frame (the end of
+    # the previous play, or the start of a wait). add() then play() with no frame between is fine.
+    shown = mon.state.setdefault("iov_shown", set())
+    if ev == "play":
+        mon.state["iov_shown"] = {id(x) for m in mon.scene.mobjects for x in m.get_family() if visibility(x) > 0.3}
+        return
+    if ev != "pre_play":
+        return
+    anims = list(_flatten(p.get("anims", ())))
+    if anims and all(type(a).__name__ == "Wait" for a in anims):
+        mon.state["iov_shown"] = {id(x) for m in mon.scene.mobjects for x in m.get_family() if visibility(x) > 0.3}
+        return
+    for a in anims:
+        m = getattr(a, "mobject", None)
+        if m is None or not getattr(a, "is_introducer", lambda: False)() or getattr(a, "remover", False):
+            continue
+        if id(m) not in shown or any("intro-of-visible" in ok or "*" in ok for mm, ok in walk([m]) if mm is m):
+            continue
+        if visibility(m) > 0.3:
+            yield id(m), f"{type(a).__name__}({label(m)}) starts on something already on screen: it flickers"
+
+
+_ONES = {w: i for i, w in enumerate("zero one two three four five six seven eight nine ten eleven twelve thirteen "
+                                    "fourteen fifteen sixteen seventeen eighteen nineteen".split())}
+_TENS = {w: 10 * i for i, w in enumerate("_ _ twenty thirty forty fifty sixty seventy eighty ninety".split()) if i > 1}
+_UNITS = r"(?:centi|milli|kilo|nano|pico)?(?:metres?|meters?|seconds?)|degrees?|percent|minutes?|hours?|" \
+         r"(?:mega |kilo |giga )?becquerels?|(?:kilo |mega )?electron volts?|(?:milli|micro)?sieverts?|kilograms?|" \
+         r"picoseconds?|nanoseconds?|millimetres?|centimetres?"
+
+
+def spoken_numbers(text):
+    """Numbers said with a unit in a narration ("seventy eight point six centimetres" -> 78.6): the ones that should be
+    drawn on the thing they measure."""
+    words = re.sub(r"<[^>]+>", " ", text.lower()).replace("-", " ")
+    toks = re.findall(r"[a-z]+|\d+(?:\.\d+)?|[,;.:]", words)
+    out, i, pend = [], 0, None                      # pend: a unitless number just before "and"/"to" (a range's start)
+    while i < len(toks):
+        j, total, cur, seen, dec = i, 0, 0, False, ""
+        while j < len(toks):
+            t = toks[j]
+            if re.fullmatch(r"\d+(?:\.\d+)?", t) and not seen:
+                cur, seen = float(t), True
+            elif t == "a" and not seen and toks[j + 1:j + 2] in (["hundred"], ["thousand"]):    # "a hundred and eighty"
+                cur, seen = 1, True
+            elif t in _ONES and not (seen and cur % 10):          # "twenty two" joins; "one, three" does not
+                cur += _ONES[t]; seen = True
+            elif t in _TENS:
+                cur += _TENS[t]; seen = True
+            elif t == "hundred" and seen:
+                cur *= 100
+            elif t == "thousand" and seen:
+                total += cur * 1000; cur = 0
+            elif t == "and" and toks[j - 1] in ("hundred", "thousand") and j + 1 < len(toks) \
+                    and (toks[j + 1] in _ONES or toks[j + 1] in _TENS):
+                pass
+            elif t == "and" and seen and toks[j + 1:j + 3] == ["a", "half"]:
+                cur += 0.5; j += 2
+            elif t == "point" and seen and j + 1 < len(toks) and toks[j + 1] in _ONES:
+                k = j + 1
+                while k < len(toks) and toks[k] in _ONES and _ONES[toks[k]] < 10:
+                    dec += str(_ONES[toks[k]]); k += 1
+                j = k
+                break
+            else:
+                break
+            j += 1
+        if seen:
+            val = total + cur + (float("0." + dec) if dec else 0)
+            rest = " ".join(toks[j:j + 3])
+            m = re.match(_UNITS, rest)
+            if m:
+                if pend and pend[2] == i - 1:
+                    out.append((pend[0], pend[1] + " " + m.group(0)))
+                out.append((val, " ".join(toks[i:j]) + " " + m.group(0)))
+                pend = None
+            else:
+                pend = (val, " ".join(toks[i:j]), j) if j < len(toks) and toks[j] in ("and", "to") else None
+            i = max(j, i + 1)
+        else:
+            i += 1
+    return out
+
+
+def _redrawn(m):
+    """What an always_redraw mobject shows now. Its become() swaps the drawing but keeps the old DecimalNumber's value,
+    so call the redraw function it closes over for a fresh copy."""
+    for u in getattr(m, "updaters", ()):
+        for c in getattr(u, "__closure__", None) or ():
+            f = c.cell_contents
+            if callable(f) and not isinstance(f, type):
+                try:
+                    out = f()
+                except Exception:
+                    continue
+                if isinstance(out, M.Mobject):
+                    yield out
+
+
+def _shown_numbers(scene):
+    vals = set()
+    for m in scene.mobjects:
+        fams = [x for r in _redrawn(m) for x in r.get_family()] if m.updaters else []
+        for x in fams or m.get_family():
+            if isinstance(x, M.DecimalNumber):
+                v = float(x.get_value())                    # as drawn: 26.98 shown to 0 places reads 27
+                vals |= {round(v, 3), round(round(v, int(getattr(x, "num_decimal_places", 2) or 0)), 3)}
+            elif isinstance(x, TEXTS()) and visibility(x) > 0.2:
+                s = str(getattr(x, "tex_string", "") or getattr(x, "original_text", "") or getattr(x, "text", ""))
+                vals |= {round(float(v), 3) for v in re.findall(r"\d+(?:\.\d+)?", s)}
+    return vals
+
+
+@rule("number-undrawn", "runtime", "warn", "The narration says a number with a unit (twenty two centimetres, fifty "
+      "seven degrees) and it never appears on screen while that block plays, so the viewer hears a spec they cannot "
+      "find on the picture.", "Part I §1, a number sits on what it measures",
+      "draw it on the thing it measures: a dimension arrow with the number, a tick on the axis, an angle arc")
+def number_undrawn(mon, ev, p):
+    st = mon.state.setdefault("number-undrawn", {})
+    if ev == "vo_open":
+        st["said"], st["shown"] = spoken_numbers(p.get("text") or ""), set()
+    elif ev == "play" and "said" in st:
+        st["shown"] |= _shown_numbers(mon.scene)
+    elif ev == "vo_close" and "said" in st:
+        shown = st["shown"] | _shown_numbers(mon.scene)
+        for val, phrase in st.pop("said"):
+            if round(val, 3) not in shown:
+                yield (phrase, mon.time()), f"said \"{phrase}\" but {val:g} is not on screen during that sentence"

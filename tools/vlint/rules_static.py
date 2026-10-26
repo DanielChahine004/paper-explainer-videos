@@ -60,14 +60,20 @@ _CTRL = re.compile(r"[\x07\x08\x0b\x0c]")
       "inside Tex), the trace of a LaTeX command eaten by Python escaping.", "Part IV, Editing scripts",
       "restore the backslash and make the string raw")
 def control_char(s):
+    told = set()                                  # Tex arguments already reported by the Tex check below
     for node in ast.walk(s.tree):
         if isinstance(node, ast.Constant) and isinstance(node.value, str) and _CTRL.search(node.value):
             yield node, f"control character in {node.value[:40]!r}"
+        elif isinstance(node, ast.Constant) and isinstance(node.value, str) \
+                and re.search(r"\t(?:extbf|ext|imes|au|heta|ilde)", node.value) and id(node) not in told:
+            # a tab where \textbf... was meant, in any string: a label helper (lab, credit) hides it from the Tex check
+            yield node, f"tab where a LaTeX command was meant: {node.value[:40]!r}"
         if call_name(node) in TEX_CALLS | TEXT_CLASSES:
             for a in node.args:
                 v = s.resolve_str(a)
                 if v and re.search(r"\t[a-z]|\n(?:u|abla|eq|ot|i\b|ewline|ormalsize)", v):
                     yield a, f"tab or newline where a LaTeX command was meant: {v[:40]!r}"
+                told.add(id(a))
 
 
 def _anim_targets(args):

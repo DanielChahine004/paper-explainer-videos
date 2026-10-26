@@ -106,6 +106,7 @@ class Checked:
         from manim import ValueTracker
         trackers = [(a.mobject, a.mobject.get_value()) for a in anims if isinstance(getattr(a, "mobject", None), ValueTracker)]
         t0 = self.vlint.time()
+        self.vlint.event("pre_play", anims=anims)
         super().play(*anims, **kw)
         self.vlint.event("play", anims=anims, trackers=trackers, t0=t0)
 

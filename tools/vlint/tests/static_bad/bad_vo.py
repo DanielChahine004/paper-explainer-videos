@@ -25,6 +25,7 @@ class Flash(Narrated):  # expect: shadows-manim
         d = MathTex("x" "\\beta")                   # fine
         e = MathTex("\frac{1}{2}")  # expect: tex-not-raw, control-char
         f = MathTex(f"\\alpha = {1}")               # fine
+        g = lab(rf"	extbf{{{2}}} mm")  # expect: control-char
         row = VGroup(a, pic)  # expect: vgroup-non-vmobject
         row2 = VGroup(a, framed("y.png"))  # expect: vgroup-non-vmobject
         ok = Group(a, pic)

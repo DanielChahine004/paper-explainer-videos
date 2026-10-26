@@ -12,6 +12,10 @@ def framed(path):
     return Group(card(path), Square())
 
 
+def lab(t, fs=26):                                # a label helper: its first argument goes straight to Tex
+    return Tex(t, font_size=fs)
+
+
 class Flash(Narrated):  # expect: shadows-manim
     def construct(self):
         pic = card("x.png")
@@ -56,12 +60,18 @@ class Flash(Narrated):  # expect: shadows-manim
             self.at("s", FadeIn(ok))
         with self.voiceover(text="The beam arrives, and <bookmark mark='w'/>its width grows."):    # bookmarked: fine
             self.at("w", Indicate(ok))
+        with self.voiceover(text="Then a <bookmark mark='lt'/>live test: the <bookmark mark='q'/>quest."):  # expect: narration-appendage
+            self.at("lt", Indicate(ok))
+            self.at("q", Indicate(ok))
         line = Tex("\tau")  # vlint: ignore[tex-not-raw, control-char] suppression on the line works
         sig = MathTex("\sigma")  # expect: syntax-warning, tex-not-raw
         # vlint: ignore-next[long-text] and on the line before
         long2 = Tex(r"another label that is far too long to be a label on the screen of a video")
         t1 = Tex(r"$a$$b$")  # expect: gx-tex
         t2 = Tex(r"costs \$5")  # expect: gx-tex
+        t4 = lab(r"+ PBC")  # expect: gx-tex
+        t5 = Tex(r"- 3 dB")  # expect: gx-tex
+        t6 = lab(r"with PBC", 24)                       # a word first: fine
         t3 = Tex(r"one\\two")                           # a line break works in GX: fine
         self.add_fixed_in_frame_mobjects(t1, t2, t3)
         self.remove(t2)

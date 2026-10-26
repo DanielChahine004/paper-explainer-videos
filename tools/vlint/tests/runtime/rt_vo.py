@@ -8,7 +8,7 @@ from manim import *
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 from vlint.runtime import Checked, vlint_ok  # noqa: E402
 
-EXPECT = {"frame-clip": 1, "text-overlap": 1, "vanished-after-intro": 1, "bookmark-unfired": 2, "indicate-image": 1, "text-chain": 1, "arrow-over-label": 1, "layout-crowded": 1, "layout-balance": 1, "arrow-skew": 1, "title-margin": 1, "line-over-label": 1, "redraw-jitter": 1, "shape-overlap": 1, "title-gap": 1, "faint-mark": 2, "frame-margin": 1}
+EXPECT = {"frame-clip": 1, "text-overlap": 1, "vanished-after-intro": 1, "bookmark-unfired": 2, "indicate-image": 1, "text-chain": 1, "arrow-over-label": 1, "layout-crowded": 1, "layout-balance": 1, "arrow-skew": 1, "title-margin": 1, "line-over-label": 1, "redraw-jitter": 1, "shape-overlap": 1, "title-gap": 1, "faint-mark": 2, "frame-margin": 1, "icon-idle": 1}
 
 
 class Fixture(Checked, Scene):
@@ -90,6 +90,13 @@ class Fixture(Checked, Scene):
         lay = Square(0.7, fill_opacity=0.3).move_to(LEFT * 3.4 + UP * 1.6)
         dot_in = Circle(0.2, fill_opacity=1).move_to(lay)                                         # a layer inside: fine
         self.add(t1, t2, lay, dot_in)
+        idle = VGroup(*[Square(0.3).shift(RIGHT * 0.4 * k) for k in range(3)]).move_to(RIGHT * 4 + UP * 1.5)
+        idle_l = Text("idea", font_size=24).next_to(idle, DOWN, buff=0.15)                         # icon-idle
+        used = VGroup(*[Circle(0.15).shift(RIGHT * 0.4 * k) for k in range(3)]).move_to(RIGHT * 4 + DOWN * 1.5)
+        used_l = Text("used", font_size=24).next_to(used, DOWN, buff=0.15)
+        self.play(FadeIn(idle), FadeIn(idle_l), FadeIn(used), FadeIn(used_l), run_time=0.2)
+        self.play(Indicate(used[1]), run_time=0.2)                                  # a part pulsed: fine
+        self.play(FadeOut(idle), FadeOut(idle_l), FadeOut(used), FadeOut(used_l), run_time=0.2)
         p1 = Square(1.5).move_to(LEFT * 5 + DOWN * 0.5)
         p2 = Square(1.5).next_to(p1, RIGHT, buff=0.1)                               # layout-crowded, layout-balance
         self.play(FadeIn(p1), FadeIn(p2), run_time=0.2)

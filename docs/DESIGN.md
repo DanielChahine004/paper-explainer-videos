@@ -60,6 +60,19 @@ on: the object, the shape of the effect and the key number. Neither repeats the 
   becomes a row of icons, each with one word. A timeline carries pictograms. Specs that differ in
   kind become tiles, each an icon plus a number. Any `Tex` holding more than about 3 words is a
   candidate for a shape (vlint: `long-text` warns past 8 prose words; numbers and units don't count).
+- **Every visual does work**. Choose what to draw by what you will do with it.
+  You can:
+  - point at a property of it (its width, its peak, the part that moves, the term that matters);
+  - change it while the voice says what changes (a parameter sweeping, a curve deforming, a cloud sharpening);
+  - measure on it (a number sitting on the length it is, a double arrow across the gap).
+
+  If no sentence will touch it, it is an icon standing in for a word: drop it and let the label stand, or draw
+  the real object whose behaviour is the point. A row of pictograms labelled "field, loss, steps" (`flow_match`
+  Intro) or "blend, regress, integrate" (Recipe) says nothing the words don't. The same row earns its place
+  when each picture is the real thing at work: the actual field turning as t runs, the real loss curve
+  falling, the same samples sharpening as the step count grows. Test before building a scene: for every drawn
+  object, name the sentence where it is pointed at, changed or measured (vlint: `icon-idle` warns when a
+  small labelled drawing is shown and then only faded out).
 - **No words pointing at words.** A flow diagram whose nodes are text boxes ("sinogram → OSEM → CNN →
   image") explains nothing the narration doesn't. Each node is a picture of the thing with a one-word
   label under it: the sinogram as a thumbnail, the reconstruction as a detector ring with lines, a network
@@ -71,6 +84,12 @@ on: the object, the shape of the effect and the key number. Neither repeats the 
   peak, a weight is the shading of the voxels a line crosses. A dashed line on the image shows where
   the profile runs. The narration word that names the property carries the cue (vlint: `property-cue`
   warns when "width", "edge", "contrast" and the like have no bookmark within 6 words before them).
+- **A number sits on what it measures**. A value goes on its bar's end, a score on
+  the distance it measures, a gain on an arrow from the old level up to the new top, a ratio as copies of the
+  smaller bar laid end to end along the larger, a percentage of cells as a grid of cells. Where it cannot sit on
+  the thing, a leader line joins them. A number in a corner, or a "+30%" floating over a group of bars, is a
+  caption, and the eye has to guess what it refers to. Test: cover the narration; can the viewer still point at
+  what each number is the size of?
 - **Appear as it is named; pulse it when it is named again.** Each thing arrives on the word that names it
   and not before. When the narration names something already on screen (a crystal, a detector pair, a
   number), it gets an `Indicate` or `Circumscribe` on that word, so the eye always knows where to look. When a
@@ -136,7 +155,9 @@ concrete choices (what is computed, what is kept). Give derivations one line at 
   reconstruction and its update equation, and the standard test (NEMA etc.), with the numbers that
   define them. Results come after the method that produced them.
 - **Recompute what you can.** If the paper states a model (a cost formula, a coverage criterion, a
-  neuron equation), run it in numpy inside the scene and label the result "computed here".
+  neuron equation), run it in numpy inside the scene and label the result "computed here". This means
+  evaluating a model the source states, not building a simulator the source didn't need; for that, see
+  "Illustrative is a valid answer" in §4.
 - **A short draft needs more explanation, not padding.** Under 5 minutes, find a mechanism the
   narration only names and give it its own scene (`mouse_pet` Motion).
 - **Show the algebra move by move**. When the narration substitutes, rearranges,
@@ -198,6 +219,15 @@ A number is a summary of something physical, so show that thing.
   air gap" means the rays end at the joint. Five drawn arrows need five labels or brackets. When the
   paper counts more than it names, say so and group what is known (MAMMI's 5 signals).
 
+- **Show where many channels go**. When a 2-channel picture stands in for N channels, add the real N-dimensional version:
+  - the model's output as one point with N coordinates (io_box → heat map → point);
+  - the family of possible outputs as a curve or sheet, drawn on the 2–3 principal axes, with the share of
+    variance they keep as a bold number;
+  - the per-channel terms as a map that adds up to the one number;
+  - the Jacobian's columns as maps, so "the Fisher matrix" is dot products of things on screen.
+
+  When a global projection dwarfs the effect (a sheet 36 units wide around a cloud of half a unit), redraw
+  it in a local frame at true lengths: two tangent directions and the normal (`zzb_slab` Space, OffSurface).
 ## 4. Every mark is true
 
 Everything on screen is either from the source, computed from the source's own model, or
@@ -314,6 +344,10 @@ labelled illustrative/schematic.
   - units: "millimetres";
   - acronyms letter by letter: "L S O";
   - chemical names: "caesium iodide", not "CsI".
+- **Full spoken sentences**. A clause
+  tacked on after a colon, semicolon or dash ("Then a live test: ECMWF's quest"; "post-processing, not a better
+  model") reads like slide notes, and the voice delivers it flatly. Give it a verb and its own sentence: "Then came
+  a live test in ECMWF's quest." (vlint: `narration-appendage`).
 - Use short sentences and avoid a bare "l". After the draft, read the Whisper check, which catches
   real mispronunciations ("Poisson" was heard as "Hwasong").
 
@@ -331,6 +365,10 @@ labelled illustrative/schematic.
   big). Fix text in frame with `add_fixed_in_frame_mobjects`, which shows it at once: `self.remove`
   it straight after, then FadeIn/Write it on its cue (vlint: `fixed-frame-early`). Rotate at about
   0.1 rad/s, and only while the object is being discussed.
+- Ambient camera rotation turns the camera about the origin, so an object placed off-centre (a globe shifted left
+  to leave room for fixed-in-frame text) orbits across the screen and under that text. Turn the object about its
+  own centre instead (`m.add_updater(lambda m, dt: m.rotate(0.15 * dt, axis=OUT, about_point=C))`) and keep the
+  camera still (Intro).
 - A label or overlay that sits inside a solid is hidden by the depth test: put it on an outer face
   or fix it in frame.
 - When a title moves down, content placed at fixed y values can collide with it; place content with
@@ -340,8 +378,11 @@ labelled illustrative/schematic.
 
 ## Reusing a figure
 - **Licence first.** "All rights reserved" means redraw (`liquid_tc`, Moliner 2012). CC BY means
-  reuse with an on-screen credit ("Fig. 3: Sun et al., IEEE JBHI 2025 (CC BY 4.0)"). Your own
-  manuscripts are fine to reuse.
+  reuse with an on-screen credit ("Fig. 3: Sun et al., IEEE JBHI 2025 (CC BY 4.0)"). CC BY-NC-ND forbids
+  adapted material, so a crop counts as one: redraw. Your own manuscripts are fine to reuse.
+- **Redrawing a bar chart:** measure each bar's end in a 300 dpi render against the axis tick rows (a short numpy
+  scan by colour), keep the values in `src/compute.py` with their figure, and check them against every gain the
+  text states before using them (`subseasonal_pbc`: "+26–37 %" and "0.023" both matched). Credit "redrawn from …".
 - Render with `pdftoppm -r 300 -x -y -W -H` (poppler, through pixi), crop to the panel, and save to
   `<video>/assets/`. Show it on a white `card()`. Check for stray panel letters. Read figure-only
   numbers from a zoomed render.
@@ -402,8 +443,9 @@ out: different API, no voiceover. GX gotchas, each of which cost a render:
   cut off in the render. Keep ~0.3 from the edges; vlint `frame-margin`
   warns in the check, and `gx-frame-edge` refuses the join when ManimGX's own layout pass (the
   "layout: N problems" list in m_<Scene>.log) finds anything past an edge.
-- `$a$$b$` (two maths runs touching) crashes Typst; `\$` prints "dollar" (vlint: `gx-tex`). A `\\`
-  line break in Tex works.
+- `$a$$b$` (two maths runs touching) crashes Typst; `\$` prints "dollar"; a Tex text starting with `+ `, `- ` or
+  `1. ` is Typst list markup ("+ PBC" came out as "1. PBC") (vlint: `gx-tex`, which also follows a script's label
+  helpers such as `lab(t)`). A `\\` line break in Tex works.
 - A MathTex with several underbraces or repeated substrings can fail with "cannot tell these parts
   apart": build the parts as separate MathTex.
 - A wait that ends between frames is held as a frame sampled just inside the next animation, so the

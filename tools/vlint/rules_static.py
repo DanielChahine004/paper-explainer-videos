@@ -279,6 +279,19 @@ def narration_markup(s):
             yield vo.node, f"stray markup near {rest[max(0, m.start() - 20):m.end() + 20]!r}"
 
 
+@rule("narration-appendage", "static", "warn", "Narration tacks clauses on with a colon, semicolon or dash ('Then a "
+      "live test: ECMWF's ...'), which reads as notes, not speech (user, subseasonal_pbc).", "Part II, Narration",
+      "write full sentences: 'Then came a live test, ...', or split into two sentences")
+def narration_appendage(s):
+    for vo in s.voiceovers:
+        if vo.text is None:
+            continue
+        t = MARK.sub("", vo.text)
+        m = re.search(r"[:;—–]|\s-\s", t)
+        if m:
+            yield vo.node, f"{t[max(0, m.start() - 30):m.end() + 20]!r}"
+
+
 def _sentences(text):
     t = MARK.sub("", text)
     return [x for x in re.split(r"(?<=[.!?])\s+", t.strip()) if len(x.split()) >= 3]
@@ -414,12 +427,22 @@ def quality_cap(s):
 
 
 @rule("gx-tex", "static", "error", "A Tex string ManimGX's Typst/mitex cannot set (common_gx maps the text macros "
-      "it can): two maths runs touching ($a$$b$) crash the render, and \\$ prints the word 'dollar'.",
-      "Part IV, ManimGX", "join the maths into one $...$; write 'USD' or a word")
+      "it can): two maths runs touching ($a$$b$) crash the render, \\$ prints the word 'dollar', and a text "
+      "starting with '+ ', '- ' or '1. ' is Typst list markup ('+ PBC' was set as '1. PBC', subseasonal_pbc).",
+      "Part IV, ManimGX", "join the maths into one $...$; write 'USD' or a word; start a label with a word")
 def gx_tex(s):
+    # a script's own label helpers (def lab(t, ...): return Tex(t, ...)) pass their first argument straight to Tex
+    wrappers = {"Tex"}
+    for fn in ast.walk(s.tree):
+        if isinstance(fn, ast.FunctionDef) and fn.args.args:
+            p = fn.args.args[0].arg
+            if any(call_name(n) == "Tex" and n.args and isinstance(n.args[0], ast.Name) and n.args[0].id == p
+                   for n in ast.walk(fn)):
+                wrappers.add(fn.name)
     for node in ast.walk(s.tree):
-        if call_name(node) == "Tex":
-            for a in node.args:
+        name = call_name(node)
+        if name in wrappers:
+            for i, a in enumerate(node.args if name == "Tex" else node.args[:1]):
                 v = s.resolve_str(a)
                 if not v:
                     continue
@@ -427,6 +450,8 @@ def gx_tex(s):
                     yield a, f"two maths runs touch: {v[:40]!r}"
                 if re.search(r"(?<!\\)\\\$", v):
                     yield a, f"\\$ is set as the word 'dollar': {v[:40]!r}"
+                if i == 0 and re.match(r"\s*([+\-]|\d+\.)\s", v):
+                    yield a, f"set as a Typst list item: {v[:40]!r}"
 
 
 @rule("fixed-frame-early", "static", "error", "add_fixed_in_frame_mobjects(x) puts x on screen at once, so a later "

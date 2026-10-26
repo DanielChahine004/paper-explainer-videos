@@ -688,3 +688,60 @@ def faint_mark(mon, ev, p):
         r = _contrast(a * rgb(m) + (1 - a) * under, under)
         if r < need:
             yield id(m), f"{type(m).__name__} at ({cx:.2f}, {cy:.2f}) has contrast {r:.2f} against {what}"
+
+
+def _drawing(m):
+    """m's non-text leaves with points: the picture, without its labels and its connecting lines and arrows.
+    None when m holds an image (real data, not an icon)."""
+    T = TEXTS()
+    out, stack = [], [m]
+    while stack:
+        x = stack.pop()
+        if isinstance(x, M.AbstractImageMobject):
+            return None
+        if isinstance(x, T) or isinstance(x, (M.Line, M.ArrowTip)):
+            continue
+        if isinstance(x, M.VMobject) and len(x.points.reshape(-1, 3)):
+            out.append(x)
+        stack += x.submobjects
+    return out
+
+
+@rule("icon-idle", "runtime", "warn", "A small drawing with a word beside it (an icon standing for an idea) is shown "
+      "and then only faded out: nothing points at a part of it, changes it or measures on it, so it illustrates a "
+      "word rather than showing anything the word does not.", "Part I §1, every visual does work",
+      "draw the thing whose property the voice is about and act on it on that word (pulse the part, change it, put "
+      "the number on it), or drop the icon and let the label stand")
+def icon_idle(mon, ev, p):
+    import numpy as np
+    st = mon.state.setdefault("icon-idle", {"cand": {}, "acted": set()})
+    if ev == "play":
+        T = TEXTS()
+        for a in _flatten(p.get("anims", ())):
+            m = getattr(a, "mobject", None)
+            if m is None:
+                continue
+            if getattr(a, "is_introducer", lambda: False)() and not getattr(a, "remover", False):
+                if any("icon-idle" in ok or "*" in ok for mm, ok in walk([m]) if mm is m):
+                    continue
+                d = _drawing(m)
+                if not d or len(d) < 2 or any(x.get_updaters() for x in d):
+                    continue
+                pts = np.concatenate([np.asarray(x.points).reshape(-1, 3)[:, :2] for x in d])
+                lo, hi = pts.min(0), pts.max(0)
+                size = float((hi - lo).max())
+                if not float(opt(mon, "icon_min", 0.4)) <= size <= float(opt(mon, "icon_max", 1.8)):
+                    continue
+                words = [t for t in m.get_family() if isinstance(t, T)]
+                near = words or [t for t in mon.scene.mobjects if isinstance(t, T)
+                                 and (lambda b: b[0] < hi[0] + 0.6 and b[2] > lo[0] - 0.6
+                                      and b[1] < hi[1] + 0.6 and b[3] > lo[1] - 0.6)(bbox(t))]
+                if near and all(len(str(getattr(t, "tex_string", "") or getattr(t, "text", "")).split()) <= 3 for t in near):
+                    st["cand"].setdefault(id(m), (m, {id(x) for x in d}, getattr(a, "run_time", 0)))
+            elif not getattr(a, "remover", False):
+                st["acted"] |= {id(x) for x in m.get_family()}
+    elif ev == "end":
+        for k, (m, ids, _) in st["cand"].items():
+            if not ids & st["acted"]:
+                yield k, f"{type(m).__name__} at ({m.get_center()[0]:+.1f}, {m.get_center()[1]:+.1f}) is an icon " \
+                         "that is shown and never pointed at, changed or measured"

@@ -141,6 +141,7 @@ def front_page(h=6.4, name="front.png"):
     import inspect
     here = Path(inspect.stack()[1].filename).resolve().parent
     im = ImageMobject(str(here / "assets" / name)).set_height(h)
+    im._front_page, im._src = True, str(here / "assets" / name)        # read by ink_box and vlint front-box-cut
     return Group(im, Rectangle(width=im.width, height=im.height, stroke_color=GREY_B, stroke_width=1.5).move_to(im))
 
 
@@ -151,7 +152,27 @@ def px_box(im, box, size, color, sw=4):
     ul = im.get_corner(UL)
     a = ul + np.array([x0 / W * im.width, -y0 / H * im.height, 0])
     b = ul + np.array([x1 / W * im.width, -y1 / H * im.height, 0])
-    return Rectangle(width=b[0] - a[0], height=a[1] - b[1], color=color, stroke_width=sw).move_to((a + b) / 2)
+    r = Rectangle(width=b[0] - a[0], height=a[1] - b[1], color=color, stroke_width=sw).move_to((a + b) / 2)
+    r._px_frame = (im, box, size)                                       # read by vlint front-box-cut
+    return r
+
+
+def ink_box(page, y0, y1, color, pad=8, sw=3):
+    """A frame around the text between rows y0 and y1 of front_page()'s image (its own pixels), fitted to the ink:
+    it grows to whole lines and spans the longest one, so it never cuts a letter (vlint: front-box-cut)."""
+    from PIL import Image
+    im = page[0]
+    ink = np.asarray(Image.open(im._src).convert("L")) < 128
+    H, W = ink.shape
+    rows = ink.any(1)
+    while y0 > 0 and rows[y0 - 1]:
+        y0 -= 1
+    while y1 < H and rows[y1]:
+        y1 += 1
+    xs = np.where(ink[y0:y1].any(0))[0]
+    ys = np.where(rows[y0:y1])[0] + y0
+    box = (max(int(xs[0]) - pad, 0), max(int(ys[0]) - pad, 0), min(int(xs[-1]) + pad, W), min(int(ys[-1]) + pad, H))
+    return px_box(im, box, (W, H), color, sw)
 
 def point(scene, m, color=WHITE):
     """The term marker: a box that moves onto whichever part of an equation the voice is naming, so the eye

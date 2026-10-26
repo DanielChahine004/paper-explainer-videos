@@ -438,6 +438,8 @@ labelled illustrative/schematic.
   the year and the authors while a box marks the author line, then the box moves to the title as the voice says
   what the paper reports (vlint: `front-page`, a warning, fires when a script credits an "et al." paper and
   never calls `front_page()`).
+  Make those boxes with `ink_box(page, y0, y1, color)`, not a hand-set `px_box`: it grows the
+  rows to whole lines and spans the widest one, so no letter sits on the frame (vlint: `front-box-cut`).
 - **Any figure in a paper you were given may be shown** when the videos are for private viewing: then the licence
   never forces a redraw, and the per-figure choice in §4 decides (real data and dense plots reused, mechanisms
   redrawn). For a public video, check the licence first. Credit each reused figure on screen while it shows
@@ -452,6 +454,10 @@ labelled illustrative/schematic.
 - Render with `pdftoppm -r 300 -x -y -W -H` (poppler, through pixi), crop to the panel, and save to
   `<video>/assets/`. Show it on a white `card()`. Check for stray panel letters. Read figure-only
   numbers from a zoomed render.
+- **Crop on white space**: every edge of a reused plot or drawing runs through white
+  paper, never through tick numbers, an axis title or a slice. Find the bounds with a numpy scan of the dark rows and
+  columns, not by eye. A neighbour's panel letter that falls inside the box is painted white in `src/crop.py`
+  (`WHITEN`), not cut through (vlint: `image-edge-cut`, a warning: ink touching an edge of a mostly white image).
 - Anything holding an image is a `Group`, not a `VGroup`, including inside `fit_frame` (vlint:
   `vgroup-non-vmobject`).
 

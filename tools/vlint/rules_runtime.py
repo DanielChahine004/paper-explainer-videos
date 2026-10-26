@@ -881,3 +881,63 @@ def number_undrawn(mon, ev, p):
         for val, phrase in st.pop("said"):
             if round(val, 3) not in shown:
                 yield (phrase, mon.time()), f"said \"{phrase}\" but {val:g} is not on screen during that sentence"
+
+
+def _ink(m):
+    """An image's luminance (alpha composited on white), or None."""
+    import numpy as np
+    pa = getattr(m, "pixel_array", None)
+    if pa is None or pa.ndim != 3:
+        return None
+    rgb = pa[..., :3].astype(float)
+    if pa.shape[2] == 4:
+        al = pa[..., 3:4] / 255.0
+        rgb = rgb * al + 255 * (1 - al)
+    return rgb.mean(2)
+
+
+@rule("image-edge-cut", "runtime", "warn", "A reused figure on a white page has ink running into one of its edges: the "
+      "crop cut through tick numbers, an axis title or a panel, so the viewer sees half a word or half a picture.",
+      "Part II, reusing a figure: crop on white space",
+      "widen the crop in src/crop.py until every edge is white; paint out a panel letter that falls inside the crop")
+def image_edge_cut(mon, ev, p):
+    if ev != "play":
+        return
+    seen = mon.state.setdefault("image-edge-cut", set())
+    for m in leaves(mon.scene, "image-edge-cut"):
+        if not isinstance(m, M.AbstractImageMobject) or id(m) in seen or visibility(m) < 0.5:
+            continue
+        seen.add(id(m))
+        lum = _ink(m)
+        if lum is None or min(lum.shape) < 20 or (lum > 225).mean() < 0.5:     # photos and dark panels end anywhere
+            continue
+        ink = lum < 150
+        h, w = ink.shape
+        for side, edge in (("top", ink[:3]), ("bottom", ink[-3:]), ("left", ink[:, :3]), ("right", ink[:, -3:])):
+            if 0.02 < edge.mean() < 0.7:                   # a full-length line along the edge is the figure's frame
+                yield (id(m), side), f"a {w}x{h} figure has ink running off its {side} edge ({edge.mean():.0%} of it)"
+
+
+@rule("front-box-cut", "runtime", "warn", "A frame drawn on the paper's front page (around the title or the author "
+      "list) runs through the text: its edge crosses letters, so part of a word sits outside the box.",
+      "Part II, open on the paper's front page",
+      "make the frame with ink_box(page, y0, y1, color), which fits it to the ink of whole lines")
+def front_box_cut(mon, ev, p):
+    if ev != "play":
+        return
+    for m, ok in walk(mon.scene.mobjects):
+        fr = getattr(m, "_px_frame", None)
+        if fr is None or "front-box-cut" in ok or "*" in ok or visibility(m) < 0.3:
+            continue
+        im, (x0, y0, x1, y1), (W, H) = fr
+        lum = _ink(im) if getattr(im, "_front_page", False) else None
+        if lum is None:
+            continue
+        ink = lum < 128
+        h, w = ink.shape
+        X0, X1 = min(int(x0 * w / W), w - 1), min(int(x1 * w / W), w - 1)
+        Y0, Y1 = min(int(y0 * h / H), h - 1), min(int(y1 * h / H), h - 1)
+        for side, line in (("left", ink[Y0:Y1, X0]), ("right", ink[Y0:Y1, X1]), ("top", ink[Y0, X0:X1]),
+                           ("bottom", ink[Y1, X0:X1])):
+            if line.size and line.mean() > 0.03:
+                yield (id(m), side), f"a frame on the front page crosses text along its {side} edge"

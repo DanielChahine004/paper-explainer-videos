@@ -8,7 +8,7 @@ from manim import *
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 from vlint.runtime import Checked, vlint_ok  # noqa: E402
 
-EXPECT = {"frame-clip": 1, "text-overlap": 1, "vanished-after-intro": 1, "bookmark-unfired": 2, "indicate-image": 1, "text-chain": 1, "arrow-over-label": 1, "layout-crowded": 1, "layout-balance": 1, "arrow-skew": 1, "title-margin": 1, "line-over-label": 1, "redraw-jitter": 1, "shape-overlap": 1, "title-gap": 1, "faint-mark": 2, "frame-margin": 1, "icon-idle": 1, "intro-of-visible": 1, "number-undrawn": 1}
+EXPECT = {"frame-clip": 1, "text-overlap": 1, "vanished-after-intro": 1, "bookmark-unfired": 2, "indicate-image": 1, "text-chain": 1, "arrow-over-label": 1, "layout-crowded": 1, "layout-balance": 1, "arrow-skew": 1, "title-margin": 1, "line-over-label": 1, "redraw-jitter": 1, "shape-overlap": 1, "title-gap": 1, "faint-mark": 2, "frame-margin": 1, "icon-idle": 1, "intro-of-visible": 1, "number-undrawn": 1, "image-edge-cut": 1, "front-box-cut": 1}
 
 
 class Fixture(Checked, Scene):
@@ -81,6 +81,23 @@ class Fixture(Checked, Scene):
         cred = Text("credit line", font_size=16).to_edge(DOWN, buff=0.08)                      # a footnote: fine
         self.play(FadeIn(faint), FadeIn(dim), FadeIn(pad), FadeIn(pale), FadeIn(eye), FadeIn(low), FadeIn(cred), run_time=0.2)
         self.remove(faint, dim, pad, pale, eye, low, cred)
+        cut = np.full((40, 60, 4), 255, dtype=np.uint8)
+        cut[10:, 20:40, :3] = 0                                                     # image-edge-cut (bottom)
+        whole = np.full((40, 60, 4), 255, dtype=np.uint8)
+        whole[10:30, 20:40, :3] = 0                                                 # white all round: fine
+        page = np.full((80, 60, 4), 255, dtype=np.uint8)
+        page[20:30, 10:50, :3] = 0                                                  # a "title" line
+        i1, i2 = ImageMobject(cut).set_height(1).move_to(LEFT * 4 + UP * 2), ImageMobject(whole).set_height(1).move_to(LEFT * 2 + UP * 2)
+        fp = ImageMobject(page).set_height(1.6).move_to(RIGHT * 3 + UP * 1.5)
+        fp._front_page = True
+        bad = Rectangle(width=0.5, height=0.3).move_to(fp)
+        bad._px_frame = (fp, (5, 15, 40, 35), (60, 80))                            # front-box-cut (right edge on ink)
+        self.play(FadeIn(i1), FadeIn(i2), FadeIn(fp), Create(bad), run_time=0.2)
+        self.remove(bad)
+        good = Rectangle(width=0.7, height=0.3).move_to(fp)
+        good._px_frame = (fp, (5, 15, 55, 35), (60, 80))                           # clear of the ink: fine
+        self.play(Create(good), run_time=0.2)
+        self.remove(i1, i2, fp, good)
         e1, e2 = MathTex("a", "+", "b"), MathTex("b", "+", "a", "+", "c")
         self.add(e1)
         self.play(TransformMatchingShapes(e1, e2), run_time=0.2)                     # pieces fade in inside it: fine

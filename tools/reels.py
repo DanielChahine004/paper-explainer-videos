@@ -397,7 +397,7 @@ function slide(r,k){const a=by[r.vid],s=document.createElement('section');s.clas
    <div class="tap"></div><div class="pz">${ICON.play}</div><div class="spd"></div>
    <div class="side"><a class="av" href="#/@${encodeURIComponent(r.vid)}" style="background-image:url('${a.avatar}')" aria-label="Account"></a>
     <button class="lk${likes.has(key(r))?' liked':''}">${ICON.heart}<span>Like</span></button>
-    <button class="nt">${ICON.note}<span>Note</span></button>
+    <button class="nt">${ICON.note}<span>0</span></button>
     <a class="fl" href="#">${ICON.full}<span>Full</span></a></div>
    <div class="cap"><a class="who" href="#/@${encodeURIComponent(r.vid)}">@${esc(r.vid)}</a>
     <div class="txt">${esc(r.cap||r.name)}${r.doc?`<span class="doc"> ${esc(r.doc)}</span>`:''}</div>
@@ -471,10 +471,10 @@ const notes={};      // video id -> its notes from feedback.json, fetched when o
 const inReel=(n,r)=>n.t>=r.a&&n.t<r.b;
 async function loadNotes(vid){try{notes[vid]=await (await fetch('/api/notes?id='+encodeURIComponent(vid))).json()}catch(e){notes[vid]=notes[vid]||[]}
   document.querySelectorAll('.slide').forEach(s=>{if(s._r.vid===vid)noteCount(s)})}
-function noteCount(s){const k=(notes[s._r.vid]||[]).filter(n=>inReel(n,s._r)).length;s.querySelector('.nt span').textContent=k||'Notes'}
+function noteCount(s){const k=(notes[s._r.vid]||[]).filter(n=>inReel(n,s._r)).length;s.querySelector('.nt span').textContent=k}
 let sheetSl=null,sheetT=0,sheetWas=false;
 async function note(s){const r=s._r;sheetSl=s;sheetT=s===curSl?V.currentTime:r.a;sheetWas=V.paused;if(s===curSl)V.pause();
-  $('#cin').placeholder='Add a note at '+fmt(sheetT-r.a)+'…';$('#sheet').classList.add('on');renderSheet();
+  $('#cin').placeholder='Add a comment at '+fmt(sheetT-r.a)+'…';$('#sheet').classList.add('on');renderSheet();
   await loadNotes(r.vid);if(sheetSl===s)renderSheet()}
 function renderSheet(){const r=sheetSl._r,a=by[r.vid],ns=(notes[r.vid]||[]).slice().sort((x,y)=>x.t-y.t);
   const reelOf=t=>a.reels.find(q=>t>=q.a&&t<q.b)||a.reels[a.reels.length-1];
@@ -483,8 +483,8 @@ function renderSheet(){const r=sheetSl._r,a=by[r.vid],ns=(notes[r.vid]||[]).slic
      <div class="bd"><div class="sn">${esc(q.name)}${done?'<span class="st">&#10003; resolved</span>':''}</div><div class="tx">${esc(n.text)}</div>
      ${done&&n.resolution?`<div class="sn">&rarr; ${esc(n.resolution)}</div>`:''}</div></div>`};
   const mine=ns.filter(n=>inReel(n,r)),rest=ns.filter(n=>!inReel(n,r));
-  $('#shd').textContent=ns.length+(ns.length===1?' note':' notes');
-  $('#clist').innerHTML=(mine.length?mine.map(row).join(''):'<div class="empty" style="padding:18px">No notes on this reel yet.</div>')+
+  $('#shd').textContent=ns.length+(ns.length===1?' comment':' comments');
+  $('#clist').innerHTML=(mine.length?mine.map(row).join(''):'<div class="empty" style="padding:18px">No comments yet. Be the first.</div>')+
     (rest.length?`<h4>Elsewhere in @${esc(r.vid)}</h4>`+rest.map(row).join(''):'')}
 function closeSheet(jump){if(!sheetSl)return;const s=sheetSl;sheetSl=null;$('#sheet').classList.remove('on');$('#cin').blur();
   if(!jump&&s===curSl&&!sheetWas&&!userPaused)V.play().catch(()=>{})}
@@ -494,7 +494,7 @@ $('#clist').onclick=e=>{const b=e.target.closest('.ts');if(!b)return;const t=+b.
   else{jumpT=t;setTimeout(()=>{jumpT=null},3000);location.hash='#/@'+encodeURIComponent(s._r.vid)+'/'+b.dataset.n}};
 $('#cform').onsubmit=async e=>{e.preventDefault();const s=sheetSl,text=$('#cin').value.trim();if(!s||!text)return;
   const ok=await fetch('/api/notes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:s._r.vid,t:sheetT,text})}).then(x=>x.ok).catch(()=>false);
-  if(!ok)return toast('Could not save the note');$('#cin').value='';await loadNotes(s._r.vid);if(sheetSl===s)renderSheet()};
+  if(!ok)return toast('Could not post the comment');$('#cin').value='';await loadNotes(s._r.vid);if(sheetSl===s)renderSheet()};
 function toast(t){const e=$('#toast');e.textContent=t;e.style.display='block';clearTimeout(e._t);e._t=setTimeout(()=>e.style.display='none',1600)}
 function activate(s){if(curSl===s)return;if(curSl){curSl.classList.remove('ready','paused')}curSl=s;cur=s._r;userPaused=false;
   const a=by[cur.vid],src=a.small||a.src;s.querySelector('.stage').prepend(V);

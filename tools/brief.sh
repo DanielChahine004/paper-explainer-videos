@@ -44,8 +44,8 @@ Mark the phases as you pass them, so the build times itself:
 Before splitting the plan for writers, run \`python -m vlint plan ../$V/plan.md --check\` from tools/ and clear it.
 
 Hand back when the video is rendered at -qh, every gate is clear (static, runtime and the join), you have
-read the review sheets and watched the joined file, and you have said in DESIGN.md's §0 what the video
-taught you. Report what you made, what you decided and what you are unsure of, in 15 lines or fewer. Work
+read the review sheets and watched the joined file, and you have folded what the video
+taught you into the DESIGN.md rule it sharpens (§0: fold, don't log -- no per-video entry). Report what you made, what you decided and what you are unsure of, in 15 lines or fewer. Work
 fast and keep your writers' prompts short. Time the script phase (plan, narration, scene writing), name the two or
 three things that slowed it most and what would cut them, apply the quick safe ones and list the rest. Do not commit.
 PROMPT

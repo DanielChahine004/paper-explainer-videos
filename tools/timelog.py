@@ -42,6 +42,10 @@ def mark(video, phase, at=None, note=None):
     if not (ROOT / video).is_dir():
         sys.exit(f"timelog: no video folder {video}")
     f, log = _load(video)
+    # a phase is marked when it ends: a second "script" at the start of writing made its time read 0 min (pet_mrpc)
+    if phase in PHASES[:6] and any(m["phase"] == phase for m in log["marks"]):
+        sys.exit(f"timelog: {video} already has {phase!r}. A phase is marked once, when it ends; feedback rounds use "
+                 f"'feedback' and 'done'.")
     t = datetime.strptime(at, FMT if at.count(":") == 2 else "%Y-%m-%d %H:%M").strftime(FMT) if at else _now()
     log["marks"].append({"phase": phase, "t": t, **({"note": note} if note else {})})
     log["marks"].sort(key=lambda m: m["t"])

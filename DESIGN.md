@@ -999,7 +999,7 @@ and knows where to look for information". It is laid out like this:
      a two-minute foreground command; tell writers to run it in the background.
    **Generate the script's side of the words from the plan, for the lead and for every writer** (g4_setup:
    eighteen scenes, 2381 words, six writers on a cheaper model, sixteen scenes merged with nothing refused, no
-   prefix changed, no `VLINT_ALLOW` and not one `plan-narration` error). `g4_setup/src/planvo.py` reads
+   prefix changed, no `VLINT_ALLOW` and not one `plan-narration` error). `tools/planvo.py <video>` reads
    `plan.md` and prints either the throwaway script that lints and voices the words, or a `skeleton.py` per
    writer: each scene's `voiceover` blocks word for word, with an empty `self.at()` per mark and the plan's
    action line as its comment. Nobody typed a spoken word twice, so nobody could mistype one. It belongs in

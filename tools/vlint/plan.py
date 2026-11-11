@@ -190,11 +190,55 @@ def check(path):
             for mk, (line, _w, _y) in b.actions.items():
                 if mk not in b.marks:
                     bad.append((line, f"{st.name}: an action line for [{mk}], which this block never says"))
+    bad += _facts(p, plan)
     for line, msg in sorted(bad):
         print(f"{p.name}:{line}: {msg}")
     cues = sum(len(b.marks) for st in plan.scenes.values() for b in st.blocks)
     print(f"plan: {len(plan.scenes)} scene(s), {cues} cue(s), {len(bad)} problem(s)")
     return 1 if bad else 0
+
+
+_FIGPAGE = re.compile(r"\b(Fig(?:ure|\.)?|Table)\s*(\d+)\b[^\n.;]{0,60}?\bpage\s+(\d+)", re.I)
+_CAPTION = re.compile(r"(?:^ *|   +)(Figure|Fig\.|Table|TABLE) +(\d+)(?:[:.]| +[A-Z])")
+
+
+def _captions(txt):
+    """{("fig"|"table", n): {pages}} from pdftotext's form feeds, as tools/prep.sh lists them in the brief."""
+    out, page = {}, 1
+    for ln in txt.read_text(encoding="utf-8", errors="replace").split("\n"):  # not splitlines(), which splits on the form feeds too
+        page += ln.count("\f")
+        for m in _CAPTION.finditer(ln.replace("\f", "")):
+            out.setdefault(("table" if m.group(1).lower() == "table" else "fig", int(m.group(2))), set()).add(page)
+    return out
+
+
+def _facts(p, plan):
+    """What a plan can get wrong before any manim exists and a writer then works round (pico40l): a figure cited on
+    the wrong page, and a focus that names a function (a shared helper or a kit primitive) instead of the variable
+    that will hold what it draws."""
+    bad = []
+    txt = p.parent / "src" / "paper.txt"
+    if txt.exists():
+        caps = _captions(txt)
+        for i, ln in enumerate(p.read_text(encoding="utf-8").splitlines(), 1):
+            for m in _FIGPAGE.finditer(ln):
+                key = ("table" if m.group(1).lower() == "table" else "fig", int(m.group(2)))
+                pages = caps.get(key)
+                if pages and int(m.group(3)) not in pages:
+                    bad.append((i, f"{m.group(1)} {m.group(2)} is on page {'/'.join(map(str, sorted(pages)))} of "
+                                   f"src/paper.txt, not page {m.group(3)}"))
+    import ast
+    fns = set()
+    for f in [*p.parent.glob("*_vo.py"), Path(__file__).resolve().parents[2] / "kit.py"]:
+        try:
+            fns |= {n.name for n in ast.parse(f.read_text(encoding="utf-8")).body if isinstance(n, ast.FunctionDef)}
+        except (OSError, SyntaxError):
+            pass
+    for st in plan.scenes.values():
+        if st.entity and st.entity in fns:
+            bad.append((st.focus_line, f"{st.name}'s focus `{st.entity}` is a function: name the variable the scene "
+                                       f"assigns its result to (e.g. `vs = {st.entity}(...)` and focus: `vs`)"))
+    return bad
 
 
 # ---- draft ----------------------------------------------------------------------------------------------------

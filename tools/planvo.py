@@ -13,7 +13,8 @@ from pathlib import Path
 
 if len(sys.argv) < 3:
     sys.exit(__doc__)
-here = Path(__file__).resolve().parent.parent / sys.argv[1]
+# a video name, or any folder holding a plan.md (a writer's copy in slab_work, pico40l)
+here = Path(sys.argv[1]).resolve() if (Path(sys.argv[1]) / "plan.md").exists() else Path(__file__).resolve().parent.parent / sys.argv[1]
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from vlint.plan import load  # noqa: E402
 

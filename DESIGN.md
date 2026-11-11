@@ -953,7 +953,10 @@ and knows where to look for information". It is laid out like this:
    to run it on. Generate one: a throwaway script made from `plan.md`, one empty scene per section with every
    mark cued on a dot, put through `vlint check`. On si_psf that found two `cue-gap`s (33 and 25 words) and
    the one number the source's text does not hold, in a second, before three writers would each have had to
-   report them back. The plan-only check (`vlint plan --check`) reads structure, not the words.
+   report them back. The plan-only check (`python -m vlint plan <video>/plan.md --check`, from tools/) reads
+   structure, not the words, and two facts a writer would otherwise work round: a figure or table cited on a page
+   its caption is not on, and a `focus:` that names a function (`rsu`, a kit primitive) instead of the variable the
+   scene assigns its result to (pico40l: both, found by five writers). Run it before splitting.
    **A figure driven by a number carries the number.** A plain action line passes `plan-action` only if the cue
    changes something that names the focus, and a `ValueTracker` swept on its own names nothing, which pushes
    honest "the focus changes" lines towards `side:`. si_psf's `live(build, d=...)` hangs the tracker on the

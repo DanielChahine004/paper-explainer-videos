@@ -174,6 +174,7 @@ Your folder is {c}. Work only in it.
 - {ex}- You may change the prefix of an action line in plan.md (new:, side:, mark:, morph:) when the check asks
   for it. You may not change a spoken word, in the plan or in the script.
 - Read DESIGN.md Part II and Part IV in {root} before you write.
+- Write code with the Write and Edit tools, never a shell heredoc: an apostrophe in a label breaks the quoting.
 
 Check after every edit, and render once, at the end:
     wsl bash {wroot}/tools/check.sh {wsl}

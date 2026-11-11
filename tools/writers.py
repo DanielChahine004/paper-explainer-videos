@@ -21,7 +21,8 @@ with VLINT_ALLOW=1 -- five writers independently switching a gate off is the gat
 given, byte for byte; what follows defines exactly that writer's scenes and otherwise only `_private` names that
 collide with nothing; and no spoken word of its plan sections changed (a re-prefixed action line is fine).
 A copy that passes has its scenes appended to the video's script and its plan sections put back. Nothing is
-merged from a copy that fails, and the others still are.
+merged from a copy that fails, and the others still are. When every copy is merged, the copies and every
+other <work>/<video>_* folder are deleted (--keep leaves them).
 """
 import argparse
 import ast
@@ -174,14 +175,16 @@ Your folder is {c}. Work only in it.
   for it. You may not change a spoken word, in the plan or in the script.
 - Read DESIGN.md Part II and Part IV in {root} before you write.
 
-Check after every edit, then look at what you made:
+Check after every edit, and render once, at the end:
     wsl bash {wroot}/tools/check.sh {wsl}
     wsl bash -c 'QUALITY=-ql bash {wroot}/tools/run_v.sh {wsl}'
 (from Git Bash, prefix both with MSYS_NO_PATHCONV=1, or it rewrites the /mnt/c paths. QUALITY is set inside the
 wsl command because a variable set in front of `wsl` does not cross into it, and the render then runs at 1080p)
-The first is static checks and every scene in skip mode, seconds, nothing rendered. The second renders your
-scenes at 480p and leaves a sheet per scene in review/: read them before you hand back. Never set VLINT_ALLOW:
-an error from the check is yours to fix, and if you believe it is wrong, say so in your report instead.
+The first is static checks and every scene in skip mode, about 25 s, nothing rendered: loop on it until it is
+clean. Only then run the second, which renders your scenes at 480p (minutes) and leaves a sheet per scene in
+review/: read them, fix what they show, check again, and render again only if a fix changed the picture.
+Rendering between checks was most of a writer's time on pet_mrpc. Never set VLINT_ALLOW: an error from the
+check is yours to fix, and if you believe it is wrong, say so in your report instead.
 
 render.sh lists all of your scenes, and the check holds you to that list: a scene it names and you have not
 written yet is an error. While you work, shorten SCENES in render.sh to the scenes you have written so far,
@@ -191,7 +194,7 @@ Hand back when both are clean with every scene listed. Report what you were unsu
 """
 
 
-def merge(v):
+def merge(v, keep=False):
     d, rsh, script, scenes = _video(v)
     state = json.loads((WORK / f"{v}_writers.json").read_text(encoding="utf-8"))
     text = script.read_text(encoding="utf-8")
@@ -247,8 +250,25 @@ def merge(v):
     script.write_text(text, encoding="utf-8", newline="\n")
     plan_path.write_text(head + "".join(secs.values()), encoding="utf-8", newline="\n")
     (WORK / f"{v}_writers.json").write_text(json.dumps(state, indent=1), encoding="utf-8")
+    if ok and not keep:
+        _clean(v)
     print(f"== {v}: now run  wsl bash tools/check.sh {v}" + ("" if ok else "   (after the copies above are put right and merged)"))
     return 0 if ok else 1
+
+
+def _clean(v):
+    """Every copy merged: the copies, the state file and the lead's throwaway folders (<video>_words, _helpers...)
+    go. slab_work held 70-odd of them by pet_mrpc. A name that starts with another video's name and an underscore is
+    that video's (g4_inside_a is not g4's), so it stays."""
+    others = [p.name for p in ROOT.iterdir() if p.is_dir() and p.name != v]
+    gone = []
+    for p in WORK.glob(f"{v}_*"):
+        if any(p.name.startswith(o + "_") and len(o) > len(v) for o in others):
+            continue
+        shutil.rmtree(p) if p.is_dir() else p.unlink()
+        gone.append(p.name)
+    if gone:
+        print(f"  removed from {WORK}: {', '.join(sorted(gone))}  (--keep to leave them)")
 
 
 def main():
@@ -258,12 +278,12 @@ def main():
     s.add_argument("video"), s.add_argument("assign", nargs="*"), s.add_argument("--per", type=int, default=3)
     s.add_argument("--helpers", help="the picture of every shared helper (default <video>/src/helpers.png)")
     m = sub.add_parser("merge")
-    m.add_argument("video")
+    m.add_argument("video"), m.add_argument("--keep", action="store_true", help="leave the copies in the work folder")
     a = ap.parse_args()
     if a.cmd == "split":
         split(a.video, {x.split("=")[0]: x.split("=")[1].split(",") for x in a.assign}, a.per, a.helpers)
         return 0
-    return merge(a.video)
+    return merge(a.video, a.keep)
 
 
 if __name__ == "__main__":

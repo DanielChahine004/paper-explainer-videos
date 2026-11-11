@@ -38,6 +38,14 @@ Each video should leave this file better than it found it, and this is part of f
   layout notes put every stack at x = -3.7 with nothing on the right until the last cue, so five scenes sheet as left-weighted with
   an empty half (the notes should give the right half something from the first cue); and the plan's `gas` and `side:` lines
   were re-prefixed by writers again. Script phase (plan, words, voice check, four writers, merge) took about 17 minutes.
+- **pico40l (a detector paper, 990 words, 5:46).** One shared helper, `rsu()`, the side view of the vessel assembly (outer and
+  inner quartz, bellows below, hot and cold tints built fresh from live geometry), carried four scenes and the recap; the other nine
+  pictures were private. Plan-first held: five Sonnet writers, 13 scenes, merged with nothing refused. What cost time: a plan note
+  said page 34 where Fig. 21 is on page 36, and the abstract is not on page 1 of a collaboration paper (the author block fills it), so
+  the Intro's `ab` box landed on the authors; check which page a figure and a sentence are on before the plan names them (the brief's
+  caption list gives pages). Writers re-prefixed 9 lines (`side:` that was `new:`) and renamed focus variables to match scene
+  variables (the plan's `focus:` must be a name the scene really defines). `planvo.py` needs an absolute path for a copy. Script
+  phase (plan, words, voice check, five writers, merge) took about 35 minutes, most of it the writers' 480p renders.
 - Prefer deepening a principle in Part I over adding a new rule. Rules carry a short example in
   brackets so a later reader can judge when they apply.
 - **If a program could have caught it, make the program catch it.** A rule here relies on someone remembering

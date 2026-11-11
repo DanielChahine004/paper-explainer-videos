@@ -43,7 +43,7 @@ PORT = int(os.environ.get("CATALOG_PORT", "8765"))
 FFMPEG = os.environ.get("FFMPEG", "/home/h/slab_render/.pixi/envs/default/bin/ffmpeg")   # inside WSL
 PLAYLISTS = ROOT / "playlists.json"
 RENDER = Path(os.environ.get("RENDER_ROOT", r"\\wsl.localhost\Ubuntu\home\h\slab_render"))   # the WSL render mirror
-SKIP = {"voice_ab"}                                      # voice tests, not explainers
+SKIP = {"voice_ab", "kit_gallery"}                       # voice tests and kit.py's gallery, not explainers
 _meta, _lock = {}, threading.Lock()
 
 

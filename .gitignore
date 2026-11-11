@@ -1,13 +1,35 @@
-# renders and caches
-m_*/
+# Renders, audio and review sheets: rebuilt by render.sh / run_v.sh
 *.mp4
-*.log
+*.wav
+*.mp3
+review/
+watch/
+voice_ab/clips/
+# a render run from a video's own folder instead of the shared root leaves its work there
+m_*/
+m_*.log
+voice.log
 list.txt
-media/
-sheets*/
-# environment
-.pixi/
-__pycache__/
-# source material: keep papers and their text out of git
+list_small.txt
+# Source papers and their text extracts: third-party, kept locally only
 *.pdf
-src/
+*/src/**/*.txt
+# Caches and local tool state
+__pycache__/
+*.pyc
+.pixi/
+.claude/
+# Rendered PDF pages and old contact sheets (assets/ holds the figures scenes use)
+*/src/**/*.png
+.catalog/
+
+# the linter fixtures carry a stand-in paper, so front-page can be tested at all
+!tools/vlint/tests/**/*.pdf
+# Manim's own output when it is run from the project root instead of a video folder, and scratch
+media/
+t/
+t2.py
+# Debug overlay from a video's src/find.py
+*/src/bbox.html
+# Resolved environment lock: kept local, pixi.toml is what is shared
+pixi.lock

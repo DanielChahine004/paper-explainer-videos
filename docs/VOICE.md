@@ -41,7 +41,7 @@ These rules are also in [DESIGN.md](DESIGN.md) (Part II, Narration):
 After a draft render, search the logs for sentences that never reached 95%:
 
 ```bash
-grep -h "\[tts\] best take only" videos/<name>/m_*.log
+grep -h "\[tts\] best take only" <name>/m_*.log
 ```
 
 Each line names the sentence and its best score. Respell the word it trips on, or split the sentence.

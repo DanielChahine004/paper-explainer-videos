@@ -1,4 +1,4 @@
-# manim 0.19 exports (regenerate with tools/vlint/gen_names.sh)
+# manim [10/24/26 18:48:07] WARNING  SoX could not be found!              __init__.py:10
                                                                                 
                                  If you do not have SoX, proceed                
                              here:                                              

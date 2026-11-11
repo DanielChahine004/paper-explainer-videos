@@ -1,0 +1,3 @@
+from manim import *  # noqa
+from pathlib import Path
+exec(Path(__file__).with_name("body3d.py").read_text())

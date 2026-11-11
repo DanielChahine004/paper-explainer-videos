@@ -79,14 +79,14 @@ class Narrated(Checked, VoiceoverScene):
         super().wait_until_bookmark(mark)
 
     def at(self, mark, *anims, **kw):
-        """Cue: wait for <bookmark mark='mark'/> in the current voiceover, then play (docs/DESIGN.md §1)."""
+        """Cue: wait for <bookmark mark='mark'/> in the current voiceover, then play (DESIGN.md §1)."""
         self.wait_until_bookmark(mark)
         if anims:
             kw.setdefault("run_time", 0.7)
             self.play(*anims, **kw)
 
 
-# Layout (docs/DESIGN.md Part II): titles sit at TITLE_BUFF from the top (vlint title-margin wants >= 0.75), content
+# Layout (DESIGN.md Part II): titles sit at TITLE_BUFF from the top (vlint title-margin wants >= 0.75), content
 # starts at CONTENT_TOP or lower (vlint title-gap wants air under the title).
 TITLE_BUFF = 0.85
 CONTENT_TOP = 2.45
@@ -120,7 +120,7 @@ def grid(items, cols, dx, dy, center=ORIGIN, by_icon=True):
 
 
 def fit_frame(m, margin=0.3):
-    """Shrink and nudge m so it lies inside the frame with `margin` to spare (docs/DESIGN.md §2)."""
+    """Shrink and nudge m so it lies inside the frame with `margin` to spare (DESIGN.md §2)."""
     hw, hh = config.frame_width / 2 - margin, config.frame_height / 2 - margin
     if m.width > 2 * hw:
         m.scale_to_fit_width(2 * hw)

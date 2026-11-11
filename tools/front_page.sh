@@ -1,5 +1,5 @@
 # Page 1 of a video's paper (the first src/*.pdf) as <video>/assets/front.png, which common.front_page() shows at the
-# start so the viewer knows which paper the video is about (docs/DESIGN.md §1, vlint: front-page). Run in WSL:
+# start so the viewer knows which paper the video is about (DESIGN §1, vlint: front-page). Run in WSL:
 #   bash tools/front_page.sh <video dir, relative to the repo>
 export PATH="$HOME/.pixi/bin:$PATH"
 D=$(cd "$(dirname "$0")/.." && pwd)/${1:?usage: front_page.sh <video>}

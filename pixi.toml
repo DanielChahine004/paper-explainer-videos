@@ -1,7 +1,7 @@
 [workspace]
-authors = ["Daniel Chahine"]
+authors = ["DanielChahine004 <danielchahine001@gmail.com>"]
 channels = ["conda-forge"]
-name = "paper-explainer-videos"
+name = "slab_crlb_narrated"
 platforms = ["linux-64"]
 version = "0.1.0"
 # Linux only (run it from WSL on Windows): Chatterbox needs CUDA torch, and manim's

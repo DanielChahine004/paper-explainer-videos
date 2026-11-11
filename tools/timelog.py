@@ -31,7 +31,16 @@ def _now():
     return datetime.now().strftime(FMT)
 
 
+PHASES = ("received", "figures", "script", "check", "render", "sent", "feedback", "done")
+
+
 def mark(video, phase, at=None, note=None):
+    # One spelling per phase, or the report cannot be compared between videos: the older logs hold "write"
+    # where others hold "script" and "check", and "design" for a feedback round, so no trend can be read off them.
+    if phase not in PHASES:
+        sys.exit(f"timelog: {phase!r} is not a phase. Use one of: {', '.join(PHASES)} (say the rest in --note)")
+    if not (ROOT / video).is_dir():
+        sys.exit(f"timelog: no video folder {video}")
     f, log = _load(video)
     t = datetime.strptime(at, FMT if at.count(":") == 2 else "%Y-%m-%d %H:%M").strftime(FMT) if at else _now()
     log["marks"].append({"phase": phase, "t": t, **({"note": note} if note else {})})

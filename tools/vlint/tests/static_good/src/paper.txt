@@ -1,0 +1,1 @@
+Fixture source for vlint selftest (number-unsourced): the label reads 1.8 mm and tau is 0.5.

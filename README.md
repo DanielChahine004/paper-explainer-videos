@@ -9,7 +9,7 @@ renderer, and [Chatterbox](https://github.com/resemble-ai/chatterbox) for the na
 transcribed back with Whisper and re-synthesised if the words don't match. Visuals appear on the word that
 names them, using `<bookmark/>` tags in the narration.
 
-What makes it work with an agent is [`docs/DESIGN.md`](docs/DESIGN.md): a set of design principles and hard-won
+What makes it work with an agent is [`DESIGN.md`](DESIGN.md): a set of design principles and hard-won
 rules, written and refined across a dozen videos. It covers what to show and what to say, how to
 explain a mechanism, how to keep every number honest, when to reuse a paper's figure, and a long list
 of pitfalls that broke earlier renders.
@@ -28,7 +28,7 @@ Requirements: Linux or WSL2, an NVIDIA GPU with CUDA 12 (about 4 GB per narratio
 git clone https://github.com/DanielChahine004/paper-explainer-videos
 cd paper-explainer-videos
 pixi install
-cd videos/_template && QUALITY=-ql bash render.sh   # a 2-scene smoke test at 480p
+bash tools/check.sh kit_gallery   # smoke test: static checks and every scene in skip mode
 ```
 
 The first run downloads the Chatterbox and Whisper weights and installs TinyTeX into `~/.TinyTeX`.
@@ -58,9 +58,9 @@ Open the repo in Claude Code (or any agent that reads `AGENTS.md`) and ask, for 
 
 > Make a narrated explainer video of `paper.pdf`, following AGENTS.md.
 
-The agent reads `docs/DESIGN.md`, plans the scenes, writes `videos/<name>/<name>_vo.py`, renders a draft,
+The agent reads `DESIGN.md`, plans the scenes, writes `<name>/<name>_vo.py`, renders a draft,
 reviews contact sheets of every scene, fixes what it finds, and renders the final 1080p video. The
-workflow is in [`AGENTS.md`](AGENTS.md). Feedback you give on one video goes into `docs/DESIGN.md`, so the
+workflow is in [`AGENTS.md`](AGENTS.md). Feedback you give on one video goes into `DESIGN.md`, so the
 next video starts from it.
 
 ## Checks (vlint)
@@ -80,8 +80,8 @@ three points, and `render.sh` stops on any error:
   fingerprint of the code that made it, so `render.sh` re-renders exactly the scenes you changed.
 
 ```bash
-python tools/vlint check videos/<name>   # run after every edit
-python tools/vlint rules                 # what is checked, and the docs/DESIGN.md rule behind each
+python tools/vlint check <name>   # run after every edit
+python tools/vlint rules                 # what is checked, and the DESIGN.md rule behind each
 ```
 
 Every rule has a planted bug in `tools/vlint/tests` (`python tools/vlint selftest`). Severities, options and
@@ -100,7 +100,7 @@ failed sentences, how to clone a voice.
 
 | Path | What it is |
 |---|---|
-| `docs/DESIGN.md` | the design rules: principles, craft, workflow, pitfalls |
+| `DESIGN.md` | the design rules: principles, craft, workflow, pitfalls |
 | `AGENTS.md`, `CLAUDE.md` | instructions for coding agents |
 | `common.py` | picks the engine (`ENGINE`) and imports one of the two below |
 | `common_ce.py` | Manim Community side: shared look, the `Narrated` scene base (with the runtime checks), `self.at()` cues, `fit_frame()` |
@@ -111,12 +111,15 @@ failed sentences, how to clone a voice.
 | `tools/render_lib.sh` | the render pipeline every `render.sh` sources, gated by vlint: narration first, then every scene at once (slowest first), the join and a small copy |
 | `tools/voice_prepass.py` | voices all narration before rendering, two model copies sharing the GPU |
 | `tools/vlint/` | the checks: rules, planted-bug tests, how to add a rule |
-| `tools/sheet.sh` | 3×3 contact sheets for reviewing scenes |
+| `kit.py`, `KIT.md` | the shared drawing primitives, and their catalogue; `kit_gallery/` draws every one |
+| `tools/prep.sh`, `tools/brief.sh` | a paper's inputs and `brief.md`; the whole prompt a building agent starts from |
+| `tools/writers.py` | splits a planned video into one folder per scene writer, and merges them back |
+| `tools/check.sh`, `tools/watch.sh`, `tools/review.sh` | static and skip-mode checks; the finished video sampled where the picture changes; per-scene review sheets |
+| `tools/kit_promote.py` | which of a video's helpers other videos also wrote: the candidates for kit |
 | `tools/catalog.py`, `tools/reels.py` | streams the rendered videos to phones and TVs on the home network, with timestamped feedback notes; `/reels` plays every scene as a swipe-through clip, each video an account |
 | `tools/timelog.py` | how long each video took, phase by phase (renders log themselves) |
-| `tools/wsl_render.sh` | renders from the WSL filesystem (much faster than `/mnt/c`) |
-| `videos/_template/` | a two-scene starting point |
-| `videos/laser_rt/`, `videos/calib/` | two worked examples (scripts only; videos are on the release) |
+| `tools/run_v.sh`, `tools/sync.sh` | render a video from the WSL filesystem (much faster than `/mnt/c`) and copy it back |
+| `laser_rt/`, `calib/` | two worked examples (scripts only; videos are on the release) |
 
 ## Examples
 

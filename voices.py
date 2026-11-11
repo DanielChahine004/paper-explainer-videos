@@ -1,20 +1,25 @@
 """Speech services for manim-voiceover.
 
-TTS=chatterbox (default): Resemble AI's Chatterbox on the GPU, a natural narrator voice.
+TTS=kokoro (default since 2026-10-25): Kokoro-82M, voice af_heart (TTS_VOICE picks another preset, e.g.
+    af_alloy, bf_emma); ~60x faster than real time. Runs in its own env (see KokoroService).
+TTS=chatterbox: Resemble AI's Chatterbox on the GPU, the narrator of every video before metamono (their render.sh
+    pin it).
     Each sentence is synthesised separately, transcribed back with Whisper and
     re-synthesised with another seed if the words do not match, so a mumbled or
     truncated take never reaches the video. TTS_VOICE=/path/to/clip.wav clones that
     voice (10-20 s of clean speech); unset uses Chatterbox's built-in voice.
-TTS=espeak: robotic, needs only espeak-ng; for checking timing only, never for a finished video.
+TTS=chatterbox-turbo: Chatterbox Turbo (350M), ~2x faster than Chatterbox, same check.
+TTS=espeak: robotic, needs only espeak-ng; good for checking timing.
 
 Every service also returns word timings, so scenes can sync to <bookmark mark='x'/> tags placed
-in the narration text (see docs/DESIGN.md). Bookmarks are stripped before synthesis and before the
+in the narration text (see DESIGN.md). Bookmarks are stripped before synthesis and before the
 cache lookup, so adding or moving one never regenerates the audio.
 """
 import difflib
 import json
 import os
 import re
+import shutil
 import subprocess
 from pathlib import Path
 
@@ -105,6 +110,40 @@ class EspeakService(_FileService):
 
     def synth_wav(self, text, wav_path):
         subprocess.run(["espeak-ng", "-v", self.voice, "-s", str(self.speed), "-w", str(wav_path), text], check=True)
+
+
+class KokoroService(_FileService):
+    """Kokoro-82M, run in its own env (KOKORO_ENV, default ~/kokoro_env: Python 3.12 with kokoro, misaki[en] and
+    espeakng_loader; without espeak, out-of-dictionary words come out garbled) by tools/kokoro_synth.py."""
+    name = "kokoro"
+
+    def __init__(self, voice="af_heart", speed=1.0, **kwargs):
+        self.voice, self.speed = voice, speed
+        super().__init__(**kwargs)
+
+    _proc = {}   # one kokoro_synth.py process per (voice, speed), kept alive so the model loads once
+
+    def synth_wav(self, text, wav_path):
+        key = (self.voice, self.speed)
+        p = KokoroService._proc.get(key)
+        if p is None or p.poll() is not None:
+            env_dir = Path(os.environ.get("KOKORO_ENV", Path.home() / "kokoro_env"))
+            pixi = shutil.which("pixi") or str(Path.home() / ".pixi" / "bin" / "pixi")
+            env = {k: v for k, v in os.environ.items() if not k.startswith(("PIXI_", "CONDA_"))}
+            p = subprocess.Popen([pixi, "run", "--manifest-path", str(env_dir / "pixi.toml"), "python",
+                                  str(Path(__file__).resolve().parent / "tools" / "kokoro_synth.py"), self.voice,
+                                  str(self.speed)], stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                                 stderr=subprocess.DEVNULL, text=True, env=env)
+            KokoroService._proc[key] = p
+        out = str(Path(wav_path).resolve())
+        p.stdin.write(f"{' '.join(text.split())}\t{out}\n")
+        p.stdin.flush()
+        while True:
+            line = p.stdout.readline()
+            if not line:
+                raise RuntimeError("kokoro_synth.py exited (run it by hand in ~/kokoro_env to see why)")
+            if line.strip() == out:
+                return
 
 
 def _letters(s):
@@ -207,10 +246,12 @@ class ChatterboxTurboService(ChatterboxService):
 
 
 def make_service(**kw):
-    choice = os.environ.get("TTS", "chatterbox")
+    choice = os.environ.get("TTS", "kokoro")
     voice = os.environ.get("TTS_VOICE", "")
     if choice == "chatterbox":
         return ChatterboxService(voice=voice, **kw)
     if choice == "chatterbox-turbo":
         return ChatterboxTurboService(voice=voice, **kw)
+    if choice == "kokoro":
+        return KokoroService(voice=voice or "af_heart", **kw)
     return EspeakService(**kw)

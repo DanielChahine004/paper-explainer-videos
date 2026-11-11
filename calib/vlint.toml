@@ -1,0 +1,6 @@
+[scenes.Block]
+ignore = ["layout-crowded"]       # crystals, light guide and tubes are one physical stack, touching by design
+[scenes.FloodSetup]
+ignore = ["layout-crowded"]       # the same block stack, with the source's cone resting on the crystals
+[scenes.Semi]
+ignore = ["number-undrawn"]       # "point eight degrees" parses as 8 degrees; the 0.8 degree step is drawn (fl[1])

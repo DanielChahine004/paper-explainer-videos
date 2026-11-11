@@ -1,0 +1,447 @@
+{
+ "videos": {
+  "bone_putty": {
+   "property-scope": 1,
+   "pulse-for-event": 8,
+   "scene-protagonist": 6
+  },
+  "brain_swin": {
+   "narration-appendage": 6,
+   "property-scope": 2,
+   "scene-protagonist": 4
+  },
+  "calib": {
+   "cue-gap": 8,
+   "narration-appendage": 15,
+   "number-unsourced": 2,
+   "property-scope": 10,
+   "pulse-for-event": 2
+  },
+  "capstone": {
+   "scene-protagonist": 3
+  },
+  "einstein1905": {
+   "cue-gap": 2,
+   "number-unsourced": 7,
+   "property-scope": 1,
+   "pulse-for-event": 3,
+   "scene-protagonist": 6
+  },
+  "feynman2": {
+   "cue-gap": 4,
+   "narration-appendage": 10,
+   "property-scope": 1,
+   "pulse-for-event": 1
+  },
+  "flow_match": {
+   "narration-appendage": 9,
+   "property-scope": 1,
+   "pulse-for-event": 2,
+   "scene-protagonist": 3
+  },
+  "fourier": {
+   "narration-appendage": 4
+  },
+  "geant4": {
+   "algebra-shown": 1,
+   "pulse-for-event": 2
+  },
+  "guitar_theory": {
+   "cue-gap": 4,
+   "narration-appendage": 40,
+   "property-scope": 2,
+   "pulse-for-event": 7,
+   "scene-protagonist": 3,
+   "unresolved-narration": 1
+  },
+  "i3m_pet": {
+   "cue-gap": 5,
+   "narration-appendage": 9,
+   "object-morph": 2,
+   "property-scope": 2,
+   "pulse-for-event": 5
+  },
+  "laser_rt": {
+   "cue-gap": 7,
+   "narration-appendage": 15,
+   "property-scope": 9,
+   "pulse-for-event": 5
+  },
+  "liquid_tc": {
+   "cue-gap": 5,
+   "narration-appendage": 11,
+   "property-scope": 1,
+   "pulse-for-event": 2,
+   "scene-protagonist": 4
+  },
+  "lnp_comet": {
+   "number-unsourced": 3,
+   "object-morph": 9,
+   "plan-why": 176
+  },
+  "mc_recon": {},
+  "metamono": {
+   "cue-gap": 10,
+   "narration-appendage": 11,
+   "number-unsourced": 4,
+   "property-scope": 8,
+   "pulse-for-event": 4
+  },
+  "mouse_pet": {
+   "cue-gap": 3,
+   "narration-appendage": 7,
+   "property-scope": 5,
+   "pulse-for-event": 7,
+   "scene-protagonist": 3
+  },
+  "pet_10ps": {
+   "cue-gap": 1,
+   "number-unsourced": 1,
+   "property-scope": 3,
+   "pulse-for-event": 4,
+   "scene-protagonist": 5
+  },
+  "pet_3dcnn_tof": {
+   "cue-gap": 2,
+   "number-unsourced": 1,
+   "object-morph": 2,
+   "property-scope": 4,
+   "pulse-for-event": 1,
+   "scene-protagonist": 3
+  },
+  "pet_diffusion": {
+   "cue-gap": 6,
+   "number-unsourced": 2,
+   "property-scope": 1,
+   "pulse-for-event": 2,
+   "scene-protagonist": 5
+  },
+  "pet_dl_recon": {
+   "cue-gap": 2,
+   "number-unsourced": 2,
+   "property-scope": 1,
+   "pulse-for-event": 5,
+   "scene-protagonist": 4
+  },
+  "pet_dl_review": {
+   "cue-gap": 5,
+   "number-unsourced": 10,
+   "pulse-for-event": 2,
+   "scene-protagonist": 3
+  },
+  "pet_explorer": {
+   "narration-appendage": 1,
+   "number-unsourced": 15,
+   "property-scope": 2,
+   "pulse-for-event": 1,
+   "scene-protagonist": 3,
+   "unresolved-narration": 1
+  },
+  "pet_fbsem": {
+   "cue-gap": 4,
+   "number-unsourced": 7,
+   "pulse-for-event": 2,
+   "scene-protagonist": 4
+  },
+  "pet_hetero_nanocomposites": {
+   "pulse-for-event": 6,
+   "scene-protagonist": 1
+  },
+  "pet_hetero_nn": {
+   "cue-gap": 3,
+   "number-unsourced": 3,
+   "pulse-for-event": 2
+  },
+  "pet_nanocomposites": {
+   "number-unsourced": 2,
+   "property-scope": 1,
+   "pulse-for-event": 3,
+   "scene-protagonist": 2
+  },
+  "pet_neuroexplorer": {
+   "number-unsourced": 2,
+   "property-scope": 5,
+   "pulse-for-event": 5,
+   "scene-protagonist": 5
+  },
+  "pet_nn_monolithic": {
+   "cue-gap": 1,
+   "pulse-for-event": 4,
+   "scene-protagonist": 2
+  },
+  "pet_nn_timestamp": {
+   "cue-gap": 3,
+   "number-unsourced": 4,
+   "property-scope": 1,
+   "pulse-for-event": 5,
+   "scene-protagonist": 5
+  },
+  "pet_perovskite": {
+   "cue-gap": 2,
+   "number-unsourced": 8,
+   "pulse-for-event": 5,
+   "scene-protagonist": 4
+  },
+  "pet_realtime_nn": {
+   "number-unsourced": 7,
+   "property-scope": 4,
+   "pulse-for-event": 6,
+   "scene-protagonist": 3
+  },
+  "pet_recon_free": {
+   "property-scope": 1,
+   "pulse-for-event": 4,
+   "scene-protagonist": 2
+  },
+  "pet_semimono_nn": {
+   "cue-gap": 1,
+   "number-unsourced": 3,
+   "property-scope": 3,
+   "pulse-for-event": 3,
+   "scene-protagonist": 2
+  },
+  "prism_loc": {
+   "cue-gap": 5,
+   "narration-appendage": 10,
+   "number-unsourced": 2,
+   "property-scope": 2,
+   "pulse-for-event": 4
+  },
+  "prism_pet": {
+   "cue-gap": 2,
+   "narration-appendage": 9,
+   "property-scope": 1,
+   "pulse-for-event": 7,
+   "scene-protagonist": 1
+  },
+  "recon": {
+   "cue-gap": 5,
+   "narration-appendage": 12,
+   "property-scope": 3,
+   "pulse-for-event": 1
+  },
+  "relativity": {
+   "cue-gap": 2,
+   "property-scope": 1,
+   "pulse-for-event": 6,
+   "scene-protagonist": 3
+  },
+  "scintillation": {
+   "narration-appendage": 6,
+   "pulse-for-event": 3,
+   "scene-protagonist": 5
+  },
+  "shell_pet": {
+   "cue-gap": 3,
+   "narration-appendage": 11,
+   "object-morph": 2,
+   "property-scope": 2,
+   "pulse-for-event": 5,
+   "scene-protagonist": 3
+  },
+  "simultaneity": {
+   "property-scope": 1,
+   "pulse-for-event": 2
+  },
+  "slab_crlb": {
+   "cue-gap": 1,
+   "narration-appendage": 8,
+   "property-scope": 1,
+   "pulse-for-event": 7,
+   "scene-protagonist": 9,
+   "unresolved-narration": 5
+  },
+  "slab_timing": {
+   "narration-appendage": 7,
+   "pulse-for-event": 6,
+   "scene-protagonist": 6,
+   "unresolved-narration": 1
+  },
+  "subseasonal_pbc": {
+   "cue-gap": 2,
+   "property-scope": 1,
+   "pulse-for-event": 4,
+   "scene-protagonist": 1
+  },
+  "wt_pet": {
+   "cue-gap": 6,
+   "narration-appendage": 15,
+   "property-scope": 4,
+   "pulse-for-event": 3,
+   "scene-protagonist": 1
+  },
+  "zzb_slab": {
+   "cue-gap": 3,
+   "narration-appendage": 17,
+   "object-morph": 2,
+   "property-scope": 6,
+   "pulse-for-event": 7,
+   "scene-protagonist": 5,
+   "unresolved-narration": 19
+  }
+ },
+ "runtime": {
+  "guitar_theory": {
+   "icon-idle": 4,
+   "label-on-ink": 72,
+   "layout-balance": 13
+  },
+  "brain_swin": {
+   "icon-idle": 4
+  },
+  "bone_putty": {
+   "icon-idle": 5,
+   "label-on-ink": 2,
+   "layout-balance": 12,
+   "text-on-figure": 20
+  },
+  "calib": {
+   "icon-idle": 4,
+   "label-on-ink": 2,
+   "text-on-figure": 1
+  },
+  "fourier": {},
+  "einstein1905": {
+   "layout-balance": 7,
+   "text-on-figure": 12
+  },
+  "feynman2": {
+   "icon-idle": 3,
+   "label-on-ink": 15
+  },
+  "flow_match": {
+   "icon-idle": 4,
+   "layout-balance": 5
+  },
+  "i3m_pet": {
+   "icon-idle": 21
+  },
+  "liquid_tc": {
+   "icon-idle": 1
+  },
+  "laser_rt": {
+   "icon-idle": 4,
+   "label-on-ink": 8
+  },
+  "mc_recon": {},
+  "mouse_pet": {
+   "icon-idle": 2
+  },
+  "metamono": {
+   "icon-idle": 2
+  },
+  "pet_10ps": {
+   "layout-balance": 3
+  },
+  "pet_3dcnn_tof": {
+   "layout-balance": 9,
+   "layout-crowded": 1,
+   "text-on-figure": 17
+  },
+  "pet_dl_recon": {
+   "icon-idle": 5,
+   "layout-balance": 16,
+   "layout-crowded": 1,
+   "text-on-figure": 27
+  },
+  "pet_explorer": {
+   "layout-balance": 2
+  },
+  "pet_diffusion": {
+   "icon-idle": 1,
+   "label-on-ink": 1,
+   "layout-balance": 12,
+   "layout-crowded": 1,
+   "text-on-figure": 20,
+   "title-gap": 1
+  },
+  "pet_dl_review": {
+   "icon-idle": 1,
+   "layout-balance": 9,
+   "layout-crowded": 1,
+   "text-on-figure": 16
+  },
+  "pet_hetero_nanocomposites": {
+   "icon-idle": 5,
+   "layout-balance": 11
+  },
+  "pet_nanocomposites": {
+   "label-on-ink": 2,
+   "layout-balance": 9,
+   "text-on-figure": 2
+  },
+  "pet_fbsem": {
+   "layout-balance": 7,
+   "text-chain": 2,
+   "text-on-figure": 13
+  },
+  "pet_neuroexplorer": {
+   "layout-balance": 2
+  },
+  "pet_hetero_nn": {
+   "layout-balance": 3
+  },
+  "lnp_comet": {
+   "layout-balance": 7
+  },
+  "pet_perovskite": {
+   "layout-balance": 9
+  },
+  "pet_nn_timestamp": {
+   "label-on-ink": 3,
+   "layout-balance": 14,
+   "text-on-figure": 18
+  },
+  "pet_nn_monolithic": {
+   "layout-balance": 8,
+   "text-on-figure": 15
+  },
+  "pet_recon_free": {
+   "layout-balance": 1
+  },
+  "prism_loc": {
+   "icon-idle": 7,
+   "label-on-ink": 1,
+   "text-on-figure": 1
+  },
+  "prism_pet": {
+   "icon-idle": 2
+  },
+  "relativity": {
+   "layout-balance": 12,
+   "redraw-jitter": 1
+  },
+  "pet_semimono_nn": {
+   "icon-idle": 3,
+   "layout-balance": 9,
+   "text-on-figure": 13
+  },
+  "recon": {
+   "icon-idle": 11,
+   "label-on-ink": 2,
+   "text-on-figure": 7
+  },
+  "scintillation": {},
+  "shell_pet": {
+   "icon-idle": 2
+  },
+  "pet_realtime_nn": {
+   "layout-balance": 14,
+   "text-on-figure": 12
+  },
+  "simultaneity": {},
+  "slab_timing": {},
+  "slab_crlb": {},
+  "subseasonal_pbc": {
+   "icon-idle": 12,
+   "layout-balance": 5
+  },
+  "wt_pet": {
+   "icon-idle": 5
+  },
+  "zzb_slab": {
+   "icon-idle": 4,
+   "layout-balance": 15
+  }
+ }
+}

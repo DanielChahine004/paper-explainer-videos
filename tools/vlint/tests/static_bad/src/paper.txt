@@ -1,0 +1,5 @@
+Fixture source for vlint selftest (number-unsourced).
+The gain was 3.59 over 1,600 counts [17, 18], from 2 000 000 decays, a fraction of 0.45.
+
+References
+[1] A. Author, J. Fixtures 70 (1997) 17000.

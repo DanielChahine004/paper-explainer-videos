@@ -39,7 +39,9 @@ scene affordable is that the plan has already decided what the scene does.
 
 Mark the phases as you pass them, so the build times itself:
 \`python tools/timelog.py mark $V <phase>\` with received, figures, script, check, render, sent in order
-(renders log themselves).
+(renders log themselves). A phase is marked once, when it ends.
+
+Before splitting the plan for writers, run \`python -m vlint plan ../$V/plan.md --check\` from tools/ and clear it.
 
 Hand back when the video is rendered at -qh, every gate is clear (static, runtime and the join), you have
 read the review sheets and watched the joined file, and you have said in DESIGN.md's §0 what the video

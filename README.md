@@ -2,146 +2,87 @@
 
 Turn a research paper into a narrated, animated explainer video, with a coding agent doing the work.
 
-The pipeline is [ManimGX](https://github.com/academa-labs/manimgx) for rendering the animation on the GPU, with
-[Manim Community](https://www.manim.community/) and
-[manim-voiceover](https://github.com/ManimCommunity/manim-voiceover) for the checks and as the fallback
-renderer, and [Kokoro](https://huggingface.co/hexgrad/Kokoro-82M) for the narrator voice ([Chatterbox](https://github.com/resemble-ai/chatterbox)
-optional). Whisper transcribes the narration back for word timings. Visuals appear on the word that
-names them, using `<bookmark/>` tags in the narration.
+- **Render:** [ManimGX](https://github.com/academa-labs/manimgx) on the GPU; [Manim Community](https://www.manim.community/) for checks and as fallback.
+- **Voice:** [Kokoro](https://huggingface.co/hexgrad/Kokoro-82M) ([Chatterbox](https://github.com/resemble-ai/chatterbox) optional), with Whisper word timings. Visuals land on the word that names them (`<bookmark/>`).
+- **Rules:** [`DESIGN.md`](DESIGN.md), the design principles and pitfalls learnt over dozens of videos. The agent follows it.
+- **Checks:** `tools/vlint` checks every video before, during and after rendering, and stops on errors.
 
-What makes it work with an agent is [`DESIGN.md`](DESIGN.md): a set of design principles and hard-won
-rules, written and refined across a dozen videos. It covers what to show and what to say, how to
-explain a mechanism, how to keep every number honest, when to reuse a paper's figure, and a long list
-of pitfalls that broke earlier renders.
-
-**Example output:** two finished videos made with this pipeline are attached to the
-[examples release](https://github.com/DanielChahine004/paper-explainer-videos/releases/tag/examples-v1):
-a review of laser-driven particle accelerators for cancer therapy (13 min), and a topic video on how PET
-detectors are calibrated (12 min).
+**Examples:** [examples release](https://github.com/DanielChahine004/paper-explainer-videos/releases/tag/examples-v1): laser-driven accelerators for cancer therapy (13 min), PET detector calibration (12 min).
 
 ## Quick start
 
-Requirements: Linux or WSL2, an NVIDIA GPU with CUDA 12 (about 4 GB per narration job), and
-[pixi](https://pixi.sh). Optional, for GPU rendering: ManimGX (see [Rendering engines](#rendering-engines)).
+Needs Linux or WSL2, an NVIDIA GPU (CUDA 12) and [pixi](https://pixi.sh).
 
 ```bash
 git clone https://github.com/DanielChahine004/paper-explainer-videos
 cd paper-explainer-videos
 pixi install
-bash tools/check.sh kit_gallery   # smoke test: static checks and every scene in skip mode
-```
-
-The narrator is Kokoro, which runs in its own env; set it up once:
-
-```bash
 mkdir -p ~/kokoro_env && cp tools/kokoro_env/pixi.toml ~/kokoro_env/ && pixi install --manifest-path ~/kokoro_env/pixi.toml
+bash tools/check.sh kit_gallery   # smoke test
 ```
 
-The first run downloads the Kokoro and Whisper weights and installs TinyTeX into `~/.TinyTeX`. `TTS=chatterbox` uses Chatterbox instead.
+The first run downloads the Kokoro and Whisper weights and TinyTeX. `TTS=chatterbox` switches voice.
 
-## Rendering engines
+## Making a video
 
-The same scene file renders under two engines; `render.sh` says which one it used (`== engine:`).
-
-- **ManimGX** (`ENGINE=gx`, the default whenever it's found): a Rust/GPU engine with Manim Community's API.
-  It renders a 10-minute, 15-scene video in about 1.5 minutes, including the checks and contact sheets. Manim
-  Community takes about 6 minutes for the same video, and 3D scenes render about 50 times faster under ManimGX.
-  Install it in its own environment (Python 3.13+, `pip install manimgx`). Then put `manimgx` on your PATH, or
-  set `GX_EXE` to the executable. Under WSL2, install it on the Windows side and set
-  `GX_EXE=/mnt/c/.../Scripts/manimgx.exe`: WSL has no NVIDIA Vulkan driver, so a Linux install there runs on
-  the CPU, while the Windows build reached from WSL uses the GPU. `common_gx.py` replays the narration
-  cached by the voice pre-pass and times each `self.at()` cue from the word timings, as manim-voiceover does.
-- **Manim Community** (`ENGINE=ce`, or when ManimGX is missing): CPU rendering with Cairo, one core per scene,
-  through `common_ce.py`.
-
-vlint's runtime checks always run under Manim Community, in skip mode beside each ManimGX render. So write
-scenes in the API both engines share. ManimGX typesets LaTeX through Typst (converted by mitex):
-`common_gx.py` patches accents (`\'a`), `\&` and `\ `, and a LaTeX package mitex lacks fails the render.
-
-## Making a video with a coding agent
-
-Open the repo in Claude Code (or any agent that reads `AGENTS.md`) and ask, for example:
+Open the repo in Claude Code (or any agent that reads `AGENTS.md`):
 
 > Make a narrated explainer video of `paper.pdf`, following AGENTS.md.
 
-The agent reads `DESIGN.md`, plans the scenes, writes `<name>/<name>_vo.py`, renders a draft,
-reviews contact sheets of every scene, fixes what it finds, and renders the final 1080p video. The
-workflow is in [`AGENTS.md`](AGENTS.md). Feedback you give on one video goes into `DESIGN.md`, so the
-next video starts from it.
+The steps the agent follows are in [`AGENTS.md`](AGENTS.md). By hand:
+
+```bash
+bash tools/prep.sh <video> paper.pdf     # inputs + <video>/brief.md (fill its TODOs)
+bash tools/brief.sh <video>              # the prompt a building agent starts from
+bash tools/check.sh <video>              # static + skip-mode checks
+QUALITY=-ql bash tools/run_v.sh <video>  # draft; -qh for the 1080p final
+bash tools/watch.sh <video>              # sample the finished video
+```
+
+Feedback on one video goes into `DESIGN.md`, so the next starts from it.
+
+## Rendering engines
+
+- **ManimGX** (`ENGINE=gx`, default when found): about 4x faster than Manim Community, and about 50x for 3D. Install it in its own env
+  (Python 3.13+, `pip install manimgx`); put it on PATH or set `GX_EXE`. Under WSL2, install it on Windows and set
+  `GX_EXE=/mnt/c/.../manimgx.exe` (WSL has no NVIDIA Vulkan driver).
+- **Manim Community** (`ENGINE=ce`): CPU fallback. vlint's runtime checks always run here, so write scenes in
+  the shared API. ManimGX typesets LaTeX through Typst; packages mitex lacks fail.
 
 ## Checks (vlint)
 
-Rules that a program can decide don't rely on the agent remembering them. `tools/vlint` checks a video at
-three points, and `render.sh` stops on any error:
+- **Static** (~1 s): LaTeX strings, bookmarks, cues, unsourced numbers, `SCENES` vs script, >1080p.
+- **Runtime** (each scene, skip mode): clipped or overlapping labels, vanished objects, crowded or off-centre layout.
+- **Join:** missing or stale scenes, audio drift, length. Only scenes whose code changed re-render.
 
-- **before rendering** (static, plain Python, ~1 s): non-raw LaTeX strings, an object faded in and pulsed in the
-  same play (it ends invisible), images inside a `VGroup`, scene names that shadow manim, bookmark typos and
-  order, a narrated property (a width, an edge) with no cue on it, `SCENES` out of step with the script,
-  anything above 1080p;
-- **while each scene runs** (inside `common_ce.Narrated`, in Manim Community's skip mode): labels cut off by the frame, overlapping labels,
-  introduced objects that end invisible, pulses that recolour an image, arrows through labels, chains of
-  text boxes joined by arrows, panels crammed together or off-centre while space is free, bookmarks never
-  reached;
-- **at the join**: missing or stale scenes, audio drift, length, resolution. Each scene's video carries a
-  fingerprint of the code that made it, so `render.sh` re-renders exactly the scenes you changed.
-
-```bash
-python tools/vlint check <name>   # run after every edit
-python tools/vlint rules                 # what is checked, and the DESIGN.md rule behind each
-```
-
-Every rule has a planted bug in `tools/vlint/tests` (`python tools/vlint selftest`). Severities, options and
-per-scene exceptions go in a `vlint.toml`; one-off exceptions go in a `# vlint: ignore[rule]` comment. To add a
-rule, see [`tools/vlint/README.md`](tools/vlint/README.md).
-
-## Voice
-
-The narrator voice is generated automatically during the draft render and cached, so later renders
-reuse it. Kokoro voices it (with `TTS=chatterbox`, each sentence is transcribed back and regenerated with
-a new seed if it doesn't match the script). Bookmarks are timed from Whisper's word timestamps. See
-[`docs/VOICE.md`](docs/VOICE.md) for how it works, how to write narration it reads well, how to check and fix
-failed sentences, how to clone a voice.
+`python tools/vlint rules` lists them all; `python tools/vlint selftest` runs each rule's planted bug.
+Adding a rule: [`tools/vlint/README.md`](tools/vlint/README.md).
 
 ## Layout
 
-| Path | What it is |
+| Path | What |
 |---|---|
-| `DESIGN.md` | the design rules: principles, craft, workflow, pitfalls |
-| `AGENTS.md`, `CLAUDE.md` | instructions for coding agents |
-| `common.py` | picks the engine (`ENGINE`) and imports one of the two below |
-| `common_ce.py` | Manim Community side: shared look, the `Narrated` scene base (with the runtime checks), `self.at()` cues, `fit_frame()` |
-| `common_gx.py` | ManimGX side: the same helpers, and a `Narrated` that replays the cached narration |
-| `voices.py` | the speech services (Kokoro by default, Chatterbox, an espeak timing check) with Whisper word timings |
-| `docs/VOICE.md` | how the narration voice is generated, checked and tuned |
-| `pixi.toml` | the environment |
-| `tools/render_lib.sh` | the render pipeline every `render.sh` sources, gated by vlint: narration first, then every scene at once (slowest first), the join and a small copy |
-| `tools/voice_prepass.py` | voices all narration before rendering, two model copies sharing the GPU |
-| `tools/vlint/` | the checks: rules, planted-bug tests, how to add a rule |
-| `kit.py`, `KIT.md` | the shared drawing primitives, and their catalogue; `kit_gallery/` draws every one |
-| `tools/prep.sh`, `tools/brief.sh` | a paper's inputs and `brief.md`; the whole prompt a building agent starts from |
-| `tools/writers.py` | splits a planned video into one folder per scene writer, and merges them back |
-| `tools/check.sh`, `tools/watch.sh`, `tools/review.sh` | static and skip-mode checks; the finished video sampled where the picture changes; per-scene review sheets |
-| `tools/kit_promote.py` | which of a video's helpers other videos also wrote: the candidates for kit |
-| `tools/catalog.py`, `tools/reels.py` | streams the rendered videos to phones and TVs on the home network, with timestamped feedback notes; `/reels` plays every scene as a swipe-through clip, each video an account |
-| `tools/timelog.py` | how long each video took, phase by phase (renders log themselves) |
-| `tools/run_v.sh`, `tools/sync.sh` | render a video from the WSL filesystem (much faster than `/mnt/c`) and copy it back |
-| `laser_rt/`, `calib/` | two worked examples (scripts only; videos are on the release) |
+| `DESIGN.md`, `AGENTS.md` | design rules; agent instructions |
+| `kit.py`, `KIT.md`, `kit_gallery/` | shared drawing primitives, their catalogue, a video drawing each |
+| `common*.py`, `voices.py` | engine shim and scene base; speech services |
+| `tools/render_lib.sh`, `tools/voice_prepass.py` | the render pipeline every `render.sh` sources; narration first |
+| `tools/prep.sh`, `brief.sh`, `writers.py` | inputs, agent prompt, per-scene writers |
+| `tools/check.sh`, `run_v.sh`, `watch.sh`, `review.sh` | check, render, sample, review sheets |
+| `tools/vlint/` | the checks and their tests |
+| `tools/catalog.py`, `reels.py`, `timelog.py` | home-network player with feedback notes; build timings |
+| `laser_rt/`, `calib/` | worked examples (scripts; videos on the release) |
 
 ## Examples
 
-Two worked examples, both made after the design rules were consolidated, so they follow them most
-closely. Their rendered videos are on the [examples release](https://github.com/DanielChahine004/paper-explainer-videos/releases/tag/examples-v1).
+| Folder | Kind | Source |
+|---|---|---|
+| `laser_rt` | survey, 18 scenes, 13 min | Alabd & Franklin, laser-driven accelerators for cancer therapy, PMB 2026 (CC BY 4.0) |
+| `calib` | topic across papers, 21 scenes, 12 min | PET detector calibration: Casey & Nutt 1986, Maas 2009, Borghi 2016, Cucarella 2026, Freire 2026 |
 
-| Folder | Kind | Source | Shows |
-|---|---|---|---|
-| `laser_rt` | survey (review), 18 scenes, 13 min | R. Alabd & D. R. Franklin, laser-driven particle accelerators for cancer therapy, Phys. Med. Biol. 2026 (CC BY 4.0) | shaped for a survey: a field map promised up front, a navigator on every scene, a side-by-side comparison of the three mechanisms, and the full map with gaps at the end; mechanisms redrawn as animations |
-| `calib` | topic across papers, 21 scenes, 12 min | how PET detectors are calibrated, pixelated vs (semi-)monolithic: Casey & Nutt 1986, Maas 2009, Borghi 2016, Cucarella 2026, Freire 2026 | bench demonstrations (flood, pencil beam, fan beam); "why before how" scenes; reused CC BY figures with credits |
-
-The example narrations summarise third-party work, and every number in them comes from the cited
-sources. Figure crops in `assets/` come only from CC BY papers, are shown with an on-screen credit, and
-remain under their original licences. Figures from papers that don't allow reuse are redrawn from scratch.
+Every number comes from the cited sources. Reused figure crops are from CC BY papers only, credited on screen,
+and keep their licences. Other figures are redrawn.
 
 ## Licence
 
-Code and documentation: MIT (see `LICENSE`). Third-party tools and model weights (Manim, ManimGX (GPL),
-Chatterbox, Whisper, TinyTeX) are under their own licences; ManimGX is installed separately, not bundled.
+Code and docs: MIT (`LICENSE`). Manim, ManimGX (GPL, not bundled), Kokoro, Chatterbox, Whisper and TinyTeX
+keep their own licences.

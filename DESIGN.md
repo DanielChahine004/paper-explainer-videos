@@ -19,6 +19,15 @@ Each video should leave this file better than it found it, and this is part of f
   *incidental* (this video only), *design* (a class a reader must judge: add or sharpen a rule here), *vlint* (a class
   a program can catch: add a rule with a planted bug), or *wontfix* with the reason. Close each one with
   `feedback.py resolve <video> <nid> <kind> "<what changed>"`, so the record shows which notes became rules.
+- **pet_entangled (a physics idea, then its test).** The idea was one picture before it was any number: the rate
+  against the angle between two scatter planes, whose peak height is R. The same `dphi_plot` axes then carried the ceiling
+  (1.63), the theory (2.85), the measurement (1.85), the loss on a prior scatter and the recap, so five scenes
+  shared one figure. Plan-first held: four Sonnet writers, 13 scenes, merged with one refusal (a writer's
+  module-level name `R_MAX`, which had to be `_idea_R_MAX`). What cost time: the shared helper `dphi_plot` put
+  its |Δϕ| label on the "180°" tick, and all four writers worked round it separately (it is fixed by shifting `xt`
+  right in the helper before the next split, not after); the plan's `plain` versus `new:`/`side:` prefixes were
+  re-chosen by every writer (a cue that draws a leg or frame is `new:`); and a figure's y levels (Fig. 2's 1.63
+  line) had to be measured from pixels, which the plan should hand over.
 - Prefer deepening a principle in Part I over adding a new rule. Rules carry a short example in
   brackets so a later reader can judge when they apply.
 - **If a program could have caught it, make the program catch it.** A rule here relies on someone remembering

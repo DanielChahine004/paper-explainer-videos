@@ -28,6 +28,16 @@ Each video should leave this file better than it found it, and this is part of f
   right in the helper before the next split, not after); the plan's `plain` versus `new:`/`side:` prefixes were
   re-chosen by every writer (a cue that draws a leg or frame is `new:`); and a figure's y levels (Fig. 2's 1.63
   line) had to be measured from pixels, which the plan should hand over.
+- **pet_mrpc (a detector design chain, 986 words, 6:10).** One shared picture carried the argument: `rpc_stack`, a side view of
+  the chamber's layers, mutated from plain chamber to converter touching the gas to a glass insulator to a stack of a hundred
+  gaps, and rebuilt (not carried) by each scene that needed it. Plan-first held: four Sonnet writers, ten scenes, merged with one
+  refusal (two module-level constants, `MUM` and `CITE4`, which had to be `_dir_` private) and nine prefix changes (every one a
+  `side:` that was really a `new:`: a cue that fades a frame or figure in is an arrival). Decided while planning, by reading the
+  paper: Fig. 5's plateau (about 0.31 %) contradicts the text's 0.228 %, so the scene draws the text's bars and does not reuse the
+  figure; a number "read off" Fig. 4(b) (0.45 at 307 keV) is labelled so on screen. What cost time: the plan's per-scene
+  layout notes put every stack at x = -3.7 with nothing on the right until the last cue, so five scenes sheet as left-weighted with
+  an empty half (the notes should give the right half something from the first cue); and the plan's `gas` and `side:` lines
+  were re-prefixed by writers again. Script phase (plan, words, voice check, four writers, merge) took about 17 minutes.
 - Prefer deepening a principle in Part I over adding a new rule. Rules carry a short example in
   brackets so a later reader can judge when they apply.
 - **If a program could have caught it, make the program catch it.** A rule here relies on someone remembering

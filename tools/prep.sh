@@ -16,7 +16,7 @@ D="$R/$V"
 [ ! -f "$D/brief.md" ] || { echo "$V/brief.md exists: this video already has its inputs (delete it to start over)" >&2; exit 2; }
 PY=""; for p in python python3; do "$p" -c "" 2>/dev/null && { PY=$p; break; }; done   # Windows' python3 is a Store stub
 [ -n "$PY" ] || { echo "no python on PATH" >&2; exit 2; }
-pp() { pixi exec -s poppler "$@" 2> >(grep -v -E "Invalid XRef entry|No display font" >&2); }
+pp() { pixi exec -s poppler "$@" 2> >(grep -v -E "Invalid XRef entry|No display font|Syntax (Error|Warning)" >&2); }
 
 mkdir -p "$D/src" "$D/assets"
 "$PY" "$R/tools/timelog.py" mark "$V" received
@@ -36,7 +36,7 @@ title=$(echo "$info" | sed -n 's/^Title: *//p' | sed 's/ *$//')
 # no Title in the metadata (pet_mrpc, an arXiv preprint): the first run of text lines on page 1, which is the title
 # on nearly every paper. Said as a guess in the brief, for the agent to check against the front page.
 if [ -z "$title" ]; then
-  guess=$(awk 'NF && !/arXiv|^[ \t]*[0-9]+[ \t]*$/ { gsub(/^[ \t]+|[ \t]+$/, ""); t = t (t ? " " : "") $0; n++; if (n == 3) exit; next }
+  guess=$(awk 'NF && !/arXiv|[Pp]repared for|[Ss]ubmitted to|[Pp]reprint|^[ \t]*[0-9]+[ \t]*$/ { gsub(/^[ \t]+|[ \t]+$/, ""); t = t (t ? " " : "") $0; n++; if (n == 3) exit; next }
                t { exit } END { print t }' paper.txt)
   [ -n "$guess" ] && title="\"$guess\" (title read off page 1; check it)"
 fi
@@ -49,7 +49,7 @@ caps=$(awk 'BEGIN { p = 1 }
     while (match(s, /(^ *|   +)(Figure|Fig\.|Table|TABLE) +[0-9IVX]+([:.]| +[A-Z])/)) {
       c = substr(s, RSTART, RLENGTH); sub(/^ +/, "", c); sub(/([:.]| +[A-Z])$/, "", c)
       print "  - page " p ": " c; s = substr(s, RSTART + RLENGTH) } }' paper.txt \
-  | sort -u -t: -k2,2 | sort -s -t' ' -k5,5 -k6,6n | sort -s -t' ' -k4,4n)
+  | sort -u -t: -k2,2 | sort -s -t' ' -k6,6 -k7,7n | sort -s -t' ' -k5,5n)
 # a table whose caption is in the text and whose cells are not is an image in the PDF: number-unsourced
 # cannot see its numbers either way (pet_hetero_nn, Tables II and IV)
 words=$(wc -w < paper.txt)

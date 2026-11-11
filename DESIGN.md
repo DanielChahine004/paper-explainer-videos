@@ -128,6 +128,21 @@ here, however well they work there.
 Narration carries the argument. The picture does two jobs the voice can't: it shows the viewer
 **where to look**, and it gives them **a way to picture the idea**, a form they can think with after the
 voice has moved on. Neither repeats the other. Every rule below serves one of those two jobs.
+- **Show, don't tell: the screen runs what the voice describes** (user, `pico40l`: "employing the visuals in the
+  videos like showing events/physics/calculations/geometrys happening - show not tell"). This is the first test a
+  scene is judged by. Whatever the paper describes happening is made to happen on screen, not named beside a
+  picture of it:
+  - **an event:** it plays out in time (a particle enters, scatters, deposits, and the readout answers);
+  - **physics:** the quantity is drawn and moves with its cause (a pressure drops and the liquid crosses into
+    superheat; a field is arrows that bend the track);
+  - **a calculation:** the numbers flow through it term by term, the result builds from its inputs on screen, and
+    a changed input visibly changes the answer;
+  - **geometry:** the shape is drawn to scale and the distance, angle or solid angle is measured on it, by a
+    line that sweeps or a ray that travels, not stated in a label.
+  Before a scene is planned, write in one sentence what *happens* in it; a scene with nothing that happens is a
+  title card and is cut or rethought. In `plan.md`, most marks of a scene should be plain or `side:` lines
+  (something on screen changing), not `new:` and `mark:` (`vlint cues` prints the split). The sections below
+  (§2 mechanism, §3 physics, "Animate the event") are this rule worked out case by case.
 - **Draw, don't write.** Text on screen is a label or a **bold number**, never prose. That means
   about 3 short lines per scene besides titles and diagram labels. A spec list becomes a drawing of
   the object with dimension arrows. A pipeline becomes the data passing through its stages. Specs that

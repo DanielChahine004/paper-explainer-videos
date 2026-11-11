@@ -22,6 +22,10 @@ Read DESIGN.md first -- Part I and Part II are the rules every frame is judged b
 workflow you follow step by step. Then read $V/brief.md: that video's source, its audience, the format it
 is in, and what has already been cut out of its source for you. Then do Part III, steps 1 to 8, for $V.
 
+Show, don't tell (Part I §1, the first rule): every event, piece of physics, calculation and geometry the
+narration describes happens on screen -- it moves, flows, builds or is measured -- rather than being named
+beside a still picture. Hold your plan and your writers to it.
+
 Those two files and the inputs the brief names are your priors, and nothing else is. An earlier version
 of this video may exist in git, or in the folder, or in the conversation that started you. You are not to
 read it, ask for it, or render it. Where you catch yourself about to copy a decision instead of making

@@ -678,6 +678,10 @@ labelled illustrative/schematic.
   and may recede (vlint: `faint-mark`; guitar Notes' sharps were grey on the dark neck).
 
 ## Reusing a figure
+- **Place a frame by reading numbers, never by eye** (pet_g4_configs, pet_entangled: frames cut through tick
+  labels or were set by eye, and writers measured plot levels themselves). `pixi exec -s pillow python
+  tools/figgrid.py <video>/assets/<fig>.png` writes a copy with a labelled fraction grid; read `fig_box` fractions
+  and any plot level off it while planning, and put them in the plan note. A frame holds a whole label or none of it.
 - **Pointer boxes on a lifted figure are never white** (user, `pet_dl_recon`: "white bounding box on white image -
   not a good idea"). Paper figures sit on white, so use the colour of what is pointed at (the method's colour,
   BAD_C for the worse result) or TEAL_L as the neutral (vlint: `pointer-white-on-page`).

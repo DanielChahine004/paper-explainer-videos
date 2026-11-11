@@ -11,7 +11,8 @@ repository; the name is unique because tools/sync.sh keys the render root on it)
   - examples.py, the scenes the lead has already written, to read for the house style. It is not a *_vo.py,
     so nothing lints or renders it;
   - render.sh listing only that writer's scenes, and plan.md holding only their sections;
-  - assets/, heard_ok.txt and vlint.toml as the video has them, and WRITER.md, which is the writer's brief.
+  - assets/, heard_ok.txt and vlint.toml as the video has them, and WRITER.md, which is the writer's brief;
+  - helpers.png, every shared helper drawn once. split refuses without it when the script has helpers.
 So the writer's first check passes the scene-list gate. On geant4 the base carried two finished scenes as
 examples and a render.sh that did not list them; `scene-list` is an error, and all five writers got past it
 with VLINT_ALLOW=1 -- five writers independently switching a gate off is the gate teaching them to.
@@ -70,9 +71,26 @@ def _spoken(section):
     return " ".join(" ".join(l.lstrip("> ").strip() for l in section.splitlines() if l.startswith(">")).split())
 
 
-def split(v, assign, per):
+def _helpers_sheet(d, text, sheet):
+    """The picture of every shared helper drawn once, which a split needs when the script has helpers: a helper
+    is frozen once it is split, so what is wrong with it must be seen first (pet_entangled: dphi_plot put its axis
+    name on the 180 degree tick, and four writers each worked round it). None when the script has no helpers."""
+    helpers = [n.name for n in ast.parse(text).body if isinstance(n, ast.FunctionDef)]
+    if not helpers:
+        return None
+    p = Path(sheet) if sheet else d / "src" / "helpers.png"
+    if not p.exists():
+        sys.exit(f"writers: {len(helpers)} shared helpers ({', '.join(helpers[:6])}{' ...' if len(helpers) > 6 else ''}) "
+                 f"and no picture of them. Render a throwaway scene that draws each once with a marked target, "
+                 f"fix what is wrong, and save one frame or sheet as {d.name}/src/helpers.png (or pass --helpers <png>). "
+                 f"DESIGN Part III, step 2.")
+    return p
+
+
+def split(v, assign, per, sheet=None):
     d, rsh, script, scenes = _video(v)
     text = script.read_text(encoding="utf-8")
+    hp = _helpers_sheet(d, text, sheet)
     tops = _tops(text)
     written = [n for n, (_, _, sc) in tops.items() if sc]
     if not assign:
@@ -126,6 +144,8 @@ def split(v, assign, per):
                 shutil.copy2(t, c / "src" / t.name)
         if (d / "assets").is_dir():
             shutil.copytree(d / "assets", c / "assets")
+        if hp:
+            shutil.copy2(hp, c / "helpers.png")
         wsl = "/mnt/" + c.drive[0].lower() + c.as_posix()[2:] if c.drive else c.as_posix()
         wroot = "/mnt/" + ROOT.drive[0].lower() + ROOT.as_posix()[2:] if ROOT.drive else ROOT.as_posix()
         (c / "WRITER.md").write_text(_BRIEF.format(v=v, scenes=", ".join(mine), script=script.name, c=c.as_posix(), wsl=wsl,
@@ -144,6 +164,7 @@ You write these scenes of one video, and nothing else: {scenes}.
 
 Your folder is {c}. Work only in it.
 - plan.md is your whole brief: every spoken word, every cue and what it is for. You do not need the paper.
+- helpers.png shows every shared helper drawn once (if the script has helpers): look at it before calling one.
 - {script} holds the video's shared helpers and palette, then a marker line. Add your scenes below the marker.
   Change nothing above it. A helper of your own is named `_<scene>_<what>` and goes below the marker too.
 - Before you write a helper, read {root}/KIT.md: the shared primitives (code, call trees, files, stacks,
@@ -235,11 +256,12 @@ def main():
     sub = ap.add_subparsers(dest="cmd", required=True)
     s = sub.add_parser("split")
     s.add_argument("video"), s.add_argument("assign", nargs="*"), s.add_argument("--per", type=int, default=3)
+    s.add_argument("--helpers", help="the picture of every shared helper (default <video>/src/helpers.png)")
     m = sub.add_parser("merge")
     m.add_argument("video")
     a = ap.parse_args()
     if a.cmd == "split":
-        split(a.video, {x.split("=")[0]: x.split("=")[1].split(",") for x in a.assign}, a.per)
+        split(a.video, {x.split("=")[0]: x.split("=")[1].split(",") for x in a.assign}, a.per, a.helpers)
         return 0
     return merge(a.video)
 

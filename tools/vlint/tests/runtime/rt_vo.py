@@ -8,7 +8,7 @@ from manim import *
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 from vlint.runtime import Checked, vlint_ok  # noqa: E402
 
-EXPECT = {"frame-clip": 1, "text-overlap": 1, "vanished-after-intro": 1, "bookmark-unfired": 2, "indicate-image": 1, "text-chain": 1, "arrow-over-label": 1, "layout-crowded": 1, "layout-balance": 1, "arrow-skew": 1, "title-margin": 1, "line-over-label": 1, "redraw-jitter": 1, "shape-overlap": 1, "title-gap": 1, "faint-mark": 2, "frame-margin": 1, "icon-idle": 1, "intro-of-visible": 1, "number-undrawn": 1, "image-edge-cut": 1, "front-box-cut": 1, "number-flash": 1}
+EXPECT = {"frame-clip": 1, "text-overlap": 1, "vanished-after-intro": 1, "bookmark-unfired": 2, "indicate-image": 1, "text-chain": 1, "arrow-over-label": 1, "layout-crowded": 1, "layout-balance": 1, "arrow-skew": 1, "title-margin": 1, "redraw-jitter": 1, "title-gap": 1, "faint-mark": 2, "frame-margin": 1, "icon-idle": 1, "intro-of-visible": 1, "number-undrawn": 1, "image-edge-cut": 1, "front-box-cut": 1, "number-flash": 1, "text-on-figure": 1, "label-on-ink": 2, "label-overhang": 1}
 
 
 class Fixture(Checked, Scene):
@@ -22,11 +22,16 @@ class Fixture(Checked, Scene):
         self.play(FadeIn(c), Indicate(c), run_time=0.2)                             # vanished-after-intro
         d = vlint_ok(Text("allowed", font_size=36).move_to(DOWN * 0.5), "text-overlap")
         e = Text("allowed too", font_size=36).move_to(DOWN * 0.5 + RIGHT * 0.2)
+        # these two are exempt from text-overlap on purpose, but they really are drawn on each
+        # other, so label-on-ink counts one of them too (hence 2, not 1)
         self.play(FadeIn(d), FadeIn(e), run_time=0.2)                               # exempt: fine
         pic = Group(ImageMobject(np.full((8, 8, 4), 200, dtype=np.uint8)).set_height(1).move_to(LEFT * 4), Square(1).move_to(LEFT * 4))
         self.add(pic)
         self.play(Indicate(pic), run_time=0.2)                                      # indicate-image
         self.play(Indicate(pic[1]), run_time=0.2)                                   # the frame: fine
+        onfig = Text("on", font_size=20).move_to(pic.get_center())   # short: must not reach pic's own frame   # text-on-figure, label-on-ink
+        self.play(FadeIn(onfig), run_time=0.2)                                      # text-on-figure
+        self.remove(onfig)
         def chain(icon):
             bx = VGroup(*[VGroup(RoundedRectangle(width=1.4, height=0.6), Text(w, font_size=20)) for w in ("in", "net", "out")])
             bx.arrange(RIGHT, buff=0.6).move_to(UP * 3.1)
@@ -57,12 +62,12 @@ class Fixture(Checked, Scene):
         self.play(FadeIn(hi), FadeIn(lo), FadeIn(bar), FadeIn(sub), run_time=0.2)
         self.remove(bar, sub)
         self.play(FadeOut(hi), FadeOut(lo), run_time=0.2)
-        crv = Line(LEFT * 3 + DOWN * 2.6, RIGHT * 3 + DOWN * 2.6)
-        on = Text("on the line", font_size=30).move_to(LEFT * 1.8 + DOWN * 2.6)                 # line-over-label
-        off = Text("beside the line", font_size=30).next_to(crv, UP, buff=0.15).shift(RIGHT * 1.8)   # fine
+        thin = Rectangle(width=0.42, height=2.0, color=GREY_B).move_to(LEFT * 1.8 + DOWN * 1.6)
+        on = Text("the score", font_size=30).move_to(thin.get_center() + UP * 0.4)            # label-overhang
+        off = Text("beside the bar", font_size=30).next_to(thin, RIGHT, buff=0.25)               # fine
         box = SurroundingRectangle(off, buff=0.1)                                   # an outline around a label: fine
-        self.play(Create(crv), FadeIn(on), FadeIn(off), Create(box), run_time=0.2)
-        self.play(FadeOut(crv), FadeOut(on), FadeOut(off), FadeOut(box), run_time=0.2)
+        self.play(Create(thin), FadeIn(on), FadeIn(off), Create(box), run_time=0.2)
+        self.play(FadeOut(thin), FadeOut(on), FadeOut(off), FadeOut(box), run_time=0.2)
         k = ValueTracker(0.0)
         saw = always_redraw(lambda: VMobject().set_points_as_corners([[x, -1 + 0.4 * ((k.get_value() * 9) % 1), 0] for x in np.linspace(-3, 3, 30)]))
         glide = always_redraw(lambda: VMobject().set_points_as_corners([[x, 1 + 0.3 * np.sin(x + k.get_value()), 0] for x in np.linspace(-3, 3, 30)]))

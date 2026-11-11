@@ -4,6 +4,7 @@ each play, payload anims), "vo_open"
 (text), "cue" (mark), "vo_close", "end". They read the real mobjects, so they catch what the script can't show:
 where things ended up and whether they can be seen."""
 import re
+import sys
 
 from .core import opt, rule
 from .runtime import walk
@@ -149,6 +150,100 @@ def text_overlap(mon, ev, p):
                 yield key, f"{label(ts[i])} overlaps {label(ts[j])} ({100 * iw * ih / small:.0f}% of the smaller)"
 
 
+@rule("text-on-figure", "runtime", "warn", "A label lies on a reused figure. The figure is somebody else's "
+      "picture on white paper, so a word laid over it is unreadable and looks like part of the paper (user, "
+      "lnp_comet: 'there seems to be text overlaying images or nearby in the video'). A label merely close to "
+      "a figure is not this: a number under the picture it measures is how this project captions things.",
+      "Reusing a figure",
+      "move the label off the card (a caption goes under it, a name goes out to the side), or, when it really "
+      "belongs on the picture, mark it vlint_ok(t, \"text-on-figure\")")
+def text_on_figure(mon, ev, p):
+    if ev != "play":
+        return
+    # Nearness is not a finding: a number under the figure it measures is the house style (DESIGN 1, "a
+    # number sits on what it measures"), and asking for air around every card put this rule in the way of
+    # a directive. 352 of its 569 findings across the corpus were that, and not one of the 569 was ever
+    # suppressed -- a warning nobody argues with is a warning nobody reads. Overlap only now; the ink that
+    # actually collides is label-on-ink's question, which it answers in pixels rather than boxes.
+    pad = float(opt(mon, "figure_card_pad", 0.08))        # card() backs an image with a white rectangle
+    imgs = [m for m, ok in walk(mon.scene.mobjects) if isinstance(m, M.AbstractImageMobject)
+            and "text-on-figure" not in ok and "*" not in ok and visibility(m) >= 0.5]
+    if not imgs:
+        return
+    boxes = [(b[0] - pad, b[1] - pad, b[2] + pad, b[3] + pad) for b in (bbox(m) for m in imgs)]
+    for t in leaves(mon.scene, "text-on-figure"):
+        if not isinstance(t, TEXTS()) or visibility(t) < 0.05:
+            continue
+        x0, y0, x1, y1 = bbox(t)
+        for m, (bx0, by0, bx1, by1) in zip(imgs, boxes):
+            if min(x1, bx1) - max(x0, bx0) <= 0 or min(y1, by1) - max(y0, by0) <= 0:
+                continue
+            yield (id(t), id(m)), f"{label(t)} lies on a figure "                                   f"(label x {x0:.2f}..{x1:.2f}, y {y0:.2f}..{y1:.2f}; "                                   f"figure x {bx0:.2f}..{bx1:.2f}, y {by0:.2f}..{by1:.2f})"
+            break
+
+
+def _label_ink(mon, box, own, tol):
+    """(background, own ink, foreign ink) pixel counts in a frame rectangle.
+
+    Foreign ink is everything that is neither the background nor the label's own colour, so it does not matter
+    what is underneath: a reused figure, a plate of wells, a ring, a curve, another label. This is the one
+    question a bounding box cannot answer and a pixel can.
+    """
+    import numpy as np
+    import manim as M
+    f = mon.frame()
+    if f is None:
+        return None
+    h, w = f.shape[0], f.shape[1]
+    x0, y0 = mon.to_px(box[0], box[3])                   # top-left: y is flipped
+    x1, y1 = mon.to_px(box[2], box[1])
+    x0, x1 = max(0, int(x0)), min(w, int(np.ceil(x1)))
+    y0, y1 = max(0, int(y0)), min(h, int(np.ceil(y1)))
+    if x1 - x0 < 2 or y1 - y0 < 2:
+        return None
+    crop = f[y0:y1, x0:x1, :3].astype(int)
+    bg = np.asarray(M.ManimColor(getattr(mon.scene.camera, "background_color", None)
+                                 or M.config.background_color).to_rgb()) * 255
+    # An antialiased glyph edge is a blend of the label's colour and the background, so "expected" is the whole
+    # segment between the two, not its two endpoints. Judging by the endpoints alone counts every edge pixel as
+    # foreign, which at 480p is a quarter of a small label's box.
+    o = np.asarray(own) * 255.0
+    d = o - bg
+    dd = float(d @ d) or 1.0
+    a = np.clip(((crop - bg) @ d) / dd, 0.0, 1.0)[..., None]
+    resid = np.abs(crop - (bg + a * d)).max(axis=2)
+    expected = resid <= tol
+    own_ink = expected & (a[..., 0] > 0.5)
+    return int((expected & ~own_ink).sum()), int(own_ink.sum()), int((~expected).sum()), (~expected), (x0, y0)
+
+
+@rule("label-on-ink", "runtime", "warn", "A label is sitting on something. Counted in the rendered pixels: the "
+      "share of its box that is neither the background nor the label's own colour. A label on clear background "
+      "is background plus its own strokes; one laid over a figure, a plate of wells, a curve or another drawing "
+      "has that drawing showing through between its letters (user, lnp_comet: 'text overlaying images or "
+      "nearby', 'the text overlapping the well plate').", "Part II, Layout",
+      "move the label clear, or put it where the picture really is empty; if it belongs on the picture, give it "
+      "a backing or mark it vlint_ok(t, \"label-on-ink\")")
+def label_on_ink(mon, ev, p):
+    if ev != "play" or isinstance(mon.scene, M.ThreeDScene) or mon.frame() is None:
+        return
+    most = float(opt(mon, "label_foreign", 0.5))
+    tol = int(opt(mon, "label_tol", 42))
+    for t in leaves(mon.scene, "label-on-ink"):
+        if not isinstance(t, TEXTS()) or visibility(t) < 0.5:
+            continue
+        col = t.get_color()
+        if col is None:
+            continue                       # a text with no colour of its own: nothing to tell its ink apart by
+        got = _label_ink(mon, bbox(t), M.ManimColor(col).to_rgb(), tol)
+        if not got:
+            continue
+        b, o, fgn = got[:3]
+        n = b + o + fgn
+        if n and fgn / n > most:
+            yield id(t), f"{label(t)} is drawn on top of something: {100 * fgn / n:.0f}% of its box is "                          f"neither the background nor its own ink (over {100 * most:.0f}%)"
+
+
 def _flatten(anims):
     for a in anims:
         # TransformMatchingShapes/Tex fade their unmatched pieces in, then swap in the target: one animation, not intros
@@ -256,67 +351,6 @@ def _inside(poly, P):
     return cross.sum(axis=1) % 2 == 1
 
 
-@rule("shape-overlap", "runtime", "warn", "Two filled shapes partly overlap: one runs into the other by accident "
-      "(rows spaced closer than the shapes are tall). A shape mostly inside another is a layer and is left alone.",
-      "Part II, Layout", "space the rows by the shapes' real extent, or shrink the shape")
-def shape_overlap(mon, ev, p):
-    if ev != "vo_close" or isinstance(mon.scene, M.ThreeDScene):
-        return
-    import numpy as np
-    lo, hi = float(opt(mon, "overlap_min", 0.03)), float(opt(mon, "overlap_max", 0.6))
-    shapes = []
-    for m, ok in walk(mon.scene.mobjects):
-        if "shape-overlap" in ok or "*" in ok or isinstance(m, TEXTS()) or not isinstance(m, M.VMobject) or len(m.points) < 4:
-            continue
-        if m.get_fill_opacity() < 0.05 or visibility(m) < 0.05:
-            continue
-        b = bbox(m)
-        if (b[2] - b[0]) * (b[3] - b[1]) < 0.15:
-            continue
-        outline = _sample_curve(m.points, 0.05)[:, :2]
-        shapes.append((m, b, outline))
-    text_fam = {id(y) for t in mon.scene.mobjects for x in t.get_family() if isinstance(x, TEXTS()) for y in x.get_family()}
-    shapes = [s_ for s_ in shapes if id(s_[0]) not in text_fam]
-    for i in range(len(shapes)):
-        for j in range(i + 1, len(shapes)):
-            (a, ba, pa), (b, bb, pb) = shapes[i], shapes[j]
-            x0, y0, x1, y1 = max(ba[0], bb[0]), max(ba[1], bb[1]), min(ba[2], bb[2]), min(ba[3], bb[3])
-            if x1 <= x0 or y1 <= y0:
-                continue
-            if a in b.get_family() or b in a.get_family():
-                continue
-            g = np.stack(np.meshgrid(np.linspace(x0, x1, 40), np.linspace(y0, y1, 40)), -1).reshape(-1, 2)
-            both = (_inside(pa, g) & _inside(pb, g)).sum() * (x1 - x0) * (y1 - y0) / len(g)
-            area = lambda bx, pts: _inside(pts, np.stack(np.meshgrid(np.linspace(bx[0], bx[2], 40), np.linspace(bx[1], bx[3], 40)), -1).reshape(-1, 2)).mean() * (bx[2] - bx[0]) * (bx[3] - bx[1])
-            small = min(area(ba, pa), area(bb, pb))
-            if small > 1e-6 and lo < both / small < hi:
-                yield (id(a), id(b)), (f"{type(a).__name__} at ({(ba[0] + ba[2]) / 2:+.1f}, {(ba[1] + ba[3]) / 2:+.1f}) and {type(b).__name__} at "
-                                       f"({(bb[0] + bb[2]) / 2:+.1f}, {(bb[1] + bb[3]) / 2:+.1f}) overlap by {both / small:.0%} of the smaller")
-
-
-@rule("line-over-label", "runtime", "warn", "A plotted curve, line or outline runs through a label: the text is struck "
-      "through (a curve label set on top of its own curve).", "Part II, Layout",
-      "set the label beside the line in empty space, e.g. next_to a data point on the open side")
-def line_over_label(mon, ev, p):
-    if ev != "play" or isinstance(mon.scene, M.ThreeDScene):
-        return
-    import numpy as np
-    texts = [(m, bbox(m)) for m in leaves(mon.scene, "line-over-label") if isinstance(m, TEXTS()) and visibility(m) >= 0.05]
-    if not texts:
-        return
-    for c in _strokes(mon.scene, "line-over-label"):
-        cx0, cy0, cx1, cy1 = bbox(c)
-        near = [(m, b) for m, b in texts if not (b[2] < cx0 or b[0] > cx1 or b[3] < cy0 or b[1] > cy1)]
-        if not near:
-            continue
-        samp = _sample_curve(c.points)
-        for m, (x0, y0, x1, y1) in near:
-            x0, y0, x1, y1 = x0 + 0.04, y0 + 0.04, x1 - 0.04, y1 - 0.04
-            hit = (samp[:, 0] > x0) & (samp[:, 0] < x1) & (samp[:, 1] > y0) & (samp[:, 1] < y1)
-            if hit.sum() >= 2:
-                yield (id(c), id(m)), f"a {type(c).__name__} runs through {label(m)}"
-
-
 @rule("arrow-skew", "runtime", "warn", "A straight arrow is a few degrees off horizontal or vertical: it reads as a "
       "mistake, not a direction. Usually its ends sit on centres of groups whose labels shift them.",
       "Part II, Layout (align)", "line the ends up on the icons' centres (icon[0], not the labelled group)")
@@ -328,6 +362,8 @@ def arrow_skew(mon, ev, p):
     for m, ok in walk(mon.scene.mobjects):
         if not isinstance(m, M.Arrow) or "arrow-skew" in ok or "*" in ok or visibility(m) < 0.05:
             continue
+        if len(m.get_points()) < 2:
+            continue                                             # an arrow built empty, waiting for its cue
         s, e = m.get_start(), m.get_end()
         dx, dy = e[0] - s[0], e[1] - s[1]
         if math.hypot(dx, dy) < 0.3:
@@ -353,7 +389,7 @@ def title_margin(mon, ev, p):
             yield id(m), f"title {label(m)!r} top is {Y1 - b[3]:.2f} below the frame edge (< {gap})"
 
 
-@rule("redraw-jitter", "runtime", "warn", "A curve redrawn from a ValueTracker wobbles up and down while the tracker "
+@rule("redraw-jitter", "runtime", "info", "A curve redrawn from a ValueTracker wobbles up and down while the tracker "
       "moves steadily: it flickers. Usually the function is sampled on a grid that moves with the parameter (a peak "
       "crossing grid points, a renormalisation by a sampled maximum).", "Part II, Motion",
       "make the function smooth in the parameter: integrate singular parts over grid cells, sample on a fixed grid")
@@ -403,7 +439,7 @@ def redraw_jitter(mon, ev, p):
                               f"positions its height reverses direction 4+ times")
 
 
-@rule("title-gap", "runtime", "warn", "A shape, image or diagram comes up to the title's baseline: the title has "
+@rule("title-gap", "runtime", "info", "A shape, image or diagram comes up to the title's baseline: the title has "
       "no air below it (often after the title was lowered and the content was not).", "Part II, Layout (title)",
       "move the content down, or start it lower; keep ~0.2 below the title")
 def title_gap(mon, ev, p):
@@ -485,9 +521,11 @@ def layout_crowded(mon, ev, p):
         return
     def wordy(m):                            # a text, or a group of nothing but texts (captions under a row of panels)
         fam = m.family_members_with_points()
-        if isinstance(m, TEXTS()):
+        if isinstance(m, TEXTS()) or getattr(m, "_text", False):
             return True
-        inside = {id(y) for t in m.get_family() if isinstance(t, TEXTS()) for y in t.get_family()}
+        # _text: glyphs lifted out of a Text into a VGroup (kit's mono and code lines) are words all the same
+        inside = {id(y) for t in m.get_family() if isinstance(t, TEXTS()) or getattr(t, "_text", False)
+                  for y in t.get_family()}
         return bool(fam) and all(id(x) in inside for x in fam)
     big = [(m, b) for m, b in items if (b[2] - b[0]) * (b[3] - b[1]) >= area_min and not wordy(m)]
     for i in range(len(big)):
@@ -506,7 +544,7 @@ def layout_crowded(mon, ev, p):
                                                        f"{100 * max(free_w, free_h):.0f}% of the {'width' if free_w >= free_h else 'height'} is empty")
 
 
-@rule("layout-balance", "runtime", "warn", "At the end of a narration block the content sits well off the centre of "
+@rule("layout-balance", "runtime", "info", "At the end of a narration block the content sits well off the centre of "
       "the screen, leaving one side empty.", "Part II, Layout (use the space)", "re-centre the layout or fill the empty side")
 def layout_balance(mon, ev, p):
     if ev != "vo_close" or isinstance(mon.scene, M.ThreeDScene):
@@ -517,7 +555,7 @@ def layout_balance(mon, ev, p):
     X0, Y0, X1, Y1 = _usable(mon)
     u = [min(b[0] for _, b in items), min(b[1] for _, b in items), max(b[2] for _, b in items), max(b[3] for _, b in items)]
     cx, cy = (u[0] + u[2]) / 2 - (X0 + X1) / 2, (u[1] + u[3]) / 2 - (Y0 + Y1) / 2
-    tx, ty = float(opt(mon, "balance_x", 1.0)), float(opt(mon, "balance_y", 0.8))
+    tx, ty = float(opt(mon, "balance_x", 1.6)), float(opt(mon, "balance_y", 1.3))
     if abs(cx) > tx or abs(cy) > ty:
         side = ("left" if cx > 0 else "right") if abs(cx) > tx else ("bottom" if cy > 0 else "top")
         yield ("balance", mon.time()), f"content centre is off by ({cx:+.1f}, {cy:+.1f}); the {side} is empty"
@@ -591,6 +629,8 @@ def text_chain(mon, ev, p):
             x = parent[x]
         return x
     for a in arrows:
+        if len(a.get_points()) < 2:
+            continue                                             # an arrow built empty, waiting for its cue
         n0, n1 = node(a.get_start()), node(a.get_end())
         if n0 and n1 and n0[1] and n1[1] and n0[0] != n1[0]:
             parent[find(n0[0])] = find(n1[0])
@@ -628,6 +668,24 @@ def _lum(rgb):
 def _contrast(a, b):
     la, lb = sorted((_lum(a), _lum(b)), reverse=True)
     return (la + 0.05) / (lb + 0.05)
+
+
+def _in_hole(b, cx, cy):
+    """True when (cx, cy) falls in a ring's hole. A backdrop is chosen by its bounding box, which for an annulus
+    or an annular sector covers the hole as well, so a dot inside a composition ring was being judged against the
+    ring's own colour instead of the background behind it (lnp_comet Reads: the shell's lipid heads inside the
+    percentage ring)."""
+    r = float(getattr(b, "inner_radius", 0) or 0)
+    if not r:
+        return False
+    try:                                        # arc_center is the construction centre: it does not follow a shift
+        c = b.get_arc_center()
+    except Exception:
+        c = getattr(b, "arc_center", None)
+    if c is None:
+        return False
+    import numpy as np
+    return bool(float(np.hypot(cx - c[0], cy - c[1])) < r)
 
 
 @rule("faint-mark", "runtime", "warn", "A small filled mark (a dot, a marker) with no outline is so close to the "
@@ -683,7 +741,7 @@ def faint_mark(mon, ev, p):
         for j, (bx0, by0, bx1, by1), area, ba, b in reversed(backs):   # the topmost filled shape drawn under the mark
             if j >= i:
                 continue
-            if bx0 <= cx <= bx1 and by0 <= cy <= by1 and area > 4 * (x1 - x0) * (y1 - y0):
+            if bx0 <= cx <= bx1 and by0 <= cy <= by1 and area > 4 * (x1 - x0) * (y1 - y0) and not _in_hole(b, cx, cy):
                 under, what = ba * rgb(b) + (1 - ba) * bg, f"the {type(b).__name__} under it"
                 break
         r = _contrast(a * rgb(m) + (1 - a) * under, under)
@@ -737,15 +795,20 @@ def icon_idle(mon, ev, p):
                 near = words or [t for t in mon.scene.mobjects if isinstance(t, T)
                                  and (lambda b: b[0] < hi[0] + 0.6 and b[2] > lo[0] - 0.6
                                       and b[1] < hi[1] + 0.6 and b[3] > lo[1] - 0.6)(bbox(t))]
-                if near and all(len(str(getattr(t, "tex_string", "") or getattr(t, "text", "")).split()) <= 3 for t in near):
-                    st["cand"].setdefault(id(m), (m, {id(x) for x in d}, getattr(a, "run_time", 0)))
+                said = [str(getattr(t, "tex_string", "") or getattr(t, "text", "")).strip() for t in near]
+                if said and all(len(s.split()) <= 3 for s in said):
+                    # keep the word: "the icon beside 'scatter'" is a thing the author can find, and
+                    # "VGroup at (+0.9, +0.3)" is not, which is why 115 of these sat unanswered
+                    st["cand"].setdefault(id(m), (m, {id(x) for x in d}, getattr(a, "run_time", 0),
+                                                  next((s for s in said if s), "")))
             elif not getattr(a, "remover", False):
                 st["acted"] |= {id(x) for x in m.get_family()}
     elif ev == "end":
-        for k, (m, ids, _) in st["cand"].items():
+        for k, (m, ids, _, word) in st["cand"].items():
             if not ids & st["acted"]:
-                yield k, f"{type(m).__name__} at ({m.get_center()[0]:+.1f}, {m.get_center()[1]:+.1f}) is an icon " \
-                         "that is shown and never pointed at, changed or measured"
+                where = f"beside {word!r}" if word else \
+                    f"at ({m.get_center()[0]:+.1f}, {m.get_center()[1]:+.1f})"
+                yield k, f"the icon {where} is shown and never pointed at, changed or measured"
 
 
 @rule("intro-of-visible", "runtime", "error", "An introducing animation (FadeIn, Create, Write, GrowArrow...) starts on "
@@ -978,3 +1041,53 @@ def number_flash(mon, ev, p):
             t0 = shown.pop(id(t), None)
             if t0 is not None and now - t0 < least:
                 yield id(t), f"{label(t)} was on screen {now - t0:.1f} s before {type(a).__name__} took it away"
+
+
+@rule("label-overhang", "runtime", "warn", "A number or label centred on a shape narrower than itself, so the "
+      "shape's own two edges run through the text. label-on-ink asks what fraction of a label's box is foreign "
+      "ink and a 2 px outline is a few percent of it, so it cannot see this: capstone's 53% sat across both "
+      "sides of a 0.42-wide score bar and passed every check. A number belongs on the thing it measures, which "
+      "means beside it when the thing is thinner than the number.",
+      "Part I, a number goes on the thing it measures",
+      "move the text clear of the shape (next_to), or widen the shape so the text fits inside it")
+def label_overhang(mon, ev, p):
+    if ev != "play":
+        return
+    # drawn leaves only: a group's box says nothing about where its ink is. A text's own glyphs are leaf
+    # VMobjects too, and every one of them is narrower than the word it belongs to, so the whole family of
+    # every text on screen is excluded first -- without that the rule reports each label against its neighbour's
+    # letters (52 findings on the fixture alone).
+    glyphs = {id(s) for m, _ in walk(mon.scene.mobjects) if isinstance(m, TEXTS()) for s in m.get_family()}
+    shapes = [m for m, ok in walk(mon.scene.mobjects)
+              if "label-overhang" not in ok and "*" not in ok and id(m) not in glyphs
+              and not isinstance(m, M.AbstractImageMobject)
+              and len(getattr(m, "points", ())) > 1 and visibility(m) >= 0.5]
+    for t in leaves(mon.scene, "label-overhang"):
+        if not isinstance(t, TEXTS()) or visibility(t) < 0.5:
+            continue
+        x0, y0, x1, y1 = bbox(t)
+        for m in shapes:
+            bx0, by0, bx1, by1 = bbox(m)
+            # the shape has to be narrower than the text AND inside it on both sides: a box drawn around a
+            # label is wider, and a label beside a shape overlaps on one side at most
+            if bx0 <= x0 or bx1 >= x1 or min(y1, by1) - max(y0, by0) <= 0:
+                continue
+            # a hairline is not a thing a number can sit on top of in the sense this rule means: a vertical
+            # rule, an axis, a leader all cross a label by a pixel or two and reading them as "the text is
+            # centred on this" found 60 of these across the corpus, none of them the defect
+            if bx1 - bx0 < float(opt(mon, "overhang_min_width", 0.05)):
+                continue
+            # and it has to be MUCH narrower, or this is a sign drawn inside its own badge: a + in a circle
+            # overhangs by a few percent on purpose, and 43 of those came from one video
+            if bx1 - bx0 > float(opt(mon, "overhang_frac", 0.7)) * (x1 - x0):
+                continue
+            # and taller than the text by a good margin, which is what makes it a bar, a column or a gauge --
+            # the thing a reading gets laid across. Without this the rule is the bounding-box question that
+            # shape-overlap and line-over-label were cut for: a box around one term of an equation, an arrow
+            # tip inside a label's box and a dot beside a symbol were 31 findings and none of them the defect.
+            if (by1 - by0) < float(opt(mon, "overhang_tall", 2.0)) * (y1 - y0):
+                continue
+            yield (id(t), id(m)), (f"{label(t)} is centred on a {type(m).__name__} narrower than itself "
+                                   f"(text {x1 - x0:.2f} wide, {type(m).__name__} {bx1 - bx0:.2f}), so its "
+                                   f"edges run through the text")
+            break

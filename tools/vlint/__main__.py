@@ -5,7 +5,8 @@
   python tools/vlint adopt <dir> --script S --res R SCENES...   trust videos rendered before vlint (writes records)
   python tools/vlint parts <dir> --script S --res R SCENES...   before the join: missing/stale scenes, runtime findings
   python tools/vlint final <out.mp4> --script S --res R SCENES... after the join: resolution, A/V sync, length
-  python tools/vlint rules [--md]                       list every rule (--md: the table for docs/CHECKS.md)
+  python tools/vlint plan <video> --draft               skeleton plan.md for a script that already exists
+  python tools/vlint rules [--md]                     list every rule (--md: the table for docs/CHECKS.md)
   python tools/vlint selftest                           every rule against its planted-bug fixture
 Exit status 1 when any finding is an error (VLINT_ALLOW=1 reports without failing). Rules and config: core.py.
 """
@@ -46,7 +47,8 @@ def check_static(path):
                 for where, msg in r.fn(s) or ():
                     found.append(_finding(r.id, where, msg, sp, s))
             except Exception as e:  # a broken rule is reported, never fatal
-                found.append(Finding("vlint-internal", f"rule {r.id} crashed: {e!r}", sp.name, 0))
+                found.append(Finding("vlint-internal", f"rule {r.id} crashed: {e!r}", sp.name, 0,
+                                     severity=cfg.level(r.id)))
         out += finalize([f for f in found if f is not None], cfg)
     return out
 
@@ -80,6 +82,14 @@ def main(argv=None):
     r = sub.add_parser("rules")
     r.add_argument("--md", action="store_true")
     sub.add_parser("selftest")
+    cu = sub.add_parser("cues")
+    cu.add_argument("path")
+    pl = sub.add_parser("plan")
+    pl.add_argument("path")
+    pl.add_argument("--draft", action="store_true", help="print a plan skeleton for a script that already exists")
+    pl.add_argument("--check", action="store_true", help="check a plan on its own, before any script exists")
+    bl = sub.add_parser("baseline")
+    bl.add_argument("--write", action="store_true")
     argv = list(sys.argv[1:] if argv is None else argv)
     if argv and argv[0] not in sub.choices and not argv[0].startswith("-"):
         argv.insert(0, "check")                          # `vlint <dir>` means check
@@ -93,6 +103,21 @@ def main(argv=None):
     if a.cmd == "selftest":
         from vlint.selftest import run
         return run()
+    if a.cmd == "cues":
+        from vlint.cues import report as cue_report
+        return cue_report(a.path)
+    if a.cmd == "plan":
+        from vlint.plan import check as plan_check, draft as plan_draft
+        if a.check:
+            return plan_check(a.path)
+        if not a.draft:
+            print("vlint plan: --check reads the plan on its own, --draft prints a skeleton from a script; once "
+                  "both exist `vlint check` holds them to each other (the plan-* rules)", file=sys.stderr)
+            return 2
+        return plan_draft(a.path)
+    if a.cmd == "baseline":
+        from vlint.baseline import run as baseline_run
+        return baseline_run(write=a.write)
     if a.cmd in ("stale", "recheck", "adopt", "parts", "final"):
         from vlint.rules_output import OutputCtx, runtime_findings
 
@@ -140,7 +165,8 @@ def main(argv=None):
 
 
 def list_rules(md=False):
-    rows = sorted(RULES.values(), key=lambda r: (["static", "runtime", "output"].index(r.stage), r.id))
+    order = ["static", "runtime", "output"]
+    rows = sorted(RULES.values(), key=lambda r: (order.index(r.stage) if r.stage in order else len(order), r.id))
     if md:
         print("| rule | stage | default | checks | DESIGN.md |\n|---|---|---|---|---|")
         for r in rows:

@@ -13,6 +13,31 @@ def _is_scene(st):
     return isinstance(st, ast.ClassDef) and any(isinstance(b, ast.FunctionDef) and b.name == "construct" for b in st.body)
 
 
+def imports_kit(tree):
+    """Whether a script draws with the shared primitives (from kit import ...)."""
+    return any(isinstance(n, ast.ImportFrom) and n.module == "kit" or
+               isinstance(n, ast.Import) and any(a.name == "kit" for a in n.names) for n in ast.walk(tree))
+
+
+def kit_used(tree, kit):
+    """The part of kit.py a script can reach: its statements that are not functions or classes (imports,
+    constants), and the functions and classes the script names, followed through kit's own calls. Promoting a
+    primitive, or changing one, then stales only the videos that draw with it (pet_g4_configs: a promotion at
+    the end of a build would have staled that build and every other video importing kit)."""
+    body = _strip_doc(ast.parse(kit.read_text(encoding="utf-8")).body)
+    defs = {st.name: st for st in body if isinstance(st, (ast.FunctionDef, ast.ClassDef))}
+    names = lambda t: {n.id for n in ast.walk(t) if isinstance(n, ast.Name)} | \
+        {n.attr for n in ast.walk(t) if isinstance(n, ast.Attribute)}
+    todo, used = list(names(tree) & defs.keys()), set()
+    while todo:
+        k = todo.pop()
+        if k not in used:
+            used.add(k)
+            todo += [m for m in names(defs[k]) & defs.keys() if m not in used]
+    keep = [st for st in body if not isinstance(st, (ast.FunctionDef, ast.ClassDef)) or st.name in used]
+    return ast.dump(ast.Module(body=keep, type_ignores=[]))
+
+
 def _strip_doc(body):
     if body and isinstance(body[0], ast.Expr) and isinstance(body[0].value, ast.Constant) and isinstance(body[0].value.value, str):
         return body[1:]
@@ -40,6 +65,8 @@ def fingerprint(script, scene):
         p = root / name
         if p.exists():
             h.update(ast.dump(ast.Module(body=_strip_doc(ast.parse(p.read_text(encoding="utf-8")).body), type_ignores=[])).encode())
+    if imports_kit(tree) and (root / "kit.py").exists():
+        h.update(kit_used(tree, root / "kit.py").encode())
     assets = script.parent / "assets"
     if assets.is_dir():
         for f in sorted(assets.rglob("*")):
@@ -56,7 +83,10 @@ def rules_hash(script):
     script = Path(script).resolve()
     h = hashlib.sha256()
     here = Path(__file__).resolve().parent
-    for f in sorted(here.glob("rules_*.py")) + [here / "runtime.py"]:
+    # script.py and core.py count too: the static rules read the narration through script._collect_cues and
+    # MARK, and core carries the severities. Leaving them out meant an edit to the cue parsing left every
+    # scene's cached findings looking current, so `vlint recheck` re-checked nothing.
+    for f in sorted(here.glob("rules_*.py")) + [here / "runtime.py", here / "script.py", here / "core.py"]:
         h.update(f.name.encode())
         h.update(f.read_bytes())
     root = find_root(script.parent)

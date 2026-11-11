@@ -48,6 +48,20 @@ class Rule:
 
 RULES: dict[str, Rule] = {}
 
+# Not a check of its own: the id the monitor (runtime.py) and the static runner (__main__.py) report under when
+# a rule raises. Registered here so it has a severity of its own at all. Before that it was absent from RULES,
+# so Config.level fell through to the "warn" default, and a rule crashing on every play of every scene showed
+# up as ONE deduplicated warning in a long log and failed no gate: broken read exactly like clean.
+# Both emit sites now pass the severity of the rule that crashed, because a crash means that rule checked
+# nothing and is worth exactly what the rule was worth: a broken error rule still fails the render, a broken
+# layout warning does not. One crashing geometry rule was failing a fifth of the corpus (label-on-ink, 52
+# scenes) for a fault in the checker, which is what this severity is for and not what it was doing.
+RULES["vlint-internal"] = Rule(
+    "vlint-internal", "internal", "error",
+    "A rule crashed while checking. It reported nothing, so whatever that rule checks went unchecked in this "
+    "render; the silence is not a clean result.",
+    "", "fix the rule (the message carries its id and the exception), or take it out")
+
 
 def rule(id, stage, severity, summary, design="", fix=""):
     """Register a rule. The decorated function is returned unchanged, so rules stay plain functions."""

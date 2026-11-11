@@ -303,46 +303,43 @@ def _sentences(text):
     return [x for x in re.split(r"(?<=[.!?])\s+", t.strip()) if len(x.split()) >= 3]
 
 
-@rule("cue-density", "static", "warn", "A voiceover has fewer cues than the design asks for, so the eye is left "
-      "alone while the voice talks.", "Part I §1, steer the eye",
-      "add a bookmark + Indicate/Circumscribe on each noun the sentence names")
-def cue_density(s):
-    need = float(opt(s, "min_cues_per_sentence", 0.75))
+@rule("cue-gap", "static", "warn", "A long stretch of narration has no cue in it, so the picture holds still while "
+      "the voice keeps talking. Cue density can be met on average and still leave a half-minute where nothing "
+      "happens (user, lnp_comet: 'when something is said, it happens visually, synchronised').",
+      "Part II, Sync: nothing is said for long over a still picture",
+      "give every clause of the stretch its own bookmark and act on that word: draw the part being named, pulse it, "
+      "move the dot along, put the number on the thing")
+def cue_gap(s):
+    """Spoken words between one cue and the next. Roughly 2.6 words a second, so 24 words is about nine seconds."""
+    lim = int(opt(s, "max_words_per_cue", 24))
     for vo in s.voiceovers:
         if vo.text is None or vo.dynamic:
             continue
-        n = len(_sentences(vo.text))
-        if n >= 2 and len(vo.cues) < need * n:
-            yield vo.node, f"{len(vo.cues)} cue(s) for {n} sentences (want >= {need:g} per sentence)"
+        cued = {m for m, _ in vo.cues}
+        parts = MARK.split(vo.text)                              # text, mark, text, mark, ..., text
+        runs, run, seg = [], parts[0], 0
+        for k in range(1, len(parts), 2):
+            if parts[k] in cued:
+                runs.append(run)
+                run = ""
+                seg += 1
+            run += parts[k + 1]
+        runs.append(run)
+        worst = max(runs, key=lambda r: len(r.split()))
+        n = len(worst.split())
+        if n > lim:
+            where = "before the first cue" if runs.index(worst) == 0 and seg else \
+                    ("after the last cue" if runs.index(worst) == len(runs) - 1 and seg else
+                     ("uncued" if not seg else "between cues"))
+            w = worst.split()
+            yield vo.node, f"{n} words with no cue ({where}, want <= {lim}): " \
+                           f"{' '.join(w[:6])} ... {' '.join(w[-6:])}"
 
 
 PROPERTY_WORDS = ["width", "wide", "widen", "narrow", "edge", "sharp", "blur", "smear", "resolution", "fwhm",
                   "spread", "tail", "gap", "thick", "diameter", "radius", "distance", "contrast", "size", "depth",
                   "slope", "peak", "angle", "offset", "length", "ratio"]
 _WORD = re.compile(r"<bookmark\s+mark\s*=\s*['\"][^'\"]+['\"]\s*/>|[A-Za-z][A-Za-z'-]*")
-
-
-@rule("property-cue", "static", "warn", "The narration names a property (a width, an edge, a contrast, a spread...) "
-      "with no bookmark just before it, so the property is said but not shown on the thing that has it.",
-      "Part I §1, steer the eye (a size)",
-      "bookmark the word and draw the property on the object: a width arrow, a pulsed edge, a profile")
-def property_cue(s):
-    words = [w.lower() for w in opt(s, "property_words", PROPERTY_WORDS)]
-    win = int(opt(s, "property_window", 6))
-    for vo in s.voiceovers:
-        if vo.text is None:
-            continue
-        since, missed = None, []
-        for tok in _WORD.findall(vo.text):
-            if tok.startswith("<"):
-                since = 0
-                continue
-            lw = tok.lower()
-            if any(lw.startswith(w) for w in words) and (since is None or since > win):
-                missed.append(tok)
-            since = None if since is None else since + 1
-        if missed:
-            yield vo.node, f"no bookmark within {win} words before: {', '.join(dict.fromkeys(missed))}"
 
 
 @rule("unresolved-narration", "static", "info", "A voiceover's text is computed, so the bookmark rules cannot read it.",
@@ -367,6 +364,9 @@ def _words(tex):
     return [w for w in re.findall(r"[A-Za-z][A-Za-z'-]*", t) if w not in UNITS]
 
 
+_CREDIT = re.compile(r"et al|arXiv:|\bCC BY\b|\bdoi\b|\bPMB\b|\bNat\.|\bPhys\.", re.I)
+
+
 @rule("long-text", "static", "warn", "An on-screen Text/Tex holds a sentence. Text is a label or a bold number; "
       "the narration carries the argument.", "Part I §1, draw, don't write",
       "cut it to a label, or draw it as shapes")
@@ -381,6 +381,9 @@ def long_text(s):
             parts = [s.resolve_str(a) for a in node.args]
             if any(p is None for p in parts) or not parts:
                 continue
+            if _CREDIT.search(" ".join(parts)):
+                continue    # a citation is a credit however it is sized: all ten exemptions written for this
+                            # rule were one, and a credit is long because a credit names its authors
             w = _words(" ".join(parts))
             if len(w) > mx:
                 yield node, f"{len(w)} words on screen: {' '.join(w)[:50]!r}"
@@ -434,7 +437,8 @@ def quality_cap(s):
 
 @rule("gx-tex", "static", "error", "A Tex string ManimGX's Typst/mitex cannot set (common_gx maps the text macros "
       "it can): two maths runs touching ($a$$b$) crash the render, \\$ prints the word 'dollar', and a text "
-      "starting with '+ ', '- ' or '1. ' is Typst list markup ('+ PBC' was set as '1. PBC', subseasonal_pbc).",
+      "starting with '+ ', '- ' or '1. ' is Typst list markup ('+ PBC' was set as '1. PBC', subseasonal_pbc) and "
+      "one starting with '= ' is a heading, whose sign is dropped ('= channel' was set as 'channel', g4_tutorial).",
       "Part IV, ManimGX", "join the maths into one $...$; write 'USD' or a word; start a label with a word")
 def gx_tex(s):
     # a script's own label helpers (def lab(t, ...): return Tex(t, ...)) pass their first argument straight to Tex
@@ -458,6 +462,8 @@ def gx_tex(s):
                     yield a, f"\\$ is set as the word 'dollar': {v[:40]!r}"
                 if i == 0 and re.match(r"\s*([+\-]|\d+\.)\s", v):
                     yield a, f"set as a Typst list item: {v[:40]!r}"
+                if i == 0 and re.match(r"\s*=+\s", v):
+                    yield a, f"a leading '= ' is a Typst heading mark and is dropped (write $=$): {v[:40]!r}"
 
 
 @rule("fixed-frame-early", "static", "error", "add_fixed_in_frame_mobjects(x) puts x on screen at once, so a later "
@@ -531,6 +537,221 @@ def watch_order(s):
             yield vo.node, f"says {', '.join(repr(w) for w in said)}"
 
 
+ACRONYM = re.compile(r"(?<![\w'])[A-Z]{2,}(?![\w'])")
+SAID_AS_WORD = {"PET", "MAP", "NASA", "LASER", "RADAR", "SONAR", "CERN", "SPECT", "LIGO", "COVID", "AIDS", "OK",   # said as words
+                "GATE", "EXPLORER", "PRISM", "LYSO", "GAGG", "POPOP", "MAMMI", "FLUKA", "FLASH", "INSERT", "AUTOMAP",
+                "ADAM", "BOLD", "STIR", "POET", "NEMA", "CAT", "DRAMA", "COMET", "LANCE", "DOPE"}
+
+
+@rule("acronym-unspelled", "static", "warn", "An acronym is written in capitals in the narration, so the voice reads it as "
+      "a word: 'EM' came out as 'em' and 'MR' as 'mister' (user, pet_fbsem).", "Narration, spell out what must be "
+      "said", "write it letter by letter, 'E M', 'M R', 'O S E M'; leave as a word only the ones said as words "
+      "(PET, MAP: SAID_AS_WORD)")
+def acronym_unspelled(s):
+    for vo in s.voiceovers:
+        if vo.text is None:
+            continue
+        said = sorted({w for w in ACRONYM.findall(re.sub(r"<bookmark[^>]*/>", "", vo.text)) if w not in SAID_AS_WORD})
+        if said:
+            yield vo.node, f"says {', '.join(said)} as written"
+
+
+SPACED = re.compile(r"(?<![\w\.])[A-Z](?: [A-Z]){1,}(?![\w-])")      # not "2.5D U-Net"
+
+
+@rule("acronym-spaced-on-screen", "static", "warn", "On-screen text spells an acronym letter by letter ('M R I'). "
+      "The spacing is only for the voice; the screen reads like the paper (user, pet_diffusion: 'the letters may "
+      "need to be seperated for the pronounciation but not in the videos text').", "Narration, spell out what must "
+      "be said", "write it closed up on screen, 'MRI', 'DDIM'; keep 'M R I' only inside the voiceover text")
+def acronym_spaced_on_screen(s):
+    for node in ast.walk(s.tree):
+        if not isinstance(node, ast.Call) or call_name(node) == "voiceover":
+            continue
+        for a in list(node.args) + [k.value for k in node.keywords]:
+            for c in ast.walk(a):                         # strings in lists of labels and f-strings too
+                if isinstance(c, ast.Constant) and isinstance(c.value, str):
+                    t = re.sub(r"\$[^$]*\$", " ", c.value)
+                    hit = SPACED.search(t)
+                    if hit and not set(hit.group(0)) <= set("ABCDEFG "):   # note names, "E A D G B E"
+                        yield node, f"shows {hit.group(0)!r}"
+
+
+@rule("pointer-white-on-page", "static", "warn", "A pointer box on a lifted figure is white. Paper figures sit on "
+      "white, so the box vanishes (user, pet_dl_recon: 'white bounding box on white image - not a good idea').",
+      "Reusing a figure", "give it a colour that shows on white and means something (the method's colour, BAD_C, "
+      "TEAL_L)")
+def pointer_white_on_page(s):
+    for node in ast.walk(s.tree):
+        if call_name(node) != "point" or len(node.args) < 2:
+            continue
+        on_fig = any(call_name(c) in ("spot", "sp") for c in ast.walk(node.args[1]))
+        col = node.args[2] if len(node.args) > 2 else next((k.value for k in node.keywords if k.arg == "color"), None)
+        if on_fig and isinstance(col, ast.Name) and col.id in ("WHITE", "GREY_A", "MARK_C", "YELLOW"):
+            yield node, f"{col.id} box on a figure"
+
+
+REMOVERS = {"FadeOut", "Uncreate", "Unwrite", "ShrinkToCenter", "Remove"}
+
+
+def _base(n):
+    """'lad' for lad[2][0].get_center()."""
+    while isinstance(n, (ast.Subscript, ast.Attribute)):
+        n = n.value
+    return n.id if isinstance(n, ast.Name) else None
+
+
+def _targets(expr, out):
+    """Base names of the mobjects an animation expression acts on. A callee is not a target (the FadeIn in
+    FadeIn(p) is not a picture), and neither is anything being removed: a group faded out at the end of its
+    block was not carried into the next one."""
+    if call_name(expr) in REMOVERS:
+        return
+    if isinstance(expr, ast.Call):
+        for a in [*expr.args, *(k.value for k in expr.keywords)]:
+            _targets(a, out)
+        if isinstance(expr.func, ast.Attribute):            # p.animate.shift(...), pie.get_center()
+            b = _base(expr.func)
+            if b:
+                out.add(b)
+        return
+    if isinstance(expr, (ast.Name, ast.Subscript, ast.Attribute)):
+        b = _base(expr)
+        if b:
+            out.add(b)
+        return
+    for ch in ast.iter_child_nodes(expr):
+        _targets(ch, out)
+
+
+def _acted(block, helpers=()):
+    """Pictures this narration block animates, by name. `helpers` names the script's own cue helpers (a page
+    walk's self.hl / self.turn), which take animations to play alongside their own work: a figure handed to one
+    of those is animated just as surely as one handed to self.at, and not counting them made a scene that does
+    its work through the format's helpers look like a scene with no central figure."""
+    out = set()
+
+    def visit(n):
+        for ch in ast.iter_child_nodes(n):
+            if isinstance(ch, ast.With) and any(call_name(i.context_expr) == "voiceover" for i in ch.items):
+                continue
+            if call_name(ch) in ("at", "play") or call_name(ch) in helpers:
+                for a in ch.args:
+                    _targets(a, out)
+            visit(ch)
+    visit(block)
+    return {n for n in out if n != "self" and not n.isupper()}
+
+
+def _blocks(s, cls):
+    return [vo.node for vo in s.voiceovers if cls.lineno <= vo.node.lineno <= cls.end_lineno]
+
+
+# Verbs for something done to a thing that is already on screen. Verbs of coming into being (form, grow,
+# appear, flow) are left out on purpose: there an introducing animation is the event. So are words that are
+# usually nouns here (a stack of blocks, a drop of liquid, a split).
+_ACTS_ON = re.compile(
+    r"\b(?:reach(?:es|ed)?|enter(?:s|ed)?|unload(?:s|ed)?|releas(?:e|es|ed)|open(?:s|ed)|break(?:s)?|broke|"
+    r"burst(?:s)?|fus(?:e|es|ed)|dissolv(?:e|es|ed)|travel(?:s|led)?|mov(?:e|es|ed)|slid(?:e|es)|"
+    r"swap(?:s|ped)?|shuffl(?:e|es|ed)|scrambl(?:e|es|ed)|swing(?:s)?|swung|escap(?:e|es|ed)|"
+    r"merg(?:e|es|ed)|collaps(?:e|es|ed)|widen(?:s|ed)|narrow(?:s|ed)|rotat(?:e|es|ed)|scatter(?:s|ed)?)\b",
+    re.I)
+# "reaches zero point seven eight" is a value being hit, not a thing crossing a room; "dissolved in alcohol"
+# describes what something already is
+_NOT_EVENT = re.compile(r"\s+(?:in\b|zero|one|two|three|four|five|six|seven|eight|nine|ten|\d)", re.I)
+
+# animations that change something already on screen, as opposed to bringing it on or pulsing it
+CHANGE = {"animate", "Transform", "ReplacementTransform", "TransformMatchingShapes", "TransformMatchingTex",
+          "MoveAlongPath", "Rotate", "Rotating", "Restore", "MoveToTarget", "ApplyFunction", "ApplyMatrix",
+          "ApplyMethod", "Swap", "CyclicReplace", "ScaleInPlace", "ShrinkToCenter", "ChangeSpeed"}
+
+
+def _anim_calls(node):
+    """The animation calls in a cue: 'FadeIn' for FadeIn(x), 'animate' for m.animate.shift(...).
+    None (a cue helper the script does not define) has none."""
+    out = []
+    if node is None:
+        return out
+    for n in ast.walk(node):
+        nm = call_name(n)
+        if nm and nm[:1].isupper():
+            out.append(nm)
+        if isinstance(n, ast.Attribute) and n.attr == "animate":
+            out.append("animate")
+    return out
+
+
+@rule("pulse-for-event", "static", "warn", "The narration says something is done to a thing that is already on "
+      "screen, and the cue on that clause does not touch it: it pulses it, or raises a fresh arrow and a fresh "
+      "box beside it. A pulse says 'this', never 'this happens' (user, lnp_comet Intro: 'instead of an arrow the "
+      "lipid nanoparticle should've gone into the cell, dissolved or whatever it does, and the mRNA released as "
+      "the narration says'). Only cue a thing when the narration gives the cue a purpose.",
+      "Part I §1, animate the event, not a pulse on its picture",
+      "animate what the clause describes, on the object the viewer is already holding: move it there, open it, "
+      "let a part of it come away, change what it is made of. Keep Indicate for naming a thing again")
+def pulse_for_event(s):
+    for vo in s.voiceovers:
+        if vo.text is None or vo.dynamic:
+            continue
+        parts = MARK.split(vo.text)                       # text, mark, text, mark, ..., text
+        after = {}
+        for k in range(1, len(parts), 2):
+            after.setdefault(parts[k], parts[k + 1])
+        for mark, node in vo.cues:
+            clause = after.get(mark)
+            if not clause:
+                continue
+            hit = _ACTS_ON.search(clause)
+            if not hit or _NOT_EVENT.match(clause[hit.end():hit.end() + 12]):
+                continue
+            calls = _anim_calls(node)
+            if calls and not any(c in CHANGE for c in calls):
+                words = " ".join(clause.split()[:9])
+                yield node, f"the voice says {hit.group(0)!r} but nothing on screen is moved or changed: " \
+                             f"{words!r} ({'/'.join(sorted(set(calls)))})"
+
+@rule("scene-protagonist", "static", "warn", "The scene has no central figure. Its narration blocks each build a "
+      "picture of their own and drop it, so nothing is on screen long enough to be transformed, and the viewer "
+      "starts again at every block instead of watching one thing change (user, lnp_comet: 'have a central figure of "
+      "interest which constitutes the focus of the scene's content, and focus on mutating, transforming, "
+      "interacting with ... that central visualisation').",
+      "Part I §1, one central figure, mutated",
+      "pick the thing the scene is about and draw it once: the particle, the membrane, the input bundle, the "
+      "detector. Every block then does something to that object (a piece taken out of it, a knob moved on it, a "
+      "part lit, a number put on it) instead of introducing a fresh panel. Graphs and metrics may sit alongside it")
+def scene_protagonist(s):
+    """Calibrated over the 255 scenes in this repo: the median scene's busiest picture covers half its blocks,
+    a scene built around one figure covers three quarters."""
+    from .plan import load as load_plan
+
+    want = float(opt(s, "protagonist_blocks", 0.6))
+    least = int(opt(s, "protagonist_min_blocks", 3))
+    plan = load_plan(s.path.parent)
+    for cls in s.scenes:
+        blocks = _blocks(s, cls)
+        if len(blocks) < least:
+            continue                                        # a two-block scene is allowed one picture per block
+        acts = [_acted(b, s.cue_helpers) for b in blocks]
+        seen = {}
+        for a in acts:
+            for nm in a:
+                seen[nm] = seen.get(nm, 0) + 1
+        if not seen:
+            continue
+        # With a staging plan there is no guessing: the scene declared its figure, so that is the one measured.
+        st = plan.scenes.get(cls.name) if plan else None
+        declared = st.entity if st and st.entity in seen else ""
+        best = declared or max(seen, key=lambda nm: seen[nm])
+        need = max(2, -(-int(want * len(blocks) * 100) // 100))      # ceil: 0.6 of four blocks is three
+        if seen[best] >= need:
+            continue
+        once = sorted(nm for nm, c in seen.items() if c == 1)
+        yield cls, ((f"the declared focus ({best}) is acted on in {seen[best]} of " if declared else
+                     f"no central figure: the most used picture ({best}) is acted on in {seen[best]} of ")
+                    + f"{len(blocks)} narration blocks (want {need}); "
+                    f"{len(once)} pictures are used in one block only"
+                    + (f": {', '.join(once[:8])}" if once else ""))
+
+
 @rule("equation-talked-over", "static", "warn", "A multi-part equation is written whole inside a voiceover and none "
       "of its parts is cued in that block, so the voice reads its terms while the eye hunts for them.",
       "Part I §1, appear as it is named (equations)", "write it part by part on the words that name them, or keep "
@@ -590,7 +811,154 @@ def authors_brief(s):
 def front_page_shown(s):
     if any(call_name(n) == "front_page" for n in ast.walk(s.tree)):
         return
+    # A front page needs a paper to be the front page of. Every one of the nine hand-written exemptions for
+    # this rule said the same thing -- a topic or programme video over many papers, or no PDF in the folder to
+    # draw a page from -- so ask the folder instead of asking the author.
+    if len(list((s.path.parent / "src").glob("*.pdf"))) != 1:
+        return
     for node in ast.walk(s.tree):
         if isinstance(node, ast.Constant) and isinstance(node.value, str) and re.search(r"\bet al\b", node.value):
             yield node, "cites a paper but never shows its front page (front_page())"
             return
+
+
+# ManimGX's animations are not Manim CE's: the setters CE grew for fluent chaining are simply absent, so a call
+# that renders under the checker (CE) raises AttributeError under the renderer (GX) partway through a scene.
+GX_MISSING = {"set_run_time": "pass run_time= to the animation instead",
+              "set_rate_func": "pass rate_func= to the animation instead",
+              "set_name": "drop it; ManimGX animations have no name setter"}
+
+
+@rule("gx-anim-setter", "static", "error", "An animation setter that exists in Manim CE but not in ManimGX "
+      "(set_run_time, set_rate_func, set_name). The checks run under CE, so this passes every static and "
+      "runtime check and then fails the GX render with AttributeError, after the other scenes have rendered "
+      "(mc_recon Hardware: `turn(LC0).set_run_time(0.6)` inside a Succession).",
+      "Part IV, ManimGX",
+      "give the animation the value in its constructor (run_time=, rate_func=); for an .animate chain, wrap it "
+      "in AnimationGroup(..., run_time=...)")
+def gx_anim_setter(s):
+    for node in ast.walk(s.tree):
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute) and node.func.attr in GX_MISSING:
+            yield node, f"{node.func.attr}() does not exist in ManimGX: {GX_MISSING[node.func.attr]}"
+
+
+# A morph is one object on screen becoming another. It is fine when the target is a rebuild of the same thing at
+# new values (Transform(bar, sbar(10)), the bar that is now shorter) and confusing when it is a second object the
+# scene built for itself, because the viewer was following both and one of them has just eaten the other.
+MORPH = {"Transform", "ReplacementTransform", "TransformMatchingShapes", "TransformMatchingTex",
+         "TransformFromCopy", "FadeTransform", "FadeTransformPieces"}
+
+
+def _src(node):
+    try:
+        return ast.unparse(node)
+    except Exception:
+        return "?"
+
+
+def _makers(cls):
+    """What built each of a scene's variables: `lors = VGroup(...)` -> 'VGroup', `grad = arm(...)` -> 'arm'.
+    A name assigned by two different builders, or by anything that is not a call, is left out: the question
+    these makers answer is only whether two objects are the same kind of thing, and a guess is worse than a
+    shrug. `bars()` twice is one kind -- the second bars is the first one at new values, which is the whole
+    point of a Transform -- so only a different maker is a different thing."""
+    rhs = {}
+    for n in ast.walk(cls):
+        if isinstance(n, ast.Assign) and isinstance(n.targets[0], ast.Name):
+            name = n.targets[0].id
+            if name in rhs and _src(rhs[name]) != _src(n.value):
+                rhs[name] = None                   # built two ways: no answer
+            elif name not in rhs:
+                rhs[name] = n.value
+    out = {}
+
+    def kind(expr, seen=()):
+        """The builder at the bottom of an expression: `loop.copy().shift(x)` is whatever built `loop`, since
+        moving a thing or copying it does not make it a different thing."""
+        if isinstance(expr, ast.Call):
+            return call_name(expr) if isinstance(expr.func, ast.Name) else kind(expr.func.value, seen)
+        if isinstance(expr, ast.Name) and expr.id not in seen:
+            return kind(rhs.get(expr.id), seen + (expr.id,))
+        return None
+
+    for name, expr in rhs.items():
+        k = kind(expr, (name,))
+        if k:
+            out[name] = k
+    return out
+
+
+@rule("object-morph", "static", "warn", "One object the scene built turns into another object the scene built. The "
+      "viewer has been tracking both, and a thing that becomes a different thing is a thing they stop tracking: the "
+      "detector they were following is now an arrow, and nothing on screen is what it was a moment ago (user, "
+      "mc_recon: 'some entities just straight up turn into different ones (e.g. a detector turns into an arrow) "
+      "which is confusing to track, try to have some object permanence'). Transforming a thing into a fresh build "
+      "of itself is not this: that is the same object at new values.",
+      "Part I §1, one central figure, mutated",
+      "keep the object and change it (move it, reshape it, recolour it, let a part come away), or fade the old one "
+      "out and bring the new one on so it reads as a replacement rather than a metamorphosis. Where the "
+      "metamorphosis is the point, stage the cue as `morph:` in plan.md and say in the why what it shows")
+def object_morph(s):
+    from .plan import load as load_plan
+    plan = load_plan(s.path.parent)
+    for cls in s.scenes:
+        st = plan.scenes.get(cls.name) if plan else None
+        makers = _makers(cls)
+        staged = {mk for b in (st.blocks if st else []) for mk, (_l, a, _w) in b.actions.items()
+                  if a.lower().startswith("morph:")}
+        allowed = set()
+        for vo in s.voiceovers:
+            if cls.lineno <= vo.node.lineno <= cls.end_lineno:
+                for mark, node in vo.cues:
+                    if mark in staged:
+                        allowed |= {id(n) for n in ast.walk(node)}
+        for n in ast.walk(cls):
+            if call_name(n) not in MORPH or len(getattr(n, "args", [])) < 2 or id(n) in allowed:
+                continue
+            src, dst = n.args[0], n.args[1]
+            if not isinstance(src, ast.Name) or not isinstance(dst, ast.Name) or src.id == dst.id:
+                continue                           # a part (sh[3]) or a fresh build: neither says what kind
+            a, b = makers.get(src.id), makers.get(dst.id)
+            if not a or not b or a == b:
+                continue                           # one kind of thing becoming the same kind is a change of state
+            yield n, f"`{src.id}` ({a}) turns into `{dst.id}` ({b}), a different kind of object"
+
+
+# a clause about one of these is about a piece of the thing, not the whole of it. Kept to words that are a part
+# of something in any sentence: "the far wall" and "the other side" are places, not parts, and a list that
+# reaches for them flags a ball crossing a room (the beam `wall` in tests/static_bad).
+PART_WORDS = ["kind", "type", "part", "piece", "component", "layer", "half", "corner", "term", "bin"]
+
+
+@rule("property-scope", "static", "warn", "The narration names a property or a part of a thing, and the cue pulses "
+      "the whole thing. The eye is sent to the object when the words were about its width, its tail, its fourth "
+      "kind of lipid -- so the viewer is told 'this' at the moment they needed 'this bit of it' (user, mc_recon: "
+      "'if mentioning a property of a thing try to only cue that property (or something indicative of that "
+      "property) rather than the whole thing in question').",
+      "Part I §1, steer the eye (a size)",
+      "pulse the part (`sh[3]`, the edge, the one bar), or draw the property itself: a width arrow across it, a "
+      "dimension line, a profile beside it. A pulse on the whole object is for naming the whole object")
+def property_scope(s):
+    words = [w.lower() for w in opt(s, "property_words", PROPERTY_WORDS)] + PART_WORDS
+    for vo in s.voiceovers:
+        if vo.text is None or vo.dynamic:
+            continue
+        parts = MARK.split(vo.text)
+        after = {}
+        for k in range(1, len(parts), 2):
+            after.setdefault(parts[k], parts[k + 1])
+        for mark, node in vo.cues:
+            head = " ".join((after.get(mark) or "").split()[:8]).lower()
+            hit = next((w for w in words if any(t.startswith(w) for t in head.split())), None)
+            if not hit:
+                continue
+            calls = _anim_calls(node)
+            if not calls or any(c not in EMPHASIS for c in calls):
+                continue                                  # only a bare pulse is too wide; a change is the property
+            if any(isinstance(n, ast.Subscript) for n in ast.walk(node)):
+                continue                                  # the cue already picks a part out
+            whole = sorted({n.id for n in ast.walk(node) if isinstance(n, ast.Name)
+                            and n.id[:1].islower() and n.id != "self"})
+            if any(w.startswith(hit[:5]) or hit.startswith(w) for w in whole):
+                continue                                  # the object pulsed is the property (`tail`, `thick`)
+            yield node, f"the voice says {hit!r} and the cue pulses the whole of {', '.join(whole) or 'it'}"

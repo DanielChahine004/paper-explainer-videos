@@ -48,6 +48,12 @@ class Script:
     voiceovers: list = field(default_factory=list)
     constants: dict = field(default_factory=dict)    # module-level NAME = "literal"
     syntax_warnings: list = field(default_factory=list)
+    cue_helpers: dict = field(default_factory=dict)  # name -> (arg position, param), the script's own cue helpers
+    lib_defs: list = field(default_factory=list)     # kit.py's functions, for a script that draws with them
+
+    def defs(self):
+        """Every function a call in this script may reach by name: its own, then kit's."""
+        return [n for n in ast.walk(self.tree) if isinstance(n, ast.FunctionDef)] + self.lib_defs
 
     def resolve_str(self, node):
         """Value of a string literal, an implicit/explicit concatenation of literals, or a module-level str
@@ -80,7 +86,9 @@ def load_script(path, config):
                 s.constants[st.targets[0].id] = v
         if isinstance(st, ast.ClassDef) and any(isinstance(b, ast.FunctionDef) and b.name == "construct" for b in st.body):
             s.scenes.append(st)
+    s.lib_defs = _kit_defs(path, tree)
     helpers = _cue_helpers(tree)
+    s.cue_helpers = helpers
     for node in ast.walk(tree):
         if isinstance(node, ast.With):
             for item in node.items:
@@ -92,6 +100,20 @@ def load_script(path, config):
                     _collect_cues(node, vo, helpers)
                     s.voiceovers.append(vo)
     return s
+
+
+def _kit_defs(path, tree):
+    """kit.py's top-level functions, when the script imports kit: a label made with kit's lab() or num() is read
+    by the rules that read labels, as it would be if the script had defined lab itself."""
+    from .core import find_root
+    from .fingerprint import imports_kit
+    if not imports_kit(tree):
+        return []
+    root = find_root(Path(path).resolve().parent)
+    kit = root / "kit.py" if root else None
+    if not kit or not kit.exists():
+        return []
+    return [n for n in ast.parse(kit.read_text(encoding="utf-8")).body if isinstance(n, ast.FunctionDef)]
 
 
 def _cue_helpers(tree):

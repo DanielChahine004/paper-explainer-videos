@@ -96,6 +96,13 @@ class _Tracker:
 
 
 class Narrated(Scene):
+    @contextmanager
+    def vlint_off(self, *rule_ids):
+        """The CE scene carries this from vlint's runtime monitor, which is where the layout rules live. Under
+        GX nothing is watching, so the block just runs -- but the method has to exist, or a scene that switches
+        a rule off for a block passes every check and then dies on the GPU."""
+        yield
+
     def wait(self, duration=1.0, *a, **kw):
         # end every wait on a whole frame: a wait ending between frames is held as a frame sampled just inside the
         # next animation, so the first stroke of a Write/Create sat on screen for the whole pause
@@ -194,7 +201,7 @@ def fade_all(scene):
 
 def front_page(h=6.4, name="front.png"):
     """Page 1 of the paper the video explains (tools/front_page.sh writes <video>/assets/front.png), framed, for the
-    opening seconds: the viewer recognises the paper before the explaining starts (docs/DESIGN.md §1, vlint: front-page)."""
+    opening seconds: the viewer recognises the paper before the explaining starts (DESIGN 1, vlint: front-page)."""
     import inspect
     here = Path(inspect.stack()[1].filename).resolve().parent
     im = ImageMobject(str(here / "assets" / name)).set_height(h)
@@ -231,12 +238,24 @@ def ink_box(page, y0, y1, color, pad=8, sw=3, x0=0, x1=None):
         y1 += 1
     xs = np.where(ink[y0:y1].any(0))[0]
     ys = np.where(rows[y0:y1])[0] + y0
-    box = (max(int(xs[0]) - pad, 0), max(int(ys[0]) - pad, 0), min(int(xs[-1]) + pad, W), min(int(ys[-1]) + pad, H))
+    a, b, c, d = int(xs[0]), int(ys[0]), int(xs[-1]), int(ys[-1])
+    # Pad outwards, but back off any edge whose padded row or column would land on ink. A superscript or a
+    # descender from the neighbouring line often sits a few pixels outside the band, and a fixed pad drops the
+    # frame straight onto it (vlint: front-box-cut).
+    def _back(v, step, limit, hit):
+        want = v + step * pad
+        while want != v and (want < 0 or want >= limit or hit(want)):
+            want -= step
+        return max(min(want, limit - 1), 0)
+    box = (_back(a, -1, W, lambda i: ink[b:d + 1, i].mean() > 0.03),
+           _back(b, -1, H, lambda i: ink[i, a:c + 1].mean() > 0.03),
+           _back(c, +1, W, lambda i: ink[b:d + 1, i].mean() > 0.03),
+           _back(d, +1, H, lambda i: ink[i, a:c + 1].mean() > 0.03))
     return px_box(im, box, (W, H), color, sw)
 
 def point(scene, m, color=WHITE):
     """The term marker: a box that moves onto whichever part of an equation the voice is naming, so the eye
-    always knows which symbol is being read (docs/DESIGN.md §1). Returns the animation; the first call draws the box.
+    always knows which symbol is being read (DESIGN 1). Returns the animation; the first call draws the box.
     Point at a part that is on screen: under ManimGX a Transform reshapes its target, so transform into
     target.copy() when you will point at the target's parts later."""
     box = SurroundingRectangle(m, buff=0.08, color=color, stroke_width=2.5)

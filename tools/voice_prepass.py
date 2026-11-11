@@ -26,7 +26,38 @@ from manim_voiceover.defaults import DEFAULT_VOICEOVER_CACHE_DIR, DEFAULT_VOICEO
 from manim_voiceover.helper import remove_bookmarks  # noqa: E402
 from manim_voiceover.services.cache import append_voiceover_cache_entry  # noqa: E402
 from vlint.script import load_script, render_scenes  # noqa: E402
+import voices  # noqa: E402
 from voices import make_service  # noqa: E402
+
+from heard import changed  # noqa: E402
+
+# A line with a word its own transcript does not have is reported, with the word. Chatterbox checks each take
+# and retries; Kokoro never did, so a garbled or misread line reached the video unless someone listened.
+# Whisper already transcribes every new line for its word timings (voices._word_boundaries), so the check costs
+# nothing: the worker keeps that transcript instead of letting it go. It lives here and not in voices.py
+# because voices.py is part of every scene's fingerprint, and editing it would mark every video stale.
+
+
+class _Listening:
+    """voices' Whisper model, remembering the last thing it heard."""
+    def __init__(self, model):
+        self.model, self.said = model, None
+
+    def transcribe(self, *a, **kw):
+        segs, info = self.model.transcribe(*a, **kw)
+        segs = list(segs)
+        self.said = "".join(w.word for sg in segs for w in (sg.words or [])).strip()
+        return segs, info
+
+
+def heard_wrong(audio_path):
+    """[(the script's words, what was heard instead)] for a line, from the transcript kept beside its audio
+    (tools/heard.py). Empty for a line heard as written, and for audio voiced before the check existed."""
+    side = Path(audio_path).with_suffix(".heard.json")
+    if not side.exists():
+        return []
+    h = json.loads(side.read_text())
+    return changed(h["text"], h["heard"])
 
 # Model copies run side by side. One copy leaves the GPU ~60% idle (token-by-token sampling); each copy takes
 # ~4.6 GB, so 2 fit an 11 GB card. VOICE_WORKERS=1 on a smaller card.
@@ -81,7 +112,8 @@ def main():
             hit = known.get(json.dumps(data, sort_keys=True))
             if hit:
                 src, e = hit
-                for f in (e["original_audio"], Path(e["original_audio"]).with_suffix(".words.json").name):
+                for f in (e["original_audio"], Path(e["original_audio"]).with_suffix(".words.json").name,
+                          Path(e["original_audio"]).with_suffix(".heard.json").name):
                     if (src / f).exists():
                         shutil.copy2(src / f, cache / f)
                 append_voiceover_cache_entry(cache / DEFAULT_VOICEOVER_CACHE_JSON_FILENAME, {**e, "input_text": t})
@@ -98,6 +130,7 @@ def main():
             ready.touch()
     if not todo:
         print("== narration: all cached")
+        heard_report(svc, scenes, texts)
         return
     chars = sum(len(sp) for *_, sp in todo)
     # whole scenes per worker (two processes never append to one cache.json), in render order onto the lightest
@@ -126,14 +159,47 @@ def main():
             sys.exit("voice_prepass: a worker failed")
     dt = time.time() - t0
     print(f"== narration: {len(todo)} line(s) in {dt:.0f} s ({1000 * dt / chars:.0f} ms per character)")
+    heard_report(svc, scenes, texts)
+
+
+def heard_report(svc, scenes, texts):
+    """The lines whose own transcript does not match the script (work() scores each one as it is voiced).
+    Printed on every run, cached lines too, so a misread line keeps being reported until its words change.
+    Whisper mishears some jargon that was said correctly: listen before rewriting. Every line starts
+    "== narration", which is what render_lib.sh lifts out of voice.log."""
+    # Words someone has listened to and found said correctly, one per line in <video>/heard_ok.txt. Whisper
+    # spells a name it does not know by guesswork ("Geant" as "gint", eighteen times in geant4, and the voice
+    # had it right), and a report that prints the same false line every run buries the next real one.
+    ok = Path("heard_ok.txt")
+    ok = {w.strip().lower() for w in ok.read_text(encoding="utf-8").split("\n") if w.strip() and w[:1] != "#"} if ok.exists() else set()
+    bad = []
+    for sc in scenes:
+        cache = Path(f"m_{sc}") / DEFAULT_VOICEOVER_CACHE_DIR
+        for t in texts.get(sc, []):
+            if t is None:
+                continue
+            spoken = " ".join(remove_bookmarks(t).split())
+            e = svc.get_cached_result({"input_text": spoken, "service": svc.name, "voice": getattr(svc, "voice", "")}, cache)
+            for was, got in heard_wrong(cache / e["original_audio"]) if e else ():
+                if not all(w in ok for w in was.split()):
+                    bad.append((sc, was, got, spoken))
+    for sc, was, got, spoken in bad:
+        print(f"== narration heard wrong in {sc}: {was!r} " + (f"heard as {got!r}" if got else "not heard")
+              + f"  in: {spoken[:70]}")
 
 
 def work(items, wid):
     svc = make_service(cache_dir=".")
+    ear = voices._ASR = _Listening(voices._asr())
     for k, (sc, cache, t, spoken) in enumerate(items, 1):
         svc.cache_dir = str(cache)
         t1 = time.time()
+        ear.said = None
         svc._wrap_generate_from_text(t)
+        e = svc.get_cached_result({"input_text": spoken, "service": svc.name, "voice": getattr(svc, "voice", "")}, cache)
+        if e and ear.said is not None:
+            (cache / e["original_audio"]).with_suffix(".heard.json").write_text(
+                json.dumps({"score": round(voices._match(spoken, ear.said), 3), "text": spoken, "heard": ear.said}))
         print(f"  w{wid} [{k}/{len(items)}] {sc} {time.time() - t1:5.1f} s  {spoken[:60]}", flush=True)
         if k == len(items) or items[k][0] != sc:
             (cache / READY).touch()

@@ -27,8 +27,11 @@ export PATH="$HOME/.local/bin:$PATH"
 pixi install
 
 export QUALITY="${QUALITY:--qh}"
-# How long renders take, per video (tools/timelog.py report)
-python3 "$ROOT/tools/timelog.py" event . "render_start $QUALITY" 2>/dev/null || true
+# How long renders take, per video (tools/timelog.py report). It goes to the video's own folder in the
+# project ($VDIR), not to the render root's copy of it, which nothing ever copies back: without this the
+# report shows a video that was never rendered.
+TLOG="${VDIR:-.}"
+python3 "$ROOT/tools/timelog.py" event "$TLOG" "render_start $QUALITY" 2>/dev/null || true
 # ManimGX when it is installed (GX_EXE, or manimgx on PATH; a Windows manimgx.exe works from WSL), else Manim CE
 GX_EXE="${GX_EXE:-$(command -v manimgx || true)}"
 if [ -z "${ENGINE:-}" ]; then [ -n "$GX_EXE" ] && ENGINE=gx || ENGINE=ce; fi
@@ -120,7 +123,23 @@ echo "== vlint: scenes before the join"
 pixi run $VLINT parts . --script "$SCRIPT" --res "$RES" $SCENES
 
 : > list.txt
-for s in $SCENES; do echo "file '$PWD/m_$s/videos/$STEM/$RES/$s.mp4'" >> list.txt; done
+for s in $SCENES; do
+  f="m_$s/videos/$STEM/$RES/$s.mp4"
+  # ManimGX writes no frames for a wait that ends a scene, so a scene whose last words are spoken over a still
+  # frame comes out shorter than its own narration. Concatenated, that pushes every later scene's audio late
+  # (vlint: av-sync, join-duration), so hold the last frame until the sound has finished. Only the scenes that
+  # need it are touched; the usual case is a video that outlasts its audio by the closing fade.
+  v=$(pixi run ffprobe -v error -select_streams v:0 -show_entries stream=duration -of csv=p=0 "$f")
+  a=$(pixi run ffprobe -v error -select_streams a:0 -show_entries stream=duration -of csv=p=0 "$f")
+  pad=$(python3 -c "print(f'{max(0.0, $a - $v):.3f}')")
+  if python3 -c "import sys; sys.exit(0 if $pad > 0.05 else 1)"; then
+    echo "   $s: holding the last frame ${pad}s, for narration that outlasts the picture"
+    pixi run ffmpeg -nostdin -loglevel error -y -i "$f" -vf "tpad=stop_mode=clone:stop_duration=$pad" \
+      -c:v libx264 -preset veryfast -crf 16 -pix_fmt yuv420p -c:a copy "${f%.mp4}.pad.mp4" \
+      && mv "${f%.mp4}.pad.mp4" "$f"
+  fi
+  echo "file '$PWD/$f'" >> list.txt
+done
 # Each scene's audio ends ~1 s before its video (the closing fade is silent). A stream copy stores each gap
 # as one AAC packet stretched to ~1 s, which most players play as 21 ms, so the narration drifts ahead scene
 # by scene; re-encoding the audio fills the gaps with real silence. Every ffmpeg here runs with -nostdin: run from a
@@ -131,7 +150,7 @@ pixi run ffmpeg -nostdin -loglevel error -y -f concat -safe 0 -i list.txt -c:v c
 echo "== vlint: joined video"
 pixi run $VLINT final "$OUT" --script "$SCRIPT" --res "$RES" $SCENES
 echo "wrote $OUT"
-python3 "$ROOT/tools/timelog.py" event . render_end 2>/dev/null || true
+python3 "$ROOT/tools/timelog.py" event "$TLOG" render_end 2>/dev/null || true
 if [ "$RES" = 1080p60 ]; then
   # A smaller copy for upload limits: same 1080p, stronger compression (never a downscale).
   SMALL="${OUT%_narrated.mp4}"; SMALL="${SMALL%.mp4}_small.mp4"

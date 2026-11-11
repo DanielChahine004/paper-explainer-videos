@@ -17,13 +17,14 @@ from pathlib import Path
 from .core import RULES, load_config, load_rules
 
 T = Path(__file__).resolve().parent / "tests"
-EXPECT = re.compile(r"#\s*expect:\s*([\w\-, ]+)")
+# "# expect: rule" in a script, "<!-- expect: rule -->" in a plan.md
+EXPECT = re.compile(r"(?:#|<!--)\s*expect:\s*([\w\-, ]+?)\s*(?:-->|$)")
 
 
 def _expected(folder):
     exp = Counter()
     for f in sorted(folder.iterdir()):
-        if f.suffix in (".py", ".sh"):
+        if f.suffix in (".py", ".sh", ".md"):
             for i, ln in enumerate(f.read_text(encoding="utf-8").splitlines(), 1):
                 m = EXPECT.search(ln)
                 if m:
@@ -35,23 +36,28 @@ def _expected(folder):
 def static():
     from .__main__ import check_static
 
-    ok = True
-    got = Counter((f.file, f.line, f.rule) for f in check_static(T / "static_bad") if f.severity != "info")
-    exp = _expected(T / "static_bad")
-    for k in sorted(set(exp) | set(got)):
-        if exp[k] != got[k]:
-            ok = False
-            print(f"  static_bad {k[0]}:{k[1]} {k[2]}: expected {exp[k]}, got {got[k]}")
-    planted = {r for _, _, r in exp}
+    ok, planted, n = True, set(), 0
+    # static_bad is one script per rule family; plan_bad is a script WITH a plan.md, which the plan-* rules
+    # hold it to. They are separate folders because a plan covers a whole video: dropping one into static_bad
+    # would put every scene there under the plan rules at once.
+    for folder in ("static_bad", "plan_bad"):
+        got = Counter((f.file, f.line, f.rule) for f in check_static(T / folder) if f.severity != "info")
+        exp = _expected(T / folder)
+        for k in sorted(set(exp) | set(got)):
+            if exp[k] != got[k]:
+                ok = False
+                print(f"  {folder} {k[0]}:{k[1]} {k[2]}: expected {exp[k]}, got {got[k]}")
+        planted |= {r for _, _, r in exp}
+        n += sum(got.values())
     for r in RULES.values():
         if r.stage == "static" and r.severity != "info" and r.id not in planted and not r.fn.__module__.startswith("vlint_local"):
             ok = False
-            print(f"  rule {r.id} has no planted bug in tests/static_bad")
+            print(f"  rule {r.id} has no planted bug in tests/static_bad or tests/plan_bad")
     bad = [f for f in check_static(T / "static_good") if f.severity in ("warn", "error")]
     for f in bad:
         ok = False
         print("  static_good false positive:", f.fmt())
-    print(f"static : {'ok' if ok else 'FAILED'} ({sum(got.values())} planted findings)")
+    print(f"static : {'ok' if ok else 'FAILED'} ({n} planted findings)")
     return ok
 
 
@@ -128,14 +134,34 @@ def _final_cases(d, cfg):
     return ok
 
 
+def _planted_runtime(src):
+    """The rules rt_vo.py claims to plant, read straight out of its EXPECT line. No manim needed, so the
+    one check that catches a new rule arriving with no test at all runs everywhere."""
+    ns = {}
+    exec(compile(re.search(r"EXPECT = \{[^}]*\}", src.read_text()).group(0), "EXPECT", "exec"), ns)
+    return ns["EXPECT"]
+
+
+def _unplanted(planted):
+    return [r.id for r in RULES.values() if r.stage == "runtime" and r.id not in planted
+            and not r.fn.__module__.startswith("vlint_local")]
+
+
 def runtime():
+    src = T / "runtime" / "rt_vo.py"
     try:
         import manim  # noqa: F401
     except ImportError:
-        print("runtime: skipped (manim not installed here; run selftest in the render environment)")
-        return True
+        # Not "ok": nothing was verified. Still refuse a runtime rule that has no planted bug, and say plainly
+        # that the other 24 are unchecked here, so a pass on Windows stops reading as a pass.
+        missing = _unplanted(_planted_runtime(src))
+        for r in missing:
+            print(f"  rule {r} has no planted bug in tests/runtime")
+        n = len(_planted_runtime(src))
+        print(f"runtime: NOT VERIFIED HERE (no manim; {n} rules have planted bugs, none of them exercised). "
+              "Run selftest in the render environment: PATH must include ~/.local/bin for TinyTeX.")
+        return not missing
     ok = True
-    src = T / "runtime" / "rt_vo.py"
     with tempfile.TemporaryDirectory() as d:
         r = subprocess.run([sys.executable, "-m", "manim", "-ql", "--disable_caching", "--progress_bar", "none",
                             "--media_dir", d, str(src), "Fixture"], capture_output=True, text=True)
@@ -146,20 +172,17 @@ def runtime():
             return False
         found = json.loads(recs[0].read_text())["findings"]
         got = Counter(f["rule"] for f in found)
-    ns = {}
-    exec(compile(re.search(r"EXPECT = \{[^}]*\}", src.read_text()).group(0), "EXPECT", "exec"), ns)
-    for k in sorted(set(ns["EXPECT"]) | set(got)):
-        if ns["EXPECT"].get(k, 0) != got.get(k, 0):
+    expect = _planted_runtime(src)
+    for k in sorted(set(expect) | set(got)):
+        if expect.get(k, 0) != got.get(k, 0):
             ok = False
-            print(f"  runtime {k}: expected {ns['EXPECT'].get(k, 0)}, got {got.get(k, 0)}")
+            print(f"  runtime {k}: expected {expect.get(k, 0)}, got {got.get(k, 0)}")
             for f in found:
                 if f["rule"] == k:
                     print(f"    {f.get('msg', f)}")
-    planted = set(ns["EXPECT"])
-    for rr in RULES.values():
-        if rr.stage == "runtime" and rr.id not in planted and not rr.fn.__module__.startswith("vlint_local"):
-            ok = False
-            print(f"  rule {rr.id} has no planted bug in tests/runtime")
+    for r in _unplanted(expect):
+        ok = False
+        print(f"  rule {r} has no planted bug in tests/runtime")
     print(f"runtime: {'ok' if ok else 'FAILED'} ({sum(got.values())} planted findings)")
     return ok
 

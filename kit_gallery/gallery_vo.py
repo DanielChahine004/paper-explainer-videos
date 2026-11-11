@@ -10,6 +10,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from kit import *  # noqa: E402,F401,F403
 
+A = Path(__file__).resolve().parent / "assets"
+
 
 class Snippet(Narrated):
     def construct(self):
@@ -168,3 +170,20 @@ class Optics(Narrated):
             self.at("s", FadeIn(sn))
             self.at("t", sn.th.animate.set_value(0.6))
             self.at("u", sn.th.animate.set_value(1.1), run_time=1.5)
+
+
+class Figures(Narrated):
+    def construct(self):
+        ttl = title("A figure from the paper")
+        fg = figcard(A / "borghi_fig7.png", h=4.6).move_to(P(0, -0.3))
+        bx = fig_box(fg, 0.595, 0.585, 0.815, 0.875, ORANGE_L)   # the heatmap only, clear of its title
+        cr = credit(r"Fig. 7: Borghi et al., Phys.\ Med.\ Biol.\ 2016 (CC BY 3.0)")
+        nt = note("frame added here")
+        with self.voiceover(text="<bookmark mark='a'/>A figure cut from the paper sits on white, <bookmark mark='b'/>"
+                                 "with its source in the corner. <bookmark mark='c'/>A frame picks out the deepest "
+                                 "band, <bookmark mark='d'/>and a note says the frame is ours."):
+            self.play(FadeIn(ttl), run_time=0.5)
+            self.at("a", FadeIn(fg))
+            self.at("b", FadeIn(cr))
+            self.at("c", Create(bx))
+            self.at("d", FadeIn(nt))

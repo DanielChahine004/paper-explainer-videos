@@ -657,7 +657,30 @@ _ACTS_ON = re.compile(
     re.I)
 # "reaches zero point seven eight" is a value being hit, not a thing crossing a room; "dissolved in alcohol"
 # describes what something already is
-_NOT_EVENT = re.compile(r"\s+(?:in\b|zero|one|two|three|four|five|six|seven|eight|nine|ten|\d)", re.I)
+_NOT_EVENT = re.compile(r"\s+(?:in\b|zero|one|two|three|four|five|six|seven|eight|nine|ten|\d|at most|at least|up to|"
+                        r"about|nearly|roughly|almost|twice|half|further|farther|as far)", re.I)
+# a cue that only brings things on: the clause names something new arriving ("a positron released at the centre",
+# "the sensor and the clock enter"), which is what an introduction shows (pet_g4_configs: four such warnings)
+_INTRO = {"FadeIn", "Create", "Write", "GrowFromCenter", "GrowFromPoint", "DrawBorderThenFill", "SpinInFromNothing",
+          "FadeInFromPoint", "LaggedStart", "AnimationGroup", "Succession"}
+
+
+def _fresh(s, node):
+    """Whether every animation in the cue introduces, and nothing it introduces was animated earlier in its
+    scene: then it is the arrival of a new thing, not a pulse on one already there."""
+    calls = [n for n in ast.walk(node) if isinstance(n, ast.Call) and call_name(n)]
+    if not calls or any(call_name(n)[:1].isupper() and call_name(n) not in _INTRO for n in calls) or \
+            any(isinstance(n, ast.Attribute) and n.attr == "animate" for n in ast.walk(node)):
+        return False
+    names = {a.id for n in calls if call_name(n) in _INTRO for x in n.args for a in ast.walk(x) if isinstance(a, ast.Name)}
+    cls = next((c for c in s.scenes if c.lineno <= node.lineno <= c.end_lineno), None)
+    if cls is None or not names:
+        return False
+    for n in ast.walk(cls):
+        if isinstance(n, ast.Call) and call_name(n) in ("play", "at") and n.lineno < node.lineno:
+            if names & {a.id for a in ast.walk(n) if isinstance(a, ast.Name)}:
+                return False
+    return True
 
 # animations that change something already on screen, as opposed to bringing it on or pulsing it
 CHANGE = {"animate", "Transform", "ReplacementTransform", "TransformMatchingShapes", "TransformMatchingTex",
@@ -704,7 +727,7 @@ def pulse_for_event(s):
             if not hit or _NOT_EVENT.match(clause[hit.end():hit.end() + 12]):
                 continue
             calls = _anim_calls(node)
-            if calls and not any(c in CHANGE for c in calls):
+            if calls and not any(c in CHANGE for c in calls) and not _fresh(s, node):
                 words = " ".join(clause.split()[:9])
                 yield node, f"the voice says {hit.group(0)!r} but nothing on screen is moved or changed: " \
                              f"{words!r} ({'/'.join(sorted(set(calls)))})"

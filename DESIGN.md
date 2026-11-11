@@ -14,38 +14,14 @@ Each video should leave this file better than it found it, and this is part of f
   render time), find the rule that should have caught it. If the rule exists but did not fire,
   sharpen it. If none exists, add one aimed at the whole class of mistake.
 - **After something that worked**, add it where it belongs.
+- **Fold, don't log.** A video's lesson goes into the rule it sharpens, with the video's name as the example, never as a
+  diary entry here: every agent reads this whole file, so a list of past builds is paid for by every later one. Build
+  times live in `timelog.json`, not here.
 - **Feedback from watching.** The user leaves timestamped notes in the catalog player; `python tools/feedback.py` lists
   the open ones with the scene, the time inside it and a frame grab. Triage every note before fixing anything:
   *incidental* (this video only), *design* (a class a reader must judge: add or sharpen a rule here), *vlint* (a class
   a program can catch: add a rule with a planted bug), or *wontfix* with the reason. Close each one with
   `feedback.py resolve <video> <nid> <kind> "<what changed>"`, so the record shows which notes became rules.
-- **pet_entangled (a physics idea, then its test).** The idea was one picture before it was any number: the rate
-  against the angle between two scatter planes, whose peak height is R. The same `dphi_plot` axes then carried the ceiling
-  (1.63), the theory (2.85), the measurement (1.85), the loss on a prior scatter and the recap, so five scenes
-  shared one figure. Plan-first held: four Sonnet writers, 13 scenes, merged with one refusal (a writer's
-  module-level name `R_MAX`, which had to be `_idea_R_MAX`). What cost time: the shared helper `dphi_plot` put
-  its |Δϕ| label on the "180°" tick, and all four writers worked round it separately (it is fixed by shifting `xt`
-  right in the helper before the next split, not after); the plan's `plain` versus `new:`/`side:` prefixes were
-  re-chosen by every writer (a cue that draws a leg or frame is `new:`); and a figure's y levels (Fig. 2's 1.63
-  line) had to be measured from pixels, which the plan should hand over.
-- **pet_mrpc (a detector design chain, 986 words, 6:10).** One shared picture carried the argument: `rpc_stack`, a side view of
-  the chamber's layers, mutated from plain chamber to converter touching the gas to a glass insulator to a stack of a hundred
-  gaps, and rebuilt (not carried) by each scene that needed it. Plan-first held: four Sonnet writers, ten scenes, merged with one
-  refusal (two module-level constants, `MUM` and `CITE4`, which had to be `_dir_` private) and nine prefix changes (every one a
-  `side:` that was really a `new:`: a cue that fades a frame or figure in is an arrival). Decided while planning, by reading the
-  paper: Fig. 5's plateau (about 0.31 %) contradicts the text's 0.228 %, so the scene draws the text's bars and does not reuse the
-  figure; a number "read off" Fig. 4(b) (0.45 at 307 keV) is labelled so on screen. What cost time: the plan's per-scene
-  layout notes put every stack at x = -3.7 with nothing on the right until the last cue, so five scenes sheet as left-weighted with
-  an empty half (the notes should give the right half something from the first cue); and the plan's `gas` and `side:` lines
-  were re-prefixed by writers again. Script phase (plan, words, voice check, four writers, merge) took about 17 minutes.
-- **pico40l (a detector paper, 990 words, 5:46).** One shared helper, `rsu()`, the side view of the vessel assembly (outer and
-  inner quartz, bellows below, hot and cold tints built fresh from live geometry), carried four scenes and the recap; the other nine
-  pictures were private. Plan-first held: five Sonnet writers, 13 scenes, merged with nothing refused. What cost time: a plan note
-  said page 34 where Fig. 21 is on page 36, and the abstract is not on page 1 of a collaboration paper (the author block fills it), so
-  the Intro's `ab` box landed on the authors; check which page a figure and a sentence are on before the plan names them (the brief's
-  caption list gives pages). Writers re-prefixed 9 lines (`side:` that was `new:`) and renamed focus variables to match scene
-  variables (the plan's `focus:` must be a name the scene really defines). `planvo.py` needs an absolute path for a copy. Script
-  phase (plan, words, voice check, five writers, merge) took about 35 minutes, most of it the writers' 480p renders.
 - Prefer deepening a principle in Part I over adding a new rule. Rules carry a short example in
   brackets so a later reader can judge when they apply.
 - **If a program could have caught it, make the program catch it.** A rule here relies on someone remembering
@@ -185,6 +161,9 @@ voice has moved on. Neither repeats the other. Every rule below serves one of th
   acted on in under 60% of its narration blocks; calibrated on this repo, where the median scene reaches half and
   a scene built round one figure reaches three quarters). A decorative copy of the subject parked in a corner and
   never touched is the tell: that is the thing the scene should have been built on.
+  The same holds across scenes: one shared helper drawing that several scenes rebuild and mutate (`pet_entangled`'s
+  `dphi_plot` carried five scenes, `pet_mrpc`'s `rpc_stack`, `pico40l`'s `rsu`, `mono_review`'s `crystal_view` eight, its
+  counts computed from the paper's own light model so the picture reproduced the paper's claims before they were said).
 - **Every visual does work: draw the form the viewer should think in** (user, after `flow_match` and
   `subseasonal_pbc`: "use the visuals functionally not just illustratively ... not just an icon placeholder";
   "the visuals show the viewer where to look and how to envision and conceptualise the information").
@@ -537,6 +516,8 @@ labelled illustrative/schematic.
   re-synthesise, so keep narration verbatim when only the visuals change.
 
 ## Layout
+- **Give both halves something from the first cue.** A plan note that puts the figure at x = -3.7 and fills the right
+  only on the last cue sheets as an empty half for most of the scene (`pet_mrpc`, five scenes).
 - **Call `fit_frame(group)` (common.py) on every panel once it is built.** It moves only what is in
   the group, so include everything placed relative to it (MAMMI's anode grid stayed behind). Fit
   the widest part, including titles and legends (`liquid_tc` Results).
@@ -625,7 +606,7 @@ labelled illustrative/schematic.
 - The narrator is Kokoro `af_heart` (the user's pick from the voice A/B and sampler in `voice_ab/`). Every
   video made before the switch pins `export TTS="${TTS:-chatterbox}"` in its render.sh, so a re-render keeps
   its voice; `TTS=chatterbox` or `chatterbox-turbo` still works for a new one.
-- Spell out what must be said:
+- Spell out what must be said ("S i P Ms" is read "miz": say "S i P M detectors", `mono_review`):
   - numbers: "one point eight two";
   - units: "millimetres";
   - acronyms letter by letter: "L S O", "E M", "M R", "O S E M". Written in capitals, the voice reads them as
@@ -722,7 +703,8 @@ labelled illustrative/schematic.
   seconds, so a viewer who has seen the paper recognises it. `tools/front_page.sh <video>` writes
   `assets/front.png` from the first `src/*.pdf`, and `front_page()` (common) frames it. The voice names the journal,
   the year and the authors while a box marks the author line, then the box moves to the title as the voice says
-  what the paper reports (`pet_explorer` Intro) (vlint: `front-page`, a warning, fires when a script credits an "et al." paper and
+  what the paper reports (`pet_explorer` Intro). A collaboration paper's page 1 can be all author list with
+  no abstract (`pico40l`): look at the page before the plan names what a box frames (vlint: `front-page`, a warning, fires when a script credits an "et al." paper and
   never calls `front_page()`).
   Make those boxes with `ink_box(page, y0, y1, color)`, not a hand-set `px_box` (user, `pet_neuroexplorer`: "the bounding box cuts into the title here"): it grows the
   rows to whole lines and spans the widest one, so no letter sits on the frame (vlint: `front-box-cut`).
@@ -903,7 +885,9 @@ and knows where to look for information". It is laid out like this:
    Most of a plan's mistakes are this one: capstone was written with plain lines for cues that could only ever
    be a `Create` or a `FadeIn`, and all four of its scene writers had to come back and re-prefix them before
    `plan-action` would pass. Write the plan asking, per line, "does this arrive, change, pulse, or morph?" --
-   the four prefixes are the question, not a label applied afterwards.
+   the four prefixes are the question, not a label applied afterwards. A cue that fades in a frame, a figure, a
+   leg, a label or a bar is `new:`, never `side:`: writers re-prefixed 9 to 11 such lines in each of pet_entangled,
+   pet_mrpc, pico40l and mono_review (`vlint plan --check` now flags a `side:` line whose action starts by arriving).
    **Keep the words in one place and generate the other.** The plan's quoted lines and the script's
    `voiceover(text=...)` are the same sentences in two formats, and `plan-narration` is an error, so trimming a
    clause late means editing both by hand across different line wrapping -- which is how a late cut turns into
@@ -1214,6 +1198,12 @@ CE 607 s, GX 12 s). ManimGL was ruled out: different API, no voiceover.
 ---
 
 # Part IV: Pitfalls
+
+**Live figures**
+- A `live` figure is rebuilt every frame at full opacity, so FadeIn, Indicate and Transform on it do nothing. Give the
+  helper opacity trackers (fade-in, bars, a dimmed part) as arguments and animate those (`mono_review`: four writers
+  each built their own gates on `crystal_view`). A defect in a shared helper is fixed before the split, once, not by
+  every writer (`pet_entangled`'s `dphi_plot` label on the 180 degree tick, worked round four times).
 
 **Drawing order**
 - A thing placed inside an opaque shape that is built later is painted over by it and simply disappears.

@@ -187,6 +187,8 @@ def check(path):
                     bad.append((line, f"{st.name}: [{mk}] has no action line"))
                 elif not why:
                     bad.append((line, f"{st.name}: [{mk}] says what happens and not why ({what[:40]})"))
+                if _ARRIVES.match(what):
+                    bad.append((line, f"{st.name}: [{mk}] is `side:` but brings something on ({what[:40]}): that is `new:`"))
             for mk, (line, _w, _y) in b.actions.items():
                 if mk not in b.marks:
                     bad.append((line, f"{st.name}: an action line for [{mk}], which this block never says"))
@@ -199,6 +201,9 @@ def check(path):
 
 
 _FIGPAGE = re.compile(r"\b(Fig(?:ure|\.)?|Table)\s*(\d+)\b[^\n.;]{0,60}?\bpage\s+(\d+)", re.I)
+# a `side:` line whose first verb is an arrival: writers re-prefixed 9 to 11 of these per video (pet_entangled to mono_review)
+_ARRIVES = re.compile(r"side:\s*(?:\S+\s+){0,6}?(?:fades? in|appears?|arrives?|is drawn|draws? in|enters?|slides? in|grows? in|"
+                      r"comes? in|pops? in|is written)\b", re.I)
 _CAPTION = re.compile(r"(?:^ *|   +)(Figure|Fig\.|Table|TABLE) +(\d+)(?:[:.]| +[A-Z])")
 
 

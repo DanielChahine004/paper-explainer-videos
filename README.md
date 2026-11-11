@@ -5,8 +5,8 @@ Turn a research paper into a narrated, animated explainer video, with a coding a
 The pipeline is [ManimGX](https://github.com/academa-labs/manimgx) for rendering the animation on the GPU, with
 [Manim Community](https://www.manim.community/) and
 [manim-voiceover](https://github.com/ManimCommunity/manim-voiceover) for the checks and as the fallback
-renderer, and [Chatterbox](https://github.com/resemble-ai/chatterbox) for the narrator voice. Each sentence is
-transcribed back with Whisper and re-synthesised if the words don't match. Visuals appear on the word that
+renderer, and [Kokoro](https://huggingface.co/hexgrad/Kokoro-82M) for the narrator voice ([Chatterbox](https://github.com/resemble-ai/chatterbox)
+optional). Whisper transcribes the narration back for word timings. Visuals appear on the word that
 names them, using `<bookmark/>` tags in the narration.
 
 What makes it work with an agent is [`DESIGN.md`](DESIGN.md): a set of design principles and hard-won
@@ -31,7 +31,13 @@ pixi install
 bash tools/check.sh kit_gallery   # smoke test: static checks and every scene in skip mode
 ```
 
-The first run downloads the Chatterbox and Whisper weights and installs TinyTeX into `~/.TinyTeX`.
+The narrator is Kokoro, which runs in its own env; set it up once:
+
+```bash
+mkdir -p ~/kokoro_env && cp tools/kokoro_env/pixi.toml ~/kokoro_env/ && pixi install --manifest-path ~/kokoro_env/pixi.toml
+```
+
+The first run downloads the Kokoro and Whisper weights and installs TinyTeX into `~/.TinyTeX`. `TTS=chatterbox` uses Chatterbox instead.
 
 ## Rendering engines
 
@@ -91,8 +97,8 @@ rule, see [`tools/vlint/README.md`](tools/vlint/README.md).
 ## Voice
 
 The narrator voice is generated automatically during the draft render and cached, so later renders
-reuse it. Each sentence is synthesised by Chatterbox, transcribed back by Whisper, and regenerated with
-a new seed if it doesn't match the script. Bookmarks are timed from Whisper's word timestamps. See
+reuse it. Kokoro voices it (with `TTS=chatterbox`, each sentence is transcribed back and regenerated with
+a new seed if it doesn't match the script). Bookmarks are timed from Whisper's word timestamps. See
 [`docs/VOICE.md`](docs/VOICE.md) for how it works, how to write narration it reads well, how to check and fix
 failed sentences, how to clone a voice.
 
@@ -105,7 +111,7 @@ failed sentences, how to clone a voice.
 | `common.py` | picks the engine (`ENGINE`) and imports one of the two below |
 | `common_ce.py` | Manim Community side: shared look, the `Narrated` scene base (with the runtime checks), `self.at()` cues, `fit_frame()` |
 | `common_gx.py` | ManimGX side: the same helpers, and a `Narrated` that replays the cached narration |
-| `voices.py` | the Chatterbox speech service (plus an espeak timing check) with Whisper word timings |
+| `voices.py` | the speech services (Kokoro by default, Chatterbox, an espeak timing check) with Whisper word timings |
 | `docs/VOICE.md` | how the narration voice is generated, checked and tuned |
 | `pixi.toml` | the environment |
 | `tools/render_lib.sh` | the render pipeline every `render.sh` sources, gated by vlint: narration first, then every scene at once (slowest first), the join and a small copy |

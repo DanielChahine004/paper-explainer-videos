@@ -2,7 +2,7 @@
 
 This repo turns a research paper (or a topic, or a set of papers) into a narrated, animated explainer
 video: Manim scenes rendered on the GPU by ManimGX (or by Manim Community where ManimGX isn't installed), a
-Chatterbox voice with a Whisper check, and visuals synced to the narration word by word. Write scenes in the
+Kokoro voice (Chatterbox optional) with Whisper word timings, and visuals synced to the narration word by word. Write scenes in the
 API both engines share, because vlint's runtime checks always run under Manim Community. When asked to make a video, follow this file and `DESIGN.md`.
 
 ## Before anything else
@@ -36,14 +36,14 @@ One folder per video, at the repo root (`calib/` and `laser_rt/` are worked exam
 ## Requirements
 
 Linux or WSL2, an NVIDIA GPU with CUDA 12 (about 4 GB per narration job), and
-[pixi](https://pixi.sh). Everything else (manim, ffmpeg, Chatterbox, Whisper, TinyTeX) is installed
+[pixi](https://pixi.sh). Everything else (manim, ffmpeg, Chatterbox, Whisper, TinyTeX) is installed, apart from the Kokoro env (README, Quick start),
 by `pixi install` and the first run of `render.sh`. Optional: [ManimGX](https://github.com/academa-labs/manimgx)
 for GPU rendering (Python 3.13+, its own environment); see the README's "Rendering engines" section.
 
 ## Voice
 
 Narration is generated automatically during the draft render. Read [`docs/VOICE.md`](docs/VOICE.md) before writing
-narration: it explains the Chatterbox + Whisper check, how to write text the voice reads well, how
+narration: it explains the voices, the Whisper check, how to write text the voice reads well, how
 to find and fix sentences that failed the check (`grep "\[tts\] best take only" m_*.log`), and the
 alternatives (`TTS=espeak`, a robotic voice for checking timing without a GPU, `TTS_VOICE=clip.wav` to clone a voice you have
 permission to use).

@@ -11,7 +11,7 @@ narration on the first draft render and caches it, and later renders reuse it.
 2. **Cache lookup.** The key is the spoken text plus the voice settings. A hit reuses the stored mp3
    from `m_<Scene>/voiceovers/`, so changing a scene's visuals costs no voice time. Changing a
    voiceover's words regenerates that voiceover only.
-3. **Sentence by sentence with Chatterbox.** The text is split at `. ? ! :`. Each sentence is
+3. **Sentence by sentence** (described here for `TTS=chatterbox`; the default Kokoro voice is listed under Options). The text is split at `. ? ! :`. Each sentence is
    synthesised by [Chatterbox](https://github.com/resemble-ai/chatterbox) on the GPU (exaggeration 0.45,
    cfg weight 0.5).
 4. **Checked by ear (Whisper).** Each take is transcribed with Whisper `small.en` and compared with the
@@ -52,7 +52,9 @@ to the draft as well: the check catches wrong words, not odd intonation.
 
 | Setting | Effect |
 |---|---|
-| `TTS=chatterbox` (default) | Chatterbox on CUDA, with the Whisper check above |
+| `TTS=kokoro` (default) | Kokoro-82M, voice `af_heart` (`TTS_VOICE` picks another preset); ~60x faster than real time. Needs its own env once: `mkdir -p ~/kokoro_env && cp tools/kokoro_env/pixi.toml ~/kokoro_env/ && pixi install --manifest-path ~/kokoro_env/pixi.toml` |
+| `TTS=chatterbox` | Chatterbox on CUDA, with the Whisper check above (slower, ~4 GB of GPU per job) |
+| `TTS=chatterbox-turbo` | Chatterbox Turbo, about twice as fast, same check |
 | `TTS_VOICE=/path/clip.wav` | clone a voice from 10–20 s of clean speech; only use a voice you have permission to use |
 | `TTS=espeak` | robotic; only for checking timing without a GPU, never for a finished video; needs `espeak-ng` installed on the system |
 

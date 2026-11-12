@@ -893,6 +893,9 @@ and knows where to look for information". It is laid out like this:
    the four prefixes are the question, not a label applied afterwards. A cue that fades in a frame, a figure, a
    leg, a label or a bar is `new:`, never `side:`: writers re-prefixed 9 to 11 such lines in each of pet_entangled,
    pet_mrpc, pico40l and mono_review (`vlint plan --check` now flags a `side:` line whose action starts by arriving).
+   **Work a moving cue's geometry out in the plan note** (what a moving point drags with it, what stays collinear):
+   a writer cannot stage a cue that is geometrically impossible (`lxe_tpc` Crystal), and a helper documented as live
+   must read its state live.
    **Keep the words in one place and generate the other.** The plan's quoted lines and the script's
    `voiceover(text=...)` are the same sentences in two formats, and `plan-narration` is an error, so trimming a
    clause late means editing both by hand across different line wrapping -- which is how a late cut turns into

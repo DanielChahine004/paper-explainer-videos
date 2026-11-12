@@ -40,7 +40,7 @@ scene affordable is that the plan has already decided what the scene does.
 
 Mark the phases as you pass them, so the build times itself:
 \`python tools/timelog.py mark $V <phase>\` with received, figures, script, check, render, sent in order
-(renders log themselves). A phase is marked once, when it ends.
+(renders log themselves). A phase is marked once, when it ends: `script` after the writers are merged, not at the plan.
 
 Before splitting the plan for writers, run \`python -m vlint plan ../$V/plan.md --check\` from tools/ and clear it.
 

@@ -474,7 +474,11 @@ labelled illustrative/schematic.
 
 - **Reach for 3D.** When something has a shape, show it in 3D: detectors, geometry, surfaces,
   fields, a function of two variables. A slow camera move gives depth for free, and ManimGX makes
-  it cheap. Stay flat only when the idea is a 1D plot or a diagram. Check draw order (§III-3D).
+  it cheap. Stay flat only when the idea is a 1D plot or a diagram. Decide it per scene in the plan
+  (the four builds before `bgo_compton` drew detectors flat throughout). The recipe:
+  `class S(Narrated, ThreeDScene)`, `set_camera_orientation(phi=65*DEGREES, theta=-55*DEGREES)`, the
+  title fixed in frame, a slow `move_camera` only while the shape is discussed (`shell_pet`, `prism_loc`).
+  Check draw order (§III-3D).
 - **Readable at 1080p.** Keep everything 0.3 units inside the frame, with text at least 24 pt and
   labels in empty space. Nothing overlaps; check every frame of the contact sheet.
 - **One look across videos.** Dark background, one accent colour per concept used consistently,

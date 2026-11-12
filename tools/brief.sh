@@ -24,7 +24,8 @@ is in, and what has already been cut out of its source for you. Then do Part III
 
 Show, don't tell (Part I §1, the first rule): every event, piece of physics, calculation and geometry the
 narration describes happens on screen -- it moves, flows, builds or is measured -- rather than being named
-beside a still picture. Hold your plan and your writers to it.
+beside a still picture. Hold your plan and your writers to it. Where the thing has a shape (a detector, a
+geometry, a field, a surface), stage that scene in 3D (Part I §5, "Reach for 3D"): ManimGX makes it cheap.
 
 Those two files and the inputs the brief names are your priors, and nothing else is. An earlier version
 of this video may exist in git, or in the folder, or in the conversation that started you. You are not to

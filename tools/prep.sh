@@ -36,7 +36,9 @@ title=$(echo "$info" | sed -n 's/^Title: *//p' | sed 's/ *$//')
 # no Title in the metadata (pet_mrpc, an arXiv preprint): the first run of text lines on page 1, which is the title
 # on nearly every paper. Said as a guess in the brief, for the agent to check against the front page.
 if [ -z "$title" ]; then
-  guess=$(awk 'NF && !/arXiv|[Pp]repared for|[Ss]ubmitted to|[Pp]reprint|^[ \t]*[0-9]+[ \t]*$/ { gsub(/^[ \t]+|[ \t]+$/, ""); t = t (t ? " " : "") $0; n++; if (n == 3) exit; next }
+  # an author line (names with affiliation marks, "Yi1,2,3," or "Lee*", three commas, or an e-mail) ends the title
+  guess=$(awk 't && /[a-z][0-9]+(,[0-9]+)*[, ]|[a-z][*†‡]|,.*,.*,|@/ { exit }
+               NF && !/arXiv|[Pp]repared for|[Ss]ubmitted to|[Pp]reprint|^[ \t]*[0-9]+[ \t]*$/ { gsub(/^[ \t]+|[ \t]+$/, ""); t = t (t ? " " : "") $0; n++; if (n == 3) exit; next }
                t { exit } END { print t }' paper.txt)
   [ -n "$guess" ] && title="\"$guess\" (title read off page 1; check it)"
 fi

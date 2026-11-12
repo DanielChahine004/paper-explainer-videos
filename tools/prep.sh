@@ -86,8 +86,9 @@ Which parts of the paper the video uses is yours to choose. These are spare part
 - \`src/hi-NN.png\`, \`src/lo-NN.png\` -- every page. Nothing has been cropped from them. Captions found in
   the text:
 ${caps:-  - (none found: look at the pages)}
-- More: \`pixi exec -s poppler pdftoppm -r 300 -x X -y Y -W W -H H -png src/paper.pdf out\` cuts a region
-  at 300 dpi (DESIGN Part II, "Reusing a figure"). It runs from Git Bash or WSL.
+- More: \`pixi exec -s pillow -s numpy python tools/figcrop.py $V <page> <name>.png x0 y0 x1 y1\` cuts a
+  figure into assets/ from a rough box in page fractions (stop it above the caption); it grows each edge until it
+  runs through white paper, so tick numbers and axis titles are never cut (DESIGN Part II, "Reusing a figure").
 
 **What the text does not hold.** vlint \`number-unsourced\` holds every number you say or show against
 \`paper.txt\`. A chart's bar heights are not in it, and neither are the cells of a table the PDF stores as

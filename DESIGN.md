@@ -742,13 +742,13 @@ labelled illustrative/schematic.
 - **Redrawing a bar chart:** measure each bar's end in a 300 dpi render against the axis tick rows (a short numpy
   scan by colour), keep the values in `src/compute.py` with their figure, and check them against every gain the
   text states before using them (`subseasonal_pbc`: "+26–37 %" and "0.023" both matched). Credit "redrawn from …".
-- Render with `pdftoppm -r 300 -x -y -W -H` (poppler, through pixi), crop to the panel, and save to
-  `<video>/assets/`. Show it on a white `card()`. Check for stray panel letters. Read figure-only
-  numbers from a zoomed render.
-- **Crop on white space** (user, `pet_neuroexplorer` Fig. 3A: "the graph sourced for here seems cut off"; the crop had dropped the tick numbers and the axis title): every edge of a reused plot or drawing runs through white
-  paper, never through tick numbers, an axis title or a slice. Find the bounds with a numpy scan of the dark rows and
-  columns, not by eye. A neighbour's panel letter that falls inside the box is painted white in `src/crop.py`
-  (`WHITEN`), not cut through (vlint: `image-edge-cut`, a warning: ink touching an edge of a mostly white image).
+- Cut it with `tools/figcrop.py` into `<video>/assets/`, show it on a white `card()`, and read figure-only numbers
+  from a zoomed render.
+- **Crop on white space** (user, `pet_neuroexplorer` Fig. 3A: "the graph sourced for here seems cut off"; the crop had
+  dropped the tick numbers and the axis title): every edge of a reused plot or drawing runs through white paper,
+  never through tick numbers, an axis title or a slice. `figcrop.py` takes a rough box and grows each edge until
+  2 mm of white lies beyond it, so give it a box that stops above the caption; `--whiten` paints a neighbour's panel
+  letter out rather than cutting through it (vlint: `image-edge-cut`, ink touching an edge of a mostly white image).
 - Anything holding an image is a `Group`, not a `VGroup`, including inside `fit_frame` (vlint:
   `vgroup-non-vmobject`).
 

@@ -113,6 +113,13 @@ class Stack(Narrated):
             self.at("k", FadeIn(ax), *[FadeIn(tick_at(ax, f)) for f in (0.2, 0.25, 0.4)])
             self.at("g", FadeIn(ga), ga.n.animate.set_value(2.6))
             self.at("s", ga.n.animate.set_value(0.8))
+        pk = live(lambda w: gauss(4.9, 0.3, w, 1.3, TEAL_L), op=0, w=0.5)
+        self.add(pk)
+        with self.voiceover(text="<bookmark mark='p'/>A live curve fades in, <bookmark mark='w'/>widens, "
+                                 "<bookmark mark='d'/>and dims."):
+            self.at("p", pk.op.animate.set_value(1))
+            self.at("w", pk.w.animate.set_value(1.3))
+            self.at("d", pk.op.animate.set_value(0.3))
 
 
 class Marks(Narrated):

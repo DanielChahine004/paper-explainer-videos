@@ -1200,9 +1200,9 @@ CE 607 s, GX 12 s). ManimGL was ruled out: different API, no voiceover.
 # Part IV: Pitfalls
 
 **Live figures**
-- A `live` figure is rebuilt every frame at full opacity, so FadeIn, Indicate and Transform on it do nothing. Give the
-  helper opacity trackers (fade-in, bars, a dimmed part) as arguments and animate those (`mono_review`: four writers
-  each built their own gates on `crystal_view`). A defect in a shared helper is fixed before the split, once, not by
+- A figure rebuilt every frame loses FadeIn, set_opacity, Indicate and Transform. Build it with kit's `live` and fade
+  or dim it with its `op` tracker; dim one part with a parameter of its own, decided in the helper before the split
+  (`mono_review`: four writers each built their own gates on `crystal_view`). A defect in a shared helper is fixed before the split, once, not by
   every writer (`pet_entangled`'s `dphi_plot` label on the 180 degree tick, worked round four times).
 
 **Drawing order**

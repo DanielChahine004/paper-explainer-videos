@@ -570,6 +570,32 @@ def gauge(n0=0.0, n_max=3.0, unit=1.5, h=0.34, name="", color=YELLOW, size=24):
     return g
 
 
+def live(build, op=1.0, **params):
+    """A figure rebuilt every frame from its own numbers. `build(**values)` returns a VGroup with the same parts each
+    time (no Tex/Text: it runs every frame; keep labels outside). Each parameter becomes a ValueTracker hung on the
+    figure, so the cue that changes it names the figure: fig.hx.animate.set_value(12); pass a ValueTracker to share one
+    value between figures. A rebuild resets opacity, so FadeIn, set_opacity and Indicate on it are lost: fade and dim
+    it with its own tracker fig.op (0 to 1, multiplies every part): live(build, op=0, ...) then
+    fig.op.animate.set_value(1) fades it in. Dim one part with a parameter build reads. Never move_to it."""
+    tr = {k: (v if isinstance(v, ValueTracker) else ValueTracker(v)) for k, v in params.items()}
+    opt = op if isinstance(op, ValueTracker) else ValueTracker(op)
+
+    def _make():
+        m = build(**{k: t.get_value() for k, t in tr.items()})
+        o = opt.get_value()
+        if o < 1.0:
+            for s in m.family_members_with_points():
+                s.set_stroke(opacity=s.get_stroke_opacity() * o)
+                s.set_fill(opacity=s.get_fill_opacity() * o)
+        return m
+    fig = _make()
+    for k, t in tr.items():
+        setattr(fig, k, t)
+    fig.op = opt
+    fig.add_updater(lambda m: m.become(_make()))
+    return fig
+
+
 # ---- detectors and optics ---------------------------------------------------------------------------------------
 
 

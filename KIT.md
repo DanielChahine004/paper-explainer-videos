@@ -76,6 +76,7 @@ never `set_opacity`, which fills it.
 | `bars(rows, x0, y_top, unit, step)` | horizontal bars, `rows = [(name, value, text, colour)]`; a list of (bar, value, name) | |
 | `time_axis(w, name)`, `tick_at(axis, f)` | a clock without numbers, and an event on it | `g.line`, `g.name`, `g.t(f)` |
 | `gauge(n0, n_max, unit, name, color)` | a quantity that rises or runs down, driven by a tracker | `g.n` (ValueTracker), `g.frame`, `g.fill` |
+| `live(build, op=1, **params)` | any figure rebuilt every frame from its numbers; fade or dim it with `g.op`, never FadeIn/set_opacity | one ValueTracker per param (`g.hx`), `g.op` |
 
 ## Detectors and light
 

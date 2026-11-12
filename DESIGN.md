@@ -439,7 +439,7 @@ labelled illustrative/schematic.
   demo was scripted as "about a millimetre", but the computed error was 0.4 mm.
 - **Animate through reported values only.** Use `np.interp` between them, with no invented curve
   shapes. Keep scales fixed during a move.
-- **When your own model contradicts your script, the script changes.** In the i3M Light scene, the
+- **When your own model contradicts your script, the script changes.** Run your model while planning, not after the writers, and draw its special cases exactly (`celeritas_optical`: at n = 1.82 against 1.5 no direction is trapped at all six faces, so "only reflects" was cut; the trapped photon above 3.1 eV runs along the body diagonal, and a tilted stand-in escapes). In the i3M Light scene, the
   model showed reflective walls do not compress positions more than black paint, so that claim
   was cut. The same goes for a drawn example: a claim made in general ("at 2 keV the likelihood grows a second
   peak") must be visible in the one case on screen (`zzb_slab` Local showed one peak; the scene was cut).
@@ -649,6 +649,7 @@ labelled illustrative/schematic.
   line", not "Each caught pair defines a line".
 
 ## 3D, when it is used
+- **Look into a detector through its translucent side, never through its readout** (`celeritas_optical`: SiPM tiles drawn on the face the camera saw were opaque and hid every photon inside the crystal, flat3d or not, since flat3d lines are still depth-tested against opaque solids). Put the opaque part on the far side and the camera over the translucent crystal; a fixed-in-frame `ImageMobject` or `figcard` does not draw under GX 3D, so a reused figure in a 3D scene stands in the world, turned to face the camera.
 - **Draw order is by face centre, and flat objects are drawn after all 3D faces.** Don't mix the
   two in one region. Either keep everything 3D, or make the scene flat (`shade_in_3d = False` on
   the whole family) and add in physical order: underneath first, then a translucent fill, then

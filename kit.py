@@ -428,7 +428,8 @@ def wavy(p, q, color=YELLOW, amp=0.07, wl=0.3, sw=3):
     p, q = [P(x) if len(x) == 2 else np.array(x, dtype=float) for x in (p, q)]
     L = np.linalg.norm(q - p)
     u = (q - p) / L
-    v = np.array([-u[1], u[0], 0.0])
+    v = np.array([-u[1], u[0], 0.0])   # in the plane, the wiggle is sideways; a steep 3D track wiggles along x
+    v = v / np.linalg.norm(v) if np.linalg.norm(v) > 1e-6 else np.array([1.0, 0.0, 0.0])   # (celeritas_optical: a vertical gamma came out straight)
     n = max(int(L / 0.02), 2)
     pts = [p + u * L * i / n + v * amp * np.sin(TAU * L * i / n / wl) * min(1, 6 * i / n, 6 * (n - i) / n) for i in range(n + 1)]
     return VMobject(stroke_color=color, stroke_width=sw).set_points_as_corners(pts)

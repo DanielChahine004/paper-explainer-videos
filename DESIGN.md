@@ -621,10 +621,13 @@ labelled illustrative/schematic.
     `acronym-spaced-on-screen`). An abbreviation a viewer may not know is said in full the first time, "magnetic
     resonance, or M R, scan" (user, `pet_dl_recon`: "build for mr? - you mean MR like magnetic resonance?");
   - chemical names: "caesium iodide", not "CsI".
-- **Full spoken sentences** (user, `subseasonal_pbc`: "more full sentences, less ';-style' appendages"). A clause
-  tacked on after a colon, semicolon or dash ("Then a live test: ECMWF's quest"; "post-processing, not a better
-  model") reads like slide notes, and the voice delivers it flatly. Give it a verb and its own sentence: "Then came
-  a live test in ECMWF's quest." (vlint: `narration-appendage`).
+- **Full spoken sentences** (user, twice: `subseasonal_pbc`, "more full sentences, less ';-style' appendages";
+  `celeritas_optical`, "speaking with ; kind of pauses can be confusing"). A phrase without its own verb, hung on after
+  a colon, semicolon, dash *or comma*, reads like slide notes; the voice pauses flatly and the listener loses which noun
+  it belongs to ("Then a live test: ECMWF's quest"; "an LSO slab, fifty by fifty by ten millimetres"; "Rayleigh
+  scattering, at two lengths, and Mie scattering kink its path"; "tiles, each five point eight millimetres wide"). Give
+  it a verb and usually its own sentence: "The slab measures fifty by fifty by ten millimetres." Read every line aloud
+  as a listener who cannot see the screen (vlint: `narration-appendage` catches the colon and dash cases only).
 - Use short sentences and avoid a bare "l". After the draft, read the Whisper check (the
   `== narration heard wrong` lines `voice_prepass.py` prints for any voice, in check.sh's output and in
   `run.log`: each word of a line that its own transcript has differently or not at all; Whisper

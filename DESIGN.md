@@ -751,7 +751,8 @@ labelled illustrative/schematic.
 - **Crop on white space** (user, `pet_neuroexplorer` Fig. 3A: "the graph sourced for here seems cut off"; the crop had
   dropped the tick numbers and the axis title): every edge of a reused plot or drawing runs through white paper,
   never through tick numbers, an axis title or a slice. `figcrop.py` takes a rough box and grows each edge until
-  2 mm of white lies beyond it, so give it a box that stops above the caption; `--whiten` paints a neighbour's panel
+  2 mm of white lies beyond it (6% of the page at most), so give it a box that stops above the caption, and
+  when it warns that an edge reached its limit, that edge is in text: move it into the white gap; `--whiten` paints a neighbour's panel
   letter out rather than cutting through it (vlint: `image-edge-cut`, ink touching an edge of a mostly white image).
 - Anything holding an image is a `Group`, not a `VGroup`, including inside `fit_frame` (vlint:
   `vgroup-non-vmobject`).

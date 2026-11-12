@@ -16,25 +16,33 @@ from pathlib import Path
 import numpy as np
 from PIL import Image
 
-INK, GAP, PAD = 200, 24, 12
+INK, GAP, PAD, MAX = 200, 24, 12, 0.06
 
 
 def safe_box(a, x0, y0, x1, y1):
-    """Grow (x0, y0, x1, y1) until GAP px beyond each edge are white, then trim to the ink inside plus PAD."""
+    """Grow (x0, y0, x1, y1) until GAP px beyond each edge are white, then trim to the ink inside plus PAD. An edge
+    grows at most MAX of the page: labels lie within that, and an edge that sits in running text (a caption, a
+    paragraph) would otherwise grow through the whole column (bgo_compton Fig. 10: 1750 px)."""
     h, w = a.shape
     ink = a < INK
+    lim = (max(0, y0 - int(MAX * h)), min(h, y1 + int(MAX * h)), max(0, x0 - int(MAX * w)), min(w, x1 + int(MAX * w)))
     for _ in range(4000):
         moved = False
-        if y0 > 0 and ink[max(0, y0 - GAP):y0, x0:x1].any():
+        if y0 > lim[0] and ink[max(0, y0 - GAP):y0, x0:x1].any():
             y0 -= 1; moved = True
-        if y1 < h and ink[y1:min(h, y1 + GAP), x0:x1].any():
+        if y1 < lim[1] and ink[y1:min(h, y1 + GAP), x0:x1].any():
             y1 += 1; moved = True
-        if x0 > 0 and ink[y0:y1, max(0, x0 - GAP):x0].any():
+        if x0 > lim[2] and ink[y0:y1, max(0, x0 - GAP):x0].any():
             x0 -= 1; moved = True
-        if x1 < w and ink[y0:y1, x1:min(w, x1 + GAP)].any():
+        if x1 < lim[3] and ink[y0:y1, x1:min(w, x1 + GAP)].any():
             x1 += 1; moved = True
         if not moved:
             break
+    stuck = [e for e, v, l in (("top", y0, lim[0]), ("bottom", y1, lim[1]), ("left", x0, lim[2]), ("right", x1, lim[3]))
+             if v == l and l not in (0, h, w)]
+    if stuck:
+        print(f"  figcrop: the {', '.join(stuck)} edge reached its limit inside ink (a caption or text?): "
+              "move it into the white gap and look at the crop", file=sys.stderr)
     rows, cols = np.where(ink[y0:y1, x0:x1].any(1))[0], np.where(ink[y0:y1, x0:x1].any(0))[0]
     if len(rows):
         y0, y1, x0, x1 = y0 + rows[0], y0 + rows[-1] + 1, x0 + cols[0], x0 + cols[-1] + 1

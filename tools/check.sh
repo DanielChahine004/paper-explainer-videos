@@ -32,6 +32,13 @@ echo "$static" | sed 's/^/  /'
 n_static=$(echo "$static" | grep -c ": error\[" || true)
 # the checker crashing is not a clean video: without this, a traceback printed no findings and read as a pass
 [ "$rc" = 0 ] || { echo "  vlint check itself failed (exit $rc)"; n_static=$((n_static + 1)); }
+# the plan's own checks too, so a writer who re-prefixes a line sees the rule the merged plan is held to
+# (rydberg_radar: a writer's side: passed check.sh here and failed `plan --check` after the merge)
+if [ -f plan.md ]; then
+  pc="$(pixi run python ../tools/vlint plan plan.md --check 2>&1)"
+  np=$(echo "$pc" | sed -n 's/.* \([0-9][0-9]*\) problem(s).*/\1/p' | tail -1)
+  if [ "${np:-0}" != 0 ]; then echo "$pc" | grep -v "problem(s)" | sed 's/^/  plan: /'; n_static=$((n_static + np)); fi
+fi
 pixi run python ../tools/voice_prepass.py "$SCRIPT" $scenes   # one voice model for all scenes, not one per scene
 rm -rf chk && mkdir -p chk
 echo "== $V: scenes (skip mode):" $scenes

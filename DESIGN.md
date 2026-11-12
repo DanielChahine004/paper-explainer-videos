@@ -658,6 +658,9 @@ labelled illustrative/schematic.
   rotation before the last voiceover, so a static camera reuses frames. Use flat `Dot`s for clouds
   and render 3D scenes first. Recolouring a surface every frame costs about 10 minutes
   (`brain_swin`).
+- **Anything that must touch a 3D part is itself 3D** (a track ending on a hit, a flag on a module, a spot over an
+  event); only labels go fixed in frame, with a gap, since their screen place is an orthographic guess the
+  perspective camera shifts (user, `lxe_tpc`: a flag off its module, a gamma stopping short of its hit).
 - Scale every part from one unit and write the conversion down (`wt_pet` Sparse was built 10× too
   big). Fix text in frame with `add_fixed_in_frame_mobjects`, which shows it at once: `self.remove`
   it straight after, then FadeIn/Write it on its cue (vlint: `fixed-frame-early`). Rotate at about

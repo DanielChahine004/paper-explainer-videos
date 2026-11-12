@@ -423,8 +423,9 @@ def poly(pts, color=WHITE, sw=3):
 
 
 def wavy(p, q, color=YELLOW, amp=0.07, wl=0.3, sw=3):
-    """A photon's (or a gamma's) flight from p to q: a sine that tapers to nothing at both ends. An open polyline."""
-    p, q = P(p), P(q)
+    """A photon's (or a gamma's) flight from p to q: a sine that tapers to nothing at both ends. An open polyline.
+    Keeps z, like poly, so it lands on a point inside a 3D scene (lxe_tpc: the gamma stopped short of its hit)."""
+    p, q = [P(x) if len(x) == 2 else np.array(x, dtype=float) for x in (p, q)]
     L = np.linalg.norm(q - p)
     u = (q - p) / L
     v = np.array([-u[1], u[0], 0.0])

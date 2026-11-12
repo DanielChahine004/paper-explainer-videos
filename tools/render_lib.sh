@@ -138,6 +138,14 @@ for s in $SCENES; do
       -c:v libx264 -preset veryfast -crf 16 -pix_fmt yuv420p -c:a copy "${f%.mp4}.pad.mp4" \
       && mv "${f%.mp4}.pad.mp4" "$f"
   fi
+  # A stream-copy concat keeps the first part's video timescale; a part written with another (CE wrote kit_gallery's
+  # Figures at 1/15360 among 1/90000) loses its picture in the join. Remux it to the first part's, no re-encode.
+  tb=$(pixi run ffprobe -v error -select_streams v:0 -show_entries stream=time_base -of csv=p=0 "$f"); tb=${tb#*/}
+  if [ -z "${tb0:-}" ]; then tb0=$tb; elif [ "$tb" != "$tb0" ]; then
+    echo "   $s: video timescale 1/$tb, remuxed to 1/$tb0 for the join"
+    pixi run ffmpeg -nostdin -loglevel error -y -i "$f" -c copy -video_track_timescale "$tb0" "${f%.mp4}.tb.mp4" \
+      && mv "${f%.mp4}.tb.mp4" "$f"
+  fi
   echo "file '$PWD/$f'" >> list.txt
 done
 # Each scene's audio ends ~1 s before its video (the closing fade is silent). A stream copy stores each gap

@@ -2,6 +2,8 @@
 
 Turn a research paper into a narrated, animated explainer video, with a coding agent doing the work.
 
+**Watch them:** [danielchahine004.github.io/explainers](https://danielchahine004.github.io/explainers/), every explainer made so far, with Reels (each scene as a swipe-through clip).
+
 - **Render:** [ManimGX](https://github.com/academa-labs/manimgx) on the GPU; [Manim Community](https://www.manim.community/) for checks and as fallback.
 - **Voice:** [Kokoro](https://huggingface.co/hexgrad/Kokoro-82M) ([Chatterbox](https://github.com/resemble-ai/chatterbox) optional), with Whisper word timings. Visuals land on the word that names them (`<bookmark/>`).
 - **Rules:** [`DESIGN.md`](DESIGN.md), the design principles and pitfalls learnt over dozens of videos. The agent follows it.

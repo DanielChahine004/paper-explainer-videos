@@ -167,7 +167,8 @@ Your folder is {c}. Work only in it.
 - plan.md is your whole brief: every spoken word, every cue and what it is for. You do not need the paper.
 - helpers.png shows every shared helper drawn once (if the script has helpers): look at it before calling one.
 - {script} holds the video's shared helpers and palette, then a marker line. Add your scenes below the marker.
-  Change nothing above it. A helper of your own is named `_<scene>_<what>` and goes below the marker too.
+  Change nothing above it. Every name of your own, helpers and module constants alike, is `_<scene>_<what>` and goes
+  below the marker too: the merge refuses any other new name (lu177_dual: three of four copies).
 - Before you write a helper, read {root}/KIT.md: the shared primitives (code, call trees, files, stacks,
   dimension lines, tracks, detector drawings), tested under both engines. If the script imports kit, use them.
   If one is wrong for your scene, say so in your report rather than working round it silently.

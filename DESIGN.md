@@ -941,6 +941,8 @@ and knows where to look for information". It is laid out like this:
    they may not change a spoken word; then diff each copy against the base before splicing, so a writer that
    wandered outside its scenes is caught rather than merged. Expect every writer to also edit its copy's
    `render.sh` so `run_v.sh` will run, and to hand that edit back: do not take it.
+   In the plan, put each block's action lines directly under that block, or `plan --check` reports every mark twice,
+   and name no scene after a manim class (`Camera`).
    **A writer's copy holds only what its `render.sh` lists.** geant4 handed five writers a base script that
    still carried two finished scenes as examples of the house style, and a `render.sh` naming only the
    writer's own. `scene-list` is an error (a class defined and not in SCENES), so every one of the five hit

@@ -394,7 +394,8 @@ A number is a summary of something physical, so show that thing.
   Play the first event slowly with every step visible, then speed up, then jump ahead in stages.
   Explain the result after the viewer has watched it form (`calib` FloodSetup, PencilScan, FanScan).
 - **Make differences visible at screen scale.** A wrong and a right answer must be at least about
-  0.3 units apart where it matters. Exaggerate the geometry and label it schematic. Avoid symmetric
+  0.3 units apart where it matters. Work the gap out in the plan, before the writers: a parallax miss of 3.9 mm on a 106 mm ring is 0.2 units, so
+  `semimono_preclinical` needed a magnified crop that the plan had to name as its fallback. Exaggerate the geometry and label it schematic. Avoid symmetric
   setups where the error cancels, and check the gap numerically (`wt_pet` Depth, `prism_pet` Parallax).
 - **The drawing does what the words say.** "Escapes through the gaps" means the arrow goes through
   a computed gap. "Clamped to the crystal" means the points are clipped in code. "Light stops at an
@@ -443,6 +444,8 @@ labelled illustrative/schematic.
   the paper prints 1.46 elsewhere. Quote the sentence that makes the claim, not just the number: writing the
   cites is the re-read that catches a sentence gone loose (`lu177_dual`: "one minute for the analytical ones"
   was the joint one's 1.0; the single windows take 0.5, so it became "at most one").
+- **Where the paper contradicts itself, pick one source and say so on screen.** `semimono_preclinical`'s abstract gives
+  recovery coefficients 0.20 to 0.85 and Table II prints 0.22 to 0.89; the plot used the abstract's and carries a note.
 - **Narrate a computed number only after computing it.** If a scene's own model produces a value
   (an error, a fraction), run the model before writing the sentence. The calibration video's k-NN
   demo was scripted as "about a millimetre", but the computed error was 0.4 mm.
@@ -991,6 +994,8 @@ and knows where to look for information". It is laid out like this:
    structure, not the words, and two facts a writer would otherwise work round: a figure or table cited on a page
    its caption is not on, and a `focus:` that names a function (`rsu`, a kit primitive) instead of the variable the
    scene assigns its result to (pico40l: both, found by five writers). Run it before splitting.
+   **Every item a clause lists gets its own mark in the plan** (writers may not add bookmarks): four named tiles under one
+   mark, and an equation's two terms under one, ran on timers that can drift from the voice (`semimono_preclinical` Intro, Calibrate).
    **A figure driven by a number carries the number.** A plain action line passes `plan-action` only if the cue
    changes something that names the focus, and a `ValueTracker` swept on its own names nothing, which pushes
    honest "the focus changes" lines towards `side:`. si_psf's `live(build, d=...)` hangs the tracker on the

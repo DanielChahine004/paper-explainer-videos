@@ -29,7 +29,7 @@ geometry, a field, a surface), stage that scene in 3D (Part I §5, "Reach for 3D
 Narrate in full sentences, each with its own verb: no phrase hung on after a comma, colon or semicolon ("Full
 spoken sentences", Part II); the user finds those pauses confusing. Avoid the LLM writing tics listed beside it.
 Draw each result in the form its comparison needs, not bars by default (Part I §4, "Pick the chart").
-Cite every fact under its narration block in plan.md (`cite: p<page> "quote"`, Part I §4, "So every fact is cited").
+Cite every fact under its narration block in plan.md (\`cite: p<page> "quote"\`, Part I §4, "So every fact is cited").
 
 Those two files and the inputs the brief names are your priors, and nothing else is. An earlier version
 of this video may exist in git, or in the folder, or in the conversation that started you. You are not to

@@ -524,15 +524,17 @@ vid.addEventListener('timeupdate',syncChap);vid.addEventListener('seeked',syncCh
 // where each claim comes from: the plan's cite lines, checked against the paper and timed by the captions
 // (tools/sources.py). The button is lit while a cited block is being said; the panel follows the playhead.
 const srcs=document.getElementById('srcs'),sbtn=document.getElementById('sbtn'),slist=document.getElementById('slist');let srcNow=-1;
-const pageUrl=(p,pg)=>{const u=p&&p.url||'';return /arxiv\.org\/abs\//.test(u)?u.replace('/abs/','/pdf/')+'#page='+pg:u};
+// a page link opens that page: in the paper store holding the PDF (papers.json "store", the viewer's #/Key, which takes
+// /p<page>/<quote> and highlights the quote; it needs access to that store), or on arXiv; a DOI only reaches a landing page
+const pageUrl=(p,pg,q)=>{const u=p&&p.url||'';return p&&p.store?p.store+'/p'+pg+'/'+encodeURIComponent(q||''):/arxiv\.org\/abs\//.test(u)?u.replace('/abs/','/pdf/')+'#page='+pg:''};
 function loadSources(v){srcNow=-1;const s=v.sources||[];sbtn.style.display=s.length?'':'none';sbtn.classList.remove('on');srcs.classList.remove('on');
   slist.replaceChildren(...s.map(b=>{const d=document.createElement('div');d.className='src';
     const ts=document.createElement('span');ts.className='ts';ts.textContent=fmt(b.t);ts.onclick=()=>{vid.currentTime=b.t};
     const sc=document.createElement('span');sc.className='sc';sc.textContent=b.scene;d.append(ts,sc);
     for(const [pg,text,kind] of b.cites){const w=document.createElement('div');w.className='w';
-      const link=pg&&v.paper&&/arxiv\.org\/abs\//.test(v.paper.url||''),where=   // only a link that opens that page; a DOI only reaches the landing pagedocument.createElement(link?'a':'span');where.className='pg';
+      const link=pg&&pageUrl(v.paper,pg,kind==='quote'?text:''),where=document.createElement(link?'a':'span');where.className='pg';
       where.textContent=kind==='computed'?'worked out: ':kind==='figure'?'read off a figure, p. '+pg+': ':'p. '+pg+' ';
-      if(link)Object.assign(where,{href:pageUrl(v.paper,pg),target:'_blank',rel:'noopener'});
+      if(link)Object.assign(where,{href:link,target:'_blank',rel:'noopener',title:v.paper.store?'Opens the paper at this passage in the paper store (needs access to it)':'Opens the paper at this page'});
       const q=document.createElement('span');q.textContent=kind==='quote'?'“'+text+'”':text;w.append(where,q);d.append(w)}
     return d}))}
 function syncSrc(){const s=cur&&cur.sources;if(!s||!s.length)return;const t=vid.currentTime,i=s.findIndex(b=>t>=b.t&&t<b.e);

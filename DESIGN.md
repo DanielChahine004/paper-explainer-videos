@@ -466,6 +466,21 @@ labelled illustrative/schematic.
   use it: a caveat in Limits, crystal area drawn as area (21,600 against 3,200 mm2, computed) beside acceptances
   within a fifth of each other. Five lines of arithmetic on the paper's stated geometry, done while planning,
   decided both scenes.
+- **Pick the chart from the comparison, not from habit** (user, `lu177_dual`: the pipeline reaches for bars when
+  they are not the clearest or most faithful form). Bars answer one question: how big each of a few separate
+  quantities is, measured from zero. Before drawing a result, write the sentence it proves and draw the form that
+  sentence compares:
+  - a trend along a continuous variable (energy, dose, time, iterations): a curve through points;
+  - a trade-off (noise against contrast, speed against accuracy): one plotted against the other;
+  - the same items before and after: paired dots joined by a line;
+  - a spread over scans, patients or regions: the dots themselves with their mean, not a bar of the mean;
+  - a speed-up or saving: the thing saved (a scan clock running out sooner), or a log axis for ratios;
+  - parts of a whole: the object split into them;
+  - an image result: the images.
+  Faithfulness goes with the form. Keep the paper's uncertainty (2.73 ± 0.23 drawn as a bare bar claims a
+  precision the paper did not), start a bar at zero or do not use one, and keep the paper's own plot type where
+  it chose one for a reason. A plan whose result scenes are all bars has defaulted rather than chosen: give each
+  one the reason it beats the alternatives above, or change it.
 - **Real data stays real.** Reuse the paper's own figure for real data (photos, reconstructions,
   measured maps or spectra), for dense plots that would be slow to rebuild faithfully, and for the
   result the paper is known for. Redraw mechanisms and schematics, and pull out

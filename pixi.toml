@@ -19,6 +19,7 @@ pip = "*"
 tomlkit = "<0.14"  # chatterbox pins gradio 6.8, which caps tomlkit and pillow
 pillow = "<13"
 setuptools = "<81"  # resemble-perth (chatterbox watermarker) still imports pkg_resources
+hatchling = ">=1.27"  # builds paperstore (PEP 639 license-files); the cu124 index offers only an older one
 
 [pypi-dependencies]
 manim-voiceover = "*"
@@ -26,6 +27,8 @@ chatterbox-tts = "==0.1.7"
 soundfile = "*"
 faster-whisper = "*"
 num2words = "*"
+paperstore = { git = "https://github.com/DanielChahine004/paperstore" }   # vlint plan: cite quotes found on their page (paperstore.pdf.find)
 
 [pypi-options]
 extra-index-urls = ["https://download.pytorch.org/whl/cu124"]
+no-build-isolation = ["paperstore"]   # built with the hatchling above, not an isolated one from the torch index

@@ -412,10 +412,16 @@ h2{font-size:17px;margin:22px 0 10px;font-weight:600;cursor:pointer;user-select:
 #nform .row{display:flex;gap:8px;align-items:center}#nat{color:var(--acc);flex:1}
 #nform button,#notes .hd button{background:#222;color:var(--text);border:1px solid #333;border-radius:8px;padding:6px 12px;font:inherit;cursor:pointer}
 #notes .hd{display:flex;align-items:center;padding:10px;border-bottom:1px solid #262a33;gap:8px}#notes .hd b{flex:1}
+#srcs{width:min(360px,42vw);background:#14161c;border-left:1px solid #262a33;display:none;flex-direction:column;min-height:0}
+#srcs.on{display:flex}#slist{flex:1;overflow:auto;padding:8px}#srcs .hd{display:flex;align-items:center;padding:10px;border-bottom:1px solid #262a33;gap:8px}#srcs .hd b{flex:1}
+#srcs .hd button{background:#222;color:var(--text);border:1px solid #333;border-radius:8px;padding:6px 12px;font:inherit;cursor:pointer}
+.src{padding:8px;border-bottom:1px solid #222;font-size:14px;border-left:3px solid transparent}.src.now{border-left-color:var(--acc);background:#1b1e26}
+.src .ts{color:var(--acc);cursor:pointer;font-variant-numeric:tabular-nums}.src .sc{color:var(--mute);font-size:12px;margin-left:8px}
+.src .w{margin-top:6px}.src .pg{color:var(--mute);font-size:12px}.src a.pg{color:var(--acc)}
 .nb{position:absolute;right:8px;top:8px;background:#e05d5d;color:#fff;padding:1px 7px;border-radius:4px;font-size:12px;font-weight:600}
 @media (max-width:700px){#pbar{gap:6px;padding:8px 10px}#pbar button,#pbar select,#pbar a{padding:6px 9px;font-size:14px}
   #back{order:-2}#ptitle{order:-1;flex-basis:calc(100% - 90px)}#pbar select{max-width:150px}#pbody{flex-direction:column}
-  #pbody video{flex:0 0 auto;aspect-ratio:16/9;height:auto;margin:auto 0}#pbody.under video{margin-bottom:0}#pbody.under #capline{margin-bottom:auto}#notes{width:100%;max-height:45vh;border-left:0;border-top:1px solid #262a33}}
+  #pbody video{flex:0 0 auto;aspect-ratio:16/9;height:auto;margin:auto 0}#pbody.under video{margin-bottom:0}#pbody.under #capline{margin-bottom:auto}#notes,#srcs{width:100%;max-height:45vh;border-left:0;border-top:1px solid #262a33}}
 </style></head><body>
 <header><h1>Explainers</h1><span id="count"></span><a id="reels" href="/reels">Reels &rsaquo;</a><input id="q" placeholder="Search" aria-label="Search"></header>
 <main id="grid"></main>
@@ -423,12 +429,14 @@ h2{font-size:17px;margin:22px 0 10px;font-weight:600;cursor:pointer;user-select:
 <select id="chap" aria-label="Jump to a scene"></select><button id="spd" title="Playback speed">1&times;</button>
 <button id="cc" title="Captions (c)">CC</button><button id="qual"></button>
 <a id="paper" target="_blank" rel="noopener">Paper &#8599;</a>
+<button id="sbtn" title="Where the narration's facts come from in the paper (lit while one is being said)">Sources</button>
 <button id="nbtn" title="Note at this moment (n)">Note</button><button id="ntog">Notes</button></div>
 <div id="pbody"><video id="vid" controls playsinline preload="metadata"></video><div id="capline" aria-live="off"></div>
 <div id="notes"><div class="hd"><b>Feedback</b><button id="nclose">Hide</button></div><div id="nlist"></div>
 <div id="nform"><div class="row"><span id="nat"></span></div>
 <textarea id="ntext" placeholder="What should change here? (Enter saves, Shift+Enter for a new line)"></textarea>
-<div class="row"><button id="nsave">Save</button><button id="ncancel">Cancel</button></div></div></div></div></div>
+<div class="row"><button id="nsave">Save</button><button id="ncancel">Cancel</button></div></div></div>
+<div id="srcs"><div class="hd"><b>Sources</b><button id="sclose">Hide</button></div><div id="slist"></div></div></div></div>
 <script>
 // window.SITE is set on the website (site/public/site.js): the list, playlists and notes come from there instead of this server
 const SITE=window.SITE||null,HOME=SITE?'./':'/',NEWDAYS=SITE?7:1;
@@ -474,7 +482,7 @@ function play(v,pl){cur=v;curPl=pl||null;markSeen(v);document.getElementById('pt
   document.getElementById('qual').style.display=v.small?'':'none';
   const pa=document.getElementById('paper');pa.style.display=v.paper&&v.paper.url?'':'none';
   if(v.paper&&v.paper.url){pa.href=v.paper.url;pa.title=v.paper.cite||''}
-  load(pos(v.id));loadChapters(v);player.classList.add('on');
+  load(pos(v.id));loadChapters(v);loadSources(v);player.classList.add('on');
   if(!history.state)history.pushState({p:1},'')}
 // speed and captions are remembered per device; the subtitles are fetched and handed over as a blob, so the video
 // itself never needs to be requested with CORS
@@ -513,6 +521,25 @@ function syncChap(){if(!chaps.length||document.activeElement===chap)return;let i
   for(let k=0;k<chaps.length;k++)if(vid.currentTime+0.25>=chaps[k][1])i=k;if(chap.selectedIndex!==i)chap.selectedIndex=i}
 chap.onchange=()=>{const c=chaps[+chap.value];if(c){vid.currentTime=c[1];vid.play().catch(()=>{})}chap.blur()};
 vid.addEventListener('timeupdate',syncChap);vid.addEventListener('seeked',syncChap);
+// where each claim comes from: the plan's cite lines, checked against the paper and timed by the captions
+// (tools/sources.py). The button is lit while a cited block is being said; the panel follows the playhead.
+const srcs=document.getElementById('srcs'),sbtn=document.getElementById('sbtn'),slist=document.getElementById('slist');let srcNow=-1;
+const pageUrl=(p,pg)=>{const u=p&&p.url||'';return /arxiv\.org\/abs\//.test(u)?u.replace('/abs/','/pdf/')+'#page='+pg:u};
+function loadSources(v){srcNow=-1;const s=v.sources||[];sbtn.style.display=s.length?'':'none';sbtn.classList.remove('on');srcs.classList.remove('on');
+  slist.replaceChildren(...s.map(b=>{const d=document.createElement('div');d.className='src';
+    const ts=document.createElement('span');ts.className='ts';ts.textContent=fmt(b.t);ts.onclick=()=>{vid.currentTime=b.t};
+    const sc=document.createElement('span');sc.className='sc';sc.textContent=b.scene;d.append(ts,sc);
+    for(const [pg,text,kind] of b.cites){const w=document.createElement('div');w.className='w';
+      const link=pg&&v.paper&&v.paper.url,where=document.createElement(link?'a':'span');where.className='pg';
+      where.textContent=kind==='computed'?'worked out: ':kind==='figure'?'read off a figure, p. '+pg+': ':'p. '+pg+' ';
+      if(link)Object.assign(where,{href:pageUrl(v.paper,pg),target:'_blank',rel:'noopener'});
+      const q=document.createElement('span');q.textContent=kind==='quote'?'“'+text+'”':text;w.append(where,q);d.append(w)}
+    return d}))}
+function syncSrc(){const s=cur&&cur.sources;if(!s||!s.length)return;const t=vid.currentTime,i=s.findIndex(b=>t>=b.t&&t<b.e);
+  sbtn.classList.toggle('on',i>=0);if(i===srcNow)return;srcNow=i;[...slist.children].forEach((d,k)=>d.classList.toggle('now',k===i));
+  if(i>=0&&srcs.classList.contains('on')){const d=slist.children[i];requestAnimationFrame(()=>slist.scrollTo({top:d.offsetTop-slist.offsetTop-8,behavior:'smooth'}))}}
+sbtn.onclick=()=>{srcs.classList.toggle('on');srcNow=-2;syncSrc()};document.getElementById('sclose').onclick=()=>srcs.classList.remove('on');
+vid.addEventListener('timeupdate',syncSrc);vid.addEventListener('seeked',syncSrc);
 const notesEl=document.getElementById('notes'),nform=document.getElementById('nform'),ntext=document.getElementById('ntext');
 let noteT=0,notes=[],showDone=false;
 // Open notes are the to-do list. Resolved ones stay in feedback.json as the record of what each led to, folded

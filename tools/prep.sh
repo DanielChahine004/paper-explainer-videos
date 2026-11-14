@@ -16,6 +16,15 @@ D="$R/$V"
 [ ! -f "$D/brief.md" ] || { echo "$V/brief.md exists: this video already has its inputs (delete it to start over)" >&2; exit 2; }
 PY=""; for p in python python3; do "$p" -c "" 2>/dev/null && { PY=$p; break; }; done   # Windows' python3 is a Store stub
 [ -n "$PY" ] || { echo "no python on PATH" >&2; exit 2; }
+# paperstore checks the plan's cite quotes (vlint plan): take its latest for each new video, here and in the render env
+PS="git+https://github.com/DanielChahine004/paperstore"
+upd='cd ~/slab_render && cp "$0" . && ~/.pixi/bin/pixi update -q paperstore'
+if grep -qi microsoft /proc/version 2>/dev/null; then
+  bash -c "$upd" "$R/pixi.toml" >&2 || echo "prep: paperstore not refreshed in the render env" >&2
+else
+  uv pip install -q --reinstall-package paperstore --python "$("$PY" -c 'import sys; print(sys.executable)')" "$PS" >&2 || echo "prep: paperstore not refreshed here" >&2
+  MSYS_NO_PATHCONV=1 wsl bash -c "$upd" "/mnt${R}/pixi.toml" >&2 || echo "prep: paperstore not refreshed in the render env" >&2
+fi
 pp() { pixi exec -s poppler "$@" 2> >(grep -v -E "Invalid XRef entry|No display font|Syntax (Error|Warning)" >&2); }
 
 mkdir -p "$D/src" "$D/assets"

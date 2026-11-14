@@ -36,6 +36,7 @@ from xml.sax.saxutils import escape
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import captions  # noqa: E402
+import sources  # noqa: E402
 import catalog  # noqa: E402  (scan, titles, playlists, notes and thumbnails, shared with the local catalogue)
 import reels  # noqa: E402
 
@@ -389,6 +390,8 @@ def main():
                 gone.append((vid, fname(p["vtt"])))
         e["chapters"] = [[r["name"], r["a"]] for r in acc["reels"]] if acc else []
         e["paper"] = papers.get(vid)
+        # where each claim comes from (plan cite lines, timed by the captions); only for a paper that is public
+        e["sources"] = sources.timed(vid, cap) if e["paper"] and cap else []
         if files:
             uploads.append((vid, e["title"], files))
         videos.append(e)   # a retitled video keeps its dates: the title is not the video

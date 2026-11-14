@@ -261,8 +261,8 @@ def _facts(p, plan):
 
 
 # ---- claims ---------------------------------------------------------------------------------------------------
-# Where each fact comes from, written under the narration block that says it (the paperstore idea: a quote has to
-# be found on its page, so a number can be traced to the place that states it):
+# Where each fact comes from, written under the narration block that says it. A quote has to be found on its page
+# by paperstore's matcher, so a number can be traced to the place that states it:
 #     cite: p9 "2.73 ± 0.23 for FMC-113&208"        a quote, found on that page of src/paper.pdf
 #     cite: computed 1.447 = 1/(1 - 0.309)         a number the video works out, with the working
 #     cite: figure p16 Fig. 7 bar heights          read off a figure, which no text holds
@@ -270,34 +270,14 @@ def _facts(p, plan):
 # passed; here every number a block says must be inside one of that block's own cites.
 _QUOTE = re.compile(r'^p(\d+)\s+["“](.+)["”]$')
 _ELSE = re.compile(r"^(computed|figure\s+p\d+)\b", re.I)
-_DASHES = dict.fromkeys(map(ord, "‐‑‒–—−­"), "-")
-
-
-def _qnorm(s):
-    """paperstore.pdf.norm: ligatures folded, dashes unified, lower case, no whitespace or line-end hyphens."""
-    import unicodedata
-    s = unicodedata.normalize("NFKC", s).translate(_DASHES).lower()
-    return re.sub(r"\s+", "", re.sub(r"-\s*\n\s*", "", s))
-
-
-def _finder(pdf, txt):
-    """found(quote, page): paperstore's own matcher when it is installed (the PDF's words in reading order), else
-    the same normalised match on pdftotext's page, read both line by line and column by column."""
+def find_quote(pdf, quote, page):
+    """Where a quote is on a page of the paper: paperstore's matcher (github.com/DanielChahine004/paperstore), used
+    rather than copied so its improvements reach here. [] when it is not there. tools/prep.sh refreshes it."""
+    from paperstore.pdf import find
     try:
-        from paperstore.pdf import find
-        return lambda q, pg: bool(find(pdf, q, pg))
-    except ImportError:
-        pass
-    streams = []
-    for pg in (txt.read_text(encoding="utf-8", errors="replace").split("\f") if txt.exists() else []):
-        lines = pg.split("\n")
-        mid = max((len(l) for l in lines), default=0) // 2
-        cols = ["", ""]
-        for l in lines:
-            for m in re.finditer(r"\S(?:.*?\S)?(?=\s{3,}|$)", l):
-                cols[m.start() >= mid] += m.group() + "\n"
-        streams.append([_qnorm(pg), _qnorm(cols[0]), _qnorm(cols[1])])
-    return lambda q, pg: 0 < pg <= len(streams) and any(_qnorm(q) in s for s in streams[pg - 1])
+        return find(pdf, quote, page)
+    except ValueError:                                 # too short to anchor, or no such page
+        return []
 
 
 def _claims(p, plan):
@@ -307,8 +287,12 @@ def _claims(p, plan):
     if not plan.cites and not any(b.cites for _, b in blocks):
         return []
     from .rules_static_source import _Numbers, _spoken, _worth_checking
-    src = p.parent / "src"
-    found = _finder(src / "paper.pdf", src / "paper.txt")
+    pdf = p.parent / "src" / "paper.pdf"
+    try:
+        import paperstore.pdf  # noqa: F401
+    except ImportError:
+        return [(1, "cite lines need paperstore: uv pip install git+https://github.com/DanielChahine004/paperstore "
+                    "(the render env has it through pixi.toml)")]
     bad, common = [], []
     for st, b in [(None, None), *blocks]:
         held = list(common)
@@ -316,7 +300,7 @@ def _claims(p, plan):
             where = st.name if st else "before the scenes"
             m, e = _QUOTE.match(c), _ELSE.match(c)
             if m:
-                if found(m.group(2), int(m.group(1))):
+                if find_quote(pdf, m.group(2), int(m.group(1))):
                     held.append(m.group(2))
                 else:
                     bad.append((line, f"{where}: not on page {m.group(1)} of the paper: {m.group(2)[:50]!r}"))

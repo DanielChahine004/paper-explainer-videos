@@ -530,7 +530,7 @@ function loadSources(v){srcNow=-1;const s=v.sources||[];sbtn.style.display=s.len
     const ts=document.createElement('span');ts.className='ts';ts.textContent=fmt(b.t);ts.onclick=()=>{vid.currentTime=b.t};
     const sc=document.createElement('span');sc.className='sc';sc.textContent=b.scene;d.append(ts,sc);
     for(const [pg,text,kind] of b.cites){const w=document.createElement('div');w.className='w';
-      const link=pg&&v.paper&&v.paper.url,where=document.createElement(link?'a':'span');where.className='pg';
+      const link=pg&&v.paper&&/arxiv\.org\/abs\//.test(v.paper.url||''),where=   // only a link that opens that page; a DOI only reaches the landing pagedocument.createElement(link?'a':'span');where.className='pg';
       where.textContent=kind==='computed'?'worked out: ':kind==='figure'?'read off a figure, p. '+pg+': ':'p. '+pg+' ';
       if(link)Object.assign(where,{href:pageUrl(v.paper,pg),target:'_blank',rel:'noopener'});
       const q=document.createElement('span');q.textContent=kind==='quote'?'“'+text+'”':text;w.append(where,q);d.append(w)}

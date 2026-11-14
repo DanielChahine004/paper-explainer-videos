@@ -19,7 +19,7 @@ pip = "*"
 tomlkit = "<0.14"  # chatterbox pins gradio 6.8, which caps tomlkit and pillow
 pillow = "<13"
 setuptools = "<81"  # resemble-perth (chatterbox watermarker) still imports pkg_resources
-hatchling = ">=1.27"  # builds paperstore (PEP 639 license-files); the cu124 index offers only an older one
+hatchling = ">=1.27"  # builds paperstore: an isolated build resolves from the cu124 index, whose packaging (<=24.1) no hatchling >=1.27 accepts
 
 [pypi-dependencies]
 manim-voiceover = "*"

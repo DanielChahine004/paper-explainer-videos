@@ -298,6 +298,30 @@ def narration_appendage(s):
             yield vo.node, f"{t[max(0, m.start() - 30):m.end() + 20]!r}"
 
 
+_NEG_REVEAL = re.compile(r"\b(?:is|was|are|were)\s+not\b[^.?!]*[.?!]\s+(?:It|This|That|They|Its)\s+(?:is|was|are|were)\b"
+                         r"|\b(?:isn't|wasn't|aren't)\b[^.?!]*[.?!]\s+(?:It|This|That|They)(?:'s|\s+(?:is|was|are))\b", re.I)
+
+
+@rule("narration-tic", "static", "warn", "Narration uses an LLM writing tic: a negation-first reveal ('It is not a "
+      "wrong answer. It is a non-answer.') or a run of clipped fragments ('Six legs. One server. One sampler.'). "
+      "Both sound like a slogan, not a colleague (user, after celeritas_optical).", "Part II, Narration",
+      "say what it is, once, in a full sentence with its verb: 'It returns no answer at all.'")
+def narration_tic(s):
+    for vo in s.voiceovers:
+        if vo.text is None:
+            continue
+        t = MARK.sub("", vo.text)
+        m = _NEG_REVEAL.search(t)
+        if m:
+            yield vo.node, f"negation-first reveal: {m.group(0)[:80]!r}"
+        sents = [x for x in re.split(r"(?<=[.!?])\s+", t.strip()) if x]
+        short = [len(x.split()) <= 3 for x in sents]
+        for i in range(len(sents) - 1):
+            if short[i] and short[i + 1]:
+                yield vo.node, f"fragment cadence: {' '.join(sents[i:i + 2])!r}"
+                break
+
+
 def _sentences(text):
     t = MARK.sub("", text)
     return [x for x in re.split(r"(?<=[.!?])\s+", t.strip()) if len(x.split()) >= 3]

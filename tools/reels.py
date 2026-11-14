@@ -116,8 +116,9 @@ def captions(folder):
 def nice(scene):
     """'ImagesHigh' -> 'Images high'; scene files named S03_Foo keep only Foo."""
     s = re.sub(r"^[Ss]\d+_?", "", scene)
-    s = re.sub(r"(?<=[a-z0-9])(?=[A-Z])", " ", s).replace("_", " ").strip()
-    return s[:1].upper() + s[1:].lower() if s else scene
+    s = re.sub(r"(?<=[a-z0-9])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z]{2})", " ", s).replace("_", " ").strip()
+    s = " ".join(w if len(w) > 1 and w.isupper() else w.lower() for w in s.split())   # acronyms keep their capitals
+    return s[:1].upper() + s[1:] if s else scene
 
 
 def index(videos, render_root):
@@ -376,6 +377,8 @@ h3{font-size:14px;color:var(--mute);font-weight:600;margin:14px 12px 8px;text-tr
  <div id="clist"></div><div id="cform"><div id="cin" contenteditable="true" role="textbox" aria-label="Add a comment" enterkeyhint="send" spellcheck="true"></div><button id="cpost">Post</button></div></div></div>
 </div><div id="toast"></div>
 <script>
+// window.SITE is set on the website (site/public/site.js): reels, notes and the catalogue's address come from there
+const SITE=window.SITE||null,HOME=SITE?'./':'/';
 const $=s=>document.querySelector(s),esc=s=>String(s).replace(/[&<>"']/g,c=>'&#'+c.charCodeAt(0)+';');
 const fmt=s=>{s=Math.max(0,Math.round(s));return Math.floor(s/60)+':'+String(s%60).padStart(2,'0')};
 const ls={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(e){return d}},
@@ -438,7 +441,7 @@ function slide(r,k){const a=by[r.vid],s=document.createElement('section');s.clas
   pg.addEventListener('pointerup',drop);pg.addEventListener('pointercancel',drop);pg.onclick=e=>e.stopPropagation();
   s.querySelector('.lk').onclick=()=>like(s,false);
   s.querySelector('.nt').onclick=()=>note(s);
-  s.querySelector('.fl').onclick=e=>{e.preventDefault();location.href='/#v='+encodeURIComponent(r.vid)+'&t='+Math.floor(s===curSl?V.currentTime:r.a)};
+  s.querySelector('.fl').onclick=e=>{e.preventDefault();location.href=HOME+'#v='+encodeURIComponent(r.vid)+'&t='+Math.floor(s===curSl?V.currentTime:r.a)};
   let last=0;
   // act on the tap itself, never after a timer: a phone only lets play() and sound through inside the tap's handler.
   // A second tap within 300 ms undoes the first one's pause or play and likes the reel instead
@@ -488,7 +491,7 @@ function like(s,burst,e){const k=key(s._r),b=s.querySelector('.lk');
 // is about (tap it to go there), and a box to add one at the moment the reel was paused on
 const notes={};      // video id -> its notes from feedback.json, fetched when one of its reels first comes up
 const inReel=(n,r)=>n.t>=r.a&&n.t<r.b;
-async function loadNotes(vid){try{notes[vid]=await (await fetch('/api/notes?id='+encodeURIComponent(vid))).json()}catch(e){notes[vid]=notes[vid]||[]}
+async function loadNotes(vid){try{notes[vid]=SITE?await SITE.notes(vid):await (await fetch('/api/notes?id='+encodeURIComponent(vid))).json()}catch(e){notes[vid]=notes[vid]||[]}
   document.querySelectorAll('.slide').forEach(s=>{if(s._r.vid===vid)noteCount(s)})}
 function noteCount(s){const k=(notes[s._r.vid]||[]).filter(n=>inReel(n,s._r)).length;s.querySelector('.nt span').textContent=k}
 let sheetSl=null,sheetT=0,sheetWas=false;
@@ -499,7 +502,7 @@ function renderSheet(){const r=sheetSl._r,a=by[r.vid],ns=(notes[r.vid]||[]).slic
   const reelOf=t=>a.reels.find(q=>t>=q.a&&t<q.b)||a.reels[a.reels.length-1];
   const row=n=>{const q=reelOf(n.t),done=n.status!=='open';return `<div class="cm${done?' done':''}">
      <button class="ts" data-n="${q.n-1}" data-t="${n.t}">${fmt(n.t-q.a)}</button>
-     <div class="bd"><div class="sn">${esc(q.name)}${done?'<span class="st">&#10003; resolved</span>':''}</div><div class="tx">${esc(n.text)}</div>
+     <div class="bd"><div class="sn">${n.by?'@'+esc(n.by)+' &middot; ':''}${esc(q.name)}${done?'<span class="st">&#10003; resolved</span>':''}</div><div class="tx">${esc(n.text)}</div>
      ${done&&n.resolution?`<div class="sn">&rarr; ${esc(n.resolution)}</div>`:''}</div></div>`};
   const mine=ns.filter(n=>inReel(n,r)),rest=ns.filter(n=>!inReel(n,r));
   $('#shd').textContent=ns.length+(ns.length===1?' comment':' comments');
@@ -512,8 +515,8 @@ $('#clist').onclick=e=>{const b=e.target.closest('.ts');if(!b)return;const t=+b.
   if(s===curSl&&inReel({t},cur)){V.currentTime=t;userPaused=false;s.classList.remove('paused');V.play().catch(()=>{})}
   else{jumpT=t;setTimeout(()=>{jumpT=null},3000);location.hash='#/@'+encodeURIComponent(s._r.vid)+'/'+b.dataset.n}};
 async function post(){const s=sheetSl,text=$('#cin').innerText.trim();if(!s||!text)return;
-  const ok=await fetch('/api/notes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:s._r.vid,t:sheetT,text})}).then(x=>x.ok).catch(()=>false);
-  if(!ok)return toast('Could not post the comment');$('#cin').textContent='';await loadNotes(s._r.vid);if(sheetSl===s)renderSheet()}
+  const ok=SITE?await SITE.addNote(s._r.vid,sheetT,text):await fetch('/api/notes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:s._r.vid,t:sheetT,text})}).then(x=>x.ok).catch(()=>false);
+  if(!ok)return SITE?null:toast('Could not post the comment');$('#cin').textContent='';await loadNotes(s._r.vid);if(sheetSl===s)renderSheet()}
 try{$('#cin').contentEditable='plaintext-only'}catch(e){}   // no pasted formatting where the browser allows it
 // a box emptied by backspacing can keep a stray <br>, which would hide the placeholder
 $('#cin').oninput=e=>{const c=e.currentTarget;if(!c.innerText.trim()&&c.innerHTML)c.innerHTML=''};
@@ -532,7 +535,7 @@ if(window.visualViewport){const vv=visualViewport,fit=()=>{const sh=$('#sheet'),
 function toast(t){const e=$('#toast');e.textContent=t;e.style.display='block';clearTimeout(e._t);e._t=setTimeout(()=>e.style.display='none',1600)}
 function activate(s){if(curSl===s||sheetSl)return;if(curSl){curSl.classList.remove('ready','paused')}curSl=s;cur=s._r;userPaused=false;
   const a=by[cur.vid],src=a.small||a.src;s.querySelector('.stage').prepend(V);
-  R.classList.remove('on');revD=0;s.querySelector('.stage').append(R);if(R.dataset.src!==a.rev){R.dataset.src=a.rev;R.src=a.rev;R.load()}
+  R.classList.remove('on');revD=0;s.querySelector('.stage').append(R);if(a.rev&&R.dataset.src!==a.rev){R.dataset.src=a.rev;R.src=a.rev;R.load()}
   let n=s;hydrate(s);for(let i=0;i<3&&n;i++){n=n.nextElementSibling;hydrate(n)}hydrate(s.previousElementSibling);
   // a new file: start it at once (an iPhone loads nothing until play() is called), silent until it has jumped to
   // the scene, then seek when its length is known
@@ -589,7 +592,7 @@ function profile(a){const tot=a.reels.reduce((s,r)=>s+r.b-r.a,0);
    <div class="prof"><div class="av" style="background-image:url('${a.avatar}')"></div><div class="h">@${esc(a.id)}</div><div class="n">${esc(a.title)}</div>
    <div class="stats"><div><b>${a.reels.length}</b><span>Reels</span></div><div><b>${fmt(tot)}</b><span>Length</span></div>
     <div><b>${new Date(a.mtime*1000).toLocaleDateString()}</b><span>Posted</span></div></div>
-   <div class="btns"><a href="#/@${encodeURIComponent(a.id)}/0">Play all</a><a class="alt" href="/#v=${encodeURIComponent(a.id)}&t=0">Full video</a></div></div>
+   <div class="btns"><a href="#/@${encodeURIComponent(a.id)}/0">Play all</a><a class="alt" href="${HOME}#v=${encodeURIComponent(a.id)}&t=0">Full video</a></div></div>
    <div class="grid">${a.reels.map(r=>tile(r,'#/@'+encodeURIComponent(a.id)+'/'+(r.n-1),r.n+' &middot; '+esc(r.name))).join('')}</div>`;
   $('#pres').scrollTop=0}
 function show(v){document.querySelectorAll('.view').forEach(e=>e.classList.toggle('on',e.id==='v-'+v));
@@ -609,6 +612,7 @@ function route(){const h=decodeURIComponent(location.hash.slice(1)||'/');let m,n
   document.querySelectorAll('#nav a').forEach(e=>e.classList.toggle('on',e.dataset.v===nav))}
 $('#q').oninput=search;window.onhashchange=route;
 document.addEventListener('visibilitychange',()=>{if(document.hidden)V.pause()});
-fetch('/api/reels').then(r=>r.json()).then(d=>{accs=d;by=Object.fromEntries(d.map(a=>[a.id,a]));
+if(SITE)document.querySelector('#nav a[data-v=cat]').href=HOME;
+(SITE?SITE.reels():fetch('/api/reels').then(r=>r.json())).then(d=>{accs=d;by=Object.fromEntries(d.map(a=>[a.id,a]));
   all=d.flatMap(a=>a.reels.map((r,k)=>Object.assign(r,{vid:a.id,n:k+1})));route()});
 </script></body></html>"""

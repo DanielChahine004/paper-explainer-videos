@@ -77,6 +77,8 @@ class Flash(Narrated):  # expect: shadows-manim, scene-protagonist
         with self.voiceover(text="Then a <bookmark mark='lt'/>live test: the <bookmark mark='q'/>quest."):  # expect: narration-appendage
             self.at("lt", Indicate(ok))
             self.at("q", Indicate(ok))
+        with self.voiceover(text="It is not a wrong <bookmark mark='nr'/>answer. It is a non-answer."):  # expect: narration-tic
+            self.at("nr", Indicate(ok))
         line = Tex("\tau")  # vlint: ignore[tex-not-raw, control-char] suppression on the line works
         sig = MathTex("\sigma")  # expect: syntax-warning, tex-not-raw
         # vlint: ignore-next[long-text] and on the line before

@@ -27,6 +27,7 @@ __pycache__/
 !tools/vlint/tests/**/*.pdf
 # Manim's own output when it is run from the project root instead of a video folder, and scratch
 media/
+!site/media/
 t/
 t2.py
 # Debug overlay from a video's src/find.py

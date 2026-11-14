@@ -628,6 +628,15 @@ labelled illustrative/schematic.
   scattering, at two lengths, and Mie scattering kink its path"; "tiles, each five point eight millimetres wide"). Give
   it a verb and usually its own sentence: "The slab measures fifty by fifty by ten millimetres." Read every line aloud
   as a listener who cannot see the screen (vlint: `narration-appendage` catches the colon and dash cases only).
+- **No LLM writing tics, spoken or on screen** (user, from a list of them). Each one makes a colleague's explanation
+  sound like a pitch, so state the plain fact once with its verb:
+  negation-first reveals ("It is not a wrong answer. It is a non-answer."), clipped fragments ("Six legs. One
+  sampler."; vlint: `narration-tic` catches both), straw-man knockdowns ("The obvious reading is X, and it is
+  wrong."), deferred nouns ("Five of those rows are one cluster. The sixth is not."), aphoristic closers ("the kind of
+  number that looks like evidence"), dressed metaphors ("information loss wearing the costume of a fix"),
+  significance labels ("the leg that answers the actual question"), and data as an actor ("the median hides it",
+  "the table shows it": say what the number is). Titles are plain names of what the scene shows, never coy or
+  thesis-shaped ("what 'exhausted' means"), and never label-first ("The gap: ...").
 - Use short sentences and avoid a bare "l". After the draft, read the Whisper check (the
   `== narration heard wrong` lines `voice_prepass.py` prints for any voice, in check.sh's output and in
   `run.log`: each word of a line that its own transcript has differently or not at all; Whisper

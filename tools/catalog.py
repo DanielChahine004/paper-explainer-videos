@@ -8,6 +8,9 @@ reach it (WSL2's network sits behind NAT):
 Thumbnails are cut by ffmpeg (through WSL, from the render env) into .catalog/ and cached; without ffmpeg the page
 falls back to the video's own first frames. Playback position is remembered per device.
 
+The same page is the friends' website (tools/publish.py writes it out with site/public/site.js, which sets window.SITE):
+there the list comes from index.json, notes are comments by signed-in GitHub users, and Reels is reels.html.
+
 Playlists live in playlists.json at the project root, {"name": ["folder", ...]}. Each shows as its own row above the
 full list, newest paper first (the videos have no watch order), counting the videos rendered so far; inside a playlist,
 the card after the one playing plays on its own. NEW marks a paper started in the last day and not yet opened on this
@@ -35,6 +38,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import unquote
 
+import captions
 import reels
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -42,6 +46,7 @@ CACHE = ROOT / ".catalog"
 PORT = int(os.environ.get("CATALOG_PORT", "8765"))
 FFMPEG = os.environ.get("FFMPEG", "/home/h/slab_render/.pixi/envs/default/bin/ffmpeg")   # inside WSL
 PLAYLISTS = ROOT / "playlists.json"
+PAPERS = ROOT / "papers.json"   # {video: {"cite", "url"}}: the paper each explains, linked under its title
 RENDER = Path(os.environ.get("RENDER_ROOT", r"\\wsl.localhost\Ubuntu\home\h\slab_render"))   # the WSL render mirror
 SKIP = {"voice_ab", "kit_gallery"}                       # voice tests and kit.py's gallery, not explainers
 _meta, _lock = {}, threading.Lock()
@@ -69,8 +74,9 @@ def title(folder):
         if m:
             t = " ".join(m.group(1).split())
             t = re.sub(r"^.*?[Ee]xplainer(?: \([^)]*\))?(?: of)?:?\s*", "", t, count=1)
-            q = re.search(r"(?:^|[\s,])'([^']{12,})'", t)          # a paper's quoted title, named up front, wins
-            t = q.group(1) if q and q.start() < 100 else re.split(r" \(|\. |; | -- ", t)[0]
+            t = re.sub(rf"^{re.escape(folder.name)}:\s*", "", t)   # newer scripts open '<folder>: Authors, "Title", venue'
+            q = re.search(r"(?:^|[\s,])(?:'([^']{12,})'|\"([^\"]{12,})\")", t)   # a paper's quoted title, named up front, wins
+            t = (q.group(1) or q.group(2)) if q and q.start() < 100 else re.split(r" \(|\. |; | -- ", t)[0]
             t = t.strip(" .'\"")
             if t:
                 t = t if len(t) <= 90 else t[:88].rsplit(" ", 1)[0] + "…"
@@ -88,10 +94,11 @@ def born(folder):
 def scan():
     """All explainers, newest first: one entry per folder, its full render plus the small copy if there is one."""
     out = []
+    newest = {}   # one render per folder: an older cut left beside it (v1_narrated.mp4) is not a second video
     for full in ROOT.glob("*/*_narrated.mp4"):
-        folder = full.parent
-        if folder.name in SKIP:
-            continue
+        if full.parent.name not in SKIP and (full.parent not in newest or full.stat().st_mtime > newest[full.parent].stat().st_mtime):
+            newest[full.parent] = full
+    for folder, full in newest.items():
         st = full.stat()
         key = (str(full), st.st_mtime, st.st_size)
         with _lock:
@@ -106,7 +113,18 @@ def scan():
                     "size": st.st_size, "src": f"/v/{folder.name}/{full.name}",
                     "small": f"/v/{folder.name}/{small.name}" if small else None,
                     "thumb": f"/thumb/{folder.name}.jpg?{int(st.st_mtime)}"})
+    ps = papers()
+    for v in out:
+        v["paper"] = ps.get(v["id"])
+        v["vtt"] = f"/vtt/{v['id']}.vtt?{int(v['mtime'])}"
     return sorted(out, key=lambda v: -v["mtime"])
+
+
+def papers():
+    try:
+        return {k: v for k, v in json.loads(PAPERS.read_text(encoding="utf-8")).items() if isinstance(v, dict)}
+    except (OSError, ValueError, AttributeError):
+        return {}
 
 
 def playlists():
@@ -275,6 +293,20 @@ class Handler(BaseHTTPRequestHandler):
                     self.send(404, b"", "text/plain")
                 else:
                     self.send(200, t.read_bytes(), "image/jpeg", [("Cache-Control", "max-age=86400")])
+            elif path.startswith("/vtt/"):
+                vid = path[5:].removesuffix(".vtt")
+                full = next((ROOT / v["src"][3:] for v in scan() if v["id"] == vid), None)
+                st = full.stat() if full else None
+                f = captions.make(vid, f"{int(st.st_mtime)}-{st.st_size}", CACHE / "captions") if st else None
+                if f is None:
+                    self.send(404, b"", "text/plain")
+                else:
+                    self.send(200, f.read_bytes(), "text/vtt; charset=utf-8", [("Cache-Control", "max-age=3600")])
+            elif path == "/api/chapters":
+                vid = unquote(self.path.split("id=", 1)[1]) if "id=" in self.path else ""
+                acc = next((a for a in reels.index([v for v in scan() if v["id"] == vid], RENDER)), None)
+                self.send(200, json.dumps([[r["name"], r["a"]] for r in acc["reels"]] if acc else []).encode(),
+                          "application/json", [("Cache-Control", "no-cache")])
             elif path == "/api/playlists":
                 self.send(200, json.dumps(playlists()).encode(), "application/json", [("Cache-Control", "no-cache")])
             elif path.startswith("/thumb/"):
@@ -355,15 +387,18 @@ h2{font-size:17px;margin:22px 0 10px;font-weight:600;cursor:pointer;user-select:
 .card:hover{transform:translateY(-2px)}.card:focus-visible{outline:2px solid var(--acc)}
 .th{position:relative;aspect-ratio:16/9;background:#000}.th img,.th video{width:100%;height:100%;object-fit:cover;display:block}
 .dur{position:absolute;right:8px;bottom:8px;background:#000c;padding:1px 6px;border-radius:4px;font-size:12px}
-.new{position:absolute;left:8px;top:8px;background:var(--acc);color:#111;padding:1px 7px;border-radius:4px;font-size:12px;font-weight:600}
+.new{position:absolute;left:8px;top:8px;background:var(--acc);color:#111;padding:1px 7px;border-radius:4px;font-size:12px;font-weight:600}.new.upd{background:#6fd1a0}
 .bar{position:absolute;left:0;bottom:0;height:3px;background:var(--acc)}
 .meta{padding:10px 12px 12px}.t{font-weight:600}.s{color:var(--mute);font-size:13px;margin-top:4px}
 #player{position:fixed;inset:0;background:#000;display:none;flex-direction:column;z-index:9}
 #player.on{display:flex}#player video{flex:1;width:100%;min-height:0;background:#000}
-#pbar{display:flex;gap:10px;align-items:center;padding:10px 16px;background:#111}
-#pbar button{background:#222;color:var(--text);border:1px solid #333;border-radius:8px;padding:8px 14px;font:inherit;cursor:pointer}
-#ptitle{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-#pbody{flex:1;display:flex;min-height:0}#pbody video{flex:1;min-width:0}
+#pbar{display:flex;gap:10px;align-items:center;padding:10px 16px;background:#111;flex-wrap:wrap}
+#pbar button,#pbar select,#pbar a{background:#222;color:var(--text);border:1px solid #333;border-radius:8px;padding:8px 14px;font:inherit;cursor:pointer;text-decoration:none}
+#pbar select{max-width:220px;padding:8px 10px}#pbar .on{border-color:var(--acc);color:var(--acc)}
+#ptitle{flex:1;min-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cite{font-style:italic}video::cue{font-size:clamp(14px,2.6vw,28px);background:#000b}
+#pbody{flex:1;display:flex;min-height:0}
+#capline{display:none;flex:0 0 auto;color:#fff;text-align:center;font-size:17px;line-height:1.35;padding:8px 14px;min-height:calc(2.7em + 16px);white-space:pre-line}#pbody video{flex:1;min-width:0}
 #notes{width:min(340px,40vw);background:#14161c;border-left:1px solid #262a33;display:none;flex-direction:column;min-height:0}
 #notes.on{display:flex}#nlist{flex:1;overflow:auto;padding:8px}
 .note{display:flex;gap:8px;padding:8px;border-bottom:1px solid #222;font-size:14px}
@@ -378,32 +413,42 @@ h2{font-size:17px;margin:22px 0 10px;font-weight:600;cursor:pointer;user-select:
 #nform button,#notes .hd button{background:#222;color:var(--text);border:1px solid #333;border-radius:8px;padding:6px 12px;font:inherit;cursor:pointer}
 #notes .hd{display:flex;align-items:center;padding:10px;border-bottom:1px solid #262a33;gap:8px}#notes .hd b{flex:1}
 .nb{position:absolute;right:8px;top:8px;background:#e05d5d;color:#fff;padding:1px 7px;border-radius:4px;font-size:12px;font-weight:600}
-@media (max-width:700px){#pbody{flex-direction:column}#notes{width:100%;max-height:45vh;border-left:0;border-top:1px solid #262a33}}
+@media (max-width:700px){#pbar{gap:6px;padding:8px 10px}#pbar button,#pbar select,#pbar a{padding:6px 9px;font-size:14px}
+  #back{order:-2}#ptitle{order:-1;flex-basis:calc(100% - 90px)}#pbar select{max-width:150px}#pbody{flex-direction:column}
+  #pbody video{flex:0 0 auto;aspect-ratio:16/9;height:auto;margin:auto 0}#pbody.under video{margin-bottom:0}#pbody.under #capline{margin-bottom:auto}#notes{width:100%;max-height:45vh;border-left:0;border-top:1px solid #262a33}}
 </style></head><body>
 <header><h1>Explainers</h1><span id="count"></span><a id="reels" href="/reels">Reels &rsaquo;</a><input id="q" placeholder="Search" aria-label="Search"></header>
 <main id="grid"></main>
-<div id="player"><div id="pbar"><button id="back">&larr; Back</button><span id="ptitle"></span><button id="qual"></button>
+<div id="player"><div id="pbar"><button id="back">&larr; Back</button><span id="ptitle"></span>
+<select id="chap" aria-label="Jump to a scene"></select><button id="spd" title="Playback speed">1&times;</button>
+<button id="cc" title="Captions (c)">CC</button><button id="qual"></button>
+<a id="paper" target="_blank" rel="noopener">Paper &#8599;</a>
 <button id="nbtn" title="Note at this moment (n)">Note</button><button id="ntog">Notes</button></div>
-<div id="pbody"><video id="vid" controls playsinline preload="metadata"></video>
+<div id="pbody"><video id="vid" controls playsinline preload="metadata"></video><div id="capline" aria-live="off"></div>
 <div id="notes"><div class="hd"><b>Feedback</b><button id="nclose">Hide</button></div><div id="nlist"></div>
 <div id="nform"><div class="row"><span id="nat"></span></div>
 <textarea id="ntext" placeholder="What should change here? (Enter saves, Shift+Enter for a new line)"></textarea>
 <div class="row"><button id="nsave">Save</button><button id="ncancel">Cancel</button></div></div></div></div></div>
 <script>
+// window.SITE is set on the website (site/public/site.js): the list, playlists and notes come from there instead of this server
+const SITE=window.SITE||null,HOME=SITE?'./':'/',NEWDAYS=SITE?7:1;
+if(SITE)document.getElementById('reels').href='reels.html';
 const grid=document.getElementById('grid'),vid=document.getElementById('vid'),player=document.getElementById('player');
 let list=[],pls=[],cur=null,curPl=null,small=false;
 const fmt=s=>{s=Math.round(s);return Math.floor(s/60)+':'+String(s%60).padStart(2,'0')};
 const pos=id=>{try{return +localStorage.getItem('pos:'+id)||0}catch(e){return 0}};
 const save=(id,t)=>{try{localStorage.setItem('pos:'+id,t)}catch(e){}};
-const seen=id=>{try{return localStorage.getItem('seen:'+id)!==null}catch(e){return true}};
-const markSeen=id=>{try{localStorage.setItem('seen:'+id,1)}catch(e){}};
+// seen:<id> holds the render last opened here (its mtime), so a newer render shows as UPDATED; older pages stored 1
+const seenAt=id=>{try{const s=localStorage.getItem('seen:'+id);return s===null?null:+s}catch(e){return 0}};
+const markSeen=v=>{try{localStorage.setItem('seen:'+v.id,Math.floor(v.mtime))}catch(e){}};
 function card(v){
   const d=document.createElement('div');d.className='card';d.tabIndex=0;
-  const age=(Date.now()/1000-v.born)/86400,p=pos(v.id);
-  d.innerHTML=`<div class="th"><img loading="lazy" alt=""><span class="dur">${fmt(v.dur)}</span>${age<1&&!seen(v.id)&&!p?'<span class="new">NEW</span>':''}${v.notes?`<span class="nb">${v.notes} note${v.notes>1?'s':''}</span>`:''}
+  const age=(Date.now()/1000-v.born)/86400,p=pos(v.id),s=seenAt(v.id);
+  const badge=age<NEWDAYS&&s===null&&!p?'<span class="new">NEW</span>':s>1&&v.mtime>=s+1?'<span class="new upd">UPDATED</span>':'';
+  d.innerHTML=`<div class="th"><img loading="lazy" alt=""><span class="dur">${fmt(v.dur)}</span>${badge}${v.notes?`<span class="nb">${v.notes} note${v.notes>1?'s':''}</span>`:''}
     ${p>5?`<div class="bar" style="width:${Math.min(100,100*p/v.dur)}%"></div>`:''}</div>
-    <div class="meta"><div class="t"></div><div class="s">${new Date(v.mtime*1000).toLocaleDateString()} · ${(v.size/1048576).toFixed(0)} MB</div></div>`;
-  d.querySelector('.t').textContent=v.title;
+    <div class="meta"><div class="t"></div>${v.paper&&v.paper.cite?'<div class="s cite"></div>':''}<div class="s">${new Date(v.mtime*1000).toLocaleDateString()} · ${(v.size/1048576).toFixed(0)} MB</div></div>`;
+  d.querySelector('.t').textContent=v.title;if(d.querySelector('.cite'))d.querySelector('.cite').textContent=v.paper.cite;
   const img=d.querySelector('img');img.src=v.thumb;
   img.onerror=()=>{const f=document.createElement('video');f.src=v.src+'#t=20';f.muted=true;f.preload='metadata';f.playsInline=true;img.replaceWith(f)};
   d.onclick=()=>play(v,d.dataset.pl);d.onkeydown=e=>{if(e.key==='Enter')play(v,d.dataset.pl)};
@@ -425,11 +470,49 @@ function render(){const q=document.getElementById('q').value.toLowerCase(),by=Ob
 function order(p){const by=Object.fromEntries(list.map(v=>[v.id,v]));return p.ids.map(id=>by[id]).filter(Boolean).sort((a,b)=>b.born-a.born)}
 function next(){if(!cur||!curPl)return null;const p=pls.find(p=>p.name===curPl);if(!p)return null;
   const o=order(p),i=o.findIndex(v=>v.id===cur.id);return i>=0&&o[i+1]||null}
-function play(v,pl){cur=v;curPl=pl||null;markSeen(v.id);document.getElementById('ptitle').textContent=v.title;
-  document.getElementById('qual').style.display=v.small?'':'none';load(pos(v.id));player.classList.add('on');
+function play(v,pl){cur=v;curPl=pl||null;markSeen(v);document.getElementById('ptitle').textContent=v.title;
+  document.getElementById('qual').style.display=v.small?'':'none';
+  const pa=document.getElementById('paper');pa.style.display=v.paper&&v.paper.url?'':'none';
+  if(v.paper&&v.paper.url){pa.href=v.paper.url;pa.title=v.paper.cite||''}
+  load(pos(v.id));loadChapters(v);player.classList.add('on');
   if(!history.state)history.pushState({p:1},'')}
+// speed and captions are remembered per device; the subtitles are fetched and handed over as a blob, so the video
+// itself never needs to be requested with CORS
+const ls=(k,d)=>{try{const v=localStorage.getItem(k);return v===null?d:v}catch(e){return d}},lset=(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}};
+const RATES=[1,1.25,1.5,1.75,2];let rate=+ls('speed',1)||1,cc=ls('cc','0')==='1',capUrl=null,capFor=null;
+function showRate(){const b=document.getElementById('spd');b.textContent=rate+'×';b.classList.toggle('on',rate!==1);vid.defaultPlaybackRate=vid.playbackRate=rate}
+document.getElementById('spd').onclick=()=>{rate=RATES[(RATES.indexOf(rate)+1)%RATES.length];lset('speed',rate);showRate()};
+// on a phone held upright the captions go in the empty space under the picture, so they never cover it; fullscreen
+// and wide screens keep them on the video
+const capline=document.getElementById('capline'),below=matchMedia('(max-width:700px) and (orientation:portrait)');
+const isFull=()=>!!(document.fullscreenElement||document.webkitFullscreenElement||vid.webkitDisplayingFullscreen);
+function drawCue(){const t=vid.textTracks[0],c=t&&t.activeCues;capline.textContent=c&&c.length?[...c].map(x=>x.text).join('\n'):''}
+function showCC(){const b=document.getElementById('cc'),under=cc&&below.matches&&!isFull();b.classList.toggle('on',cc);
+  for(const t of vid.textTracks)t.mode=cc&&!under?'showing':'hidden';capline.style.display=under?'block':'none';
+  document.getElementById('pbody').classList.toggle('under',under);drawCue()}
+below.addEventListener('change',showCC);['fullscreenchange','webkitfullscreenchange'].forEach(e=>document.addEventListener(e,showCC));
+['webkitbeginfullscreen','webkitendfullscreen'].forEach(e=>vid.addEventListener(e,()=>setTimeout(showCC,0)));
+document.getElementById('cc').onclick=()=>{cc=!cc;lset('cc',cc?'1':'0');showCC()};
+async function loadCaptions(v){vid.querySelectorAll('track').forEach(t=>t.remove());const b=document.getElementById('cc');
+  b.style.display=v.vtt?'':'none';if(!v.vtt)return;
+  if(capFor!==v.vtt){try{const r=await fetch(v.vtt);if(!r.ok)throw 0;if(capUrl)URL.revokeObjectURL(capUrl);
+    capUrl=URL.createObjectURL(new Blob([await r.text()],{type:'text/vtt'}));capFor=v.vtt}catch(e){b.style.display='none';return}}
+  if(cur!==v)return;const t=document.createElement('track');Object.assign(t,{kind:'subtitles',srclang:'en',label:'English',src:capUrl});
+  vid.append(t);t.track.addEventListener('cuechange',drawCue);showCC();t.addEventListener('load',showCC)}
 function load(t){loadNotes();vid.src=small&&cur.small?cur.small:cur.src;document.getElementById('qual').textContent=small?'Small':'HD';
-  vid.addEventListener('loadedmetadata',()=>{if(t>5&&t<vid.duration-10)vid.currentTime=t;vid.play().catch(()=>{})},{once:true})}
+  loadCaptions(cur);
+  vid.addEventListener('loadedmetadata',()=>{showRate();if(t>5&&t<vid.duration-10)vid.currentTime=t;vid.play().catch(()=>{})},{once:true})}
+// scenes as chapters: a picker that follows the playhead and jumps on a pick
+const chap=document.getElementById('chap');let chaps=[];
+async function loadChapters(v){chaps=[];chap.style.display='none';
+  try{chaps=SITE?(v.chapters||[]):await (await fetch('/api/chapters?id='+encodeURIComponent(v.id))).json()}catch(e){}
+  if(cur!==v||chaps.length<2)return;
+  chap.replaceChildren(...chaps.map(([n,a],i)=>Object.assign(document.createElement('option'),{value:i,textContent:(i+1)+'. '+n+' · '+fmt(a)})));
+  chap.style.display='';syncChap()}
+function syncChap(){if(!chaps.length||document.activeElement===chap)return;let i=0;
+  for(let k=0;k<chaps.length;k++)if(vid.currentTime+0.25>=chaps[k][1])i=k;if(chap.selectedIndex!==i)chap.selectedIndex=i}
+chap.onchange=()=>{const c=chaps[+chap.value];if(c){vid.currentTime=c[1];vid.play().catch(()=>{})}chap.blur()};
+vid.addEventListener('timeupdate',syncChap);vid.addEventListener('seeked',syncChap);
 const notesEl=document.getElementById('notes'),nform=document.getElementById('nform'),ntext=document.getElementById('ntext');
 let noteT=0,notes=[],showDone=false;
 // Open notes are the to-do list. Resolved ones stay in feedback.json as the record of what each led to, folded
@@ -438,14 +521,17 @@ function noteRow(n){const d=document.createElement('div');d.className='note'+(n.
   d.innerHTML='<span class="ts"></span><div class="tx"></div><button class="x" title="Delete">&times;</button>';
   const ts=d.querySelector('.ts');ts.textContent=fmt(n.t);ts.onclick=()=>{vid.currentTime=n.t;vid.pause()};
   const tx=d.querySelector('.tx');tx.textContent=n.text;
+  if(n.by){const b=document.createElement('div');b.className='sc';b.textContent='@'+n.by;tx.prepend(b)}
+  if(SITE&&!n.mine)d.querySelector('.x').remove();   // on the site, only your own comments can be deleted
   if(n.scene){const s=document.createElement('div');s.className='sc';s.textContent=n.scene+' @ '+n.scene_t+' s'+
     (n.status!=='open'&&n.render&&cur.mtime&&Math.abs(n.render-cur.mtime)>2?' · earlier cut':'');tx.append(s)}
   if(n.resolution){const r=document.createElement('div');r.className='rs';const k=document.createElement('span');k.className='k';
     k.textContent=(n.kind||'done')+': ';r.append(k,n.resolution);tx.append(r)}
-  d.querySelector('.x').onclick=async()=>{if(!confirm('Delete this note?'))return;
+  if(d.querySelector('.x'))d.querySelector('.x').onclick=async()=>{if(!confirm('Delete this note?'))return;
+    if(SITE){await SITE.delNote(cur.id,n);return loadNotes()}
     await fetch('/api/notes/delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:cur.id,nid:n.nid})});loadNotes()};
   return d}
-async function loadNotes(){if(!cur)return;try{notes=await (await fetch('/api/notes?id='+encodeURIComponent(cur.id))).json()}catch(e){notes=[]}
+async function loadNotes(){if(!cur)return;try{notes=SITE?await SITE.notes(cur.id):await (await fetch('/api/notes?id='+encodeURIComponent(cur.id))).json()}catch(e){notes=[]}
   const by=(a,b)=>a.t-b.t,open=notes.filter(n=>n.status==='open').sort(by),done=notes.filter(n=>n.status!=='open').sort(by);
   const rows=open.map(noteRow);
   if(!open.length)rows.push(Object.assign(document.createElement('div'),{className:'sc',textContent:'No open notes.',style:'padding:8px'}));
@@ -456,6 +542,7 @@ async function loadNotes(){if(!cur)return;try{notes=await (await fetch('/api/not
 function startNote(){if(!cur)return;vid.pause();noteT=vid.currentTime;notesEl.classList.add('on');nform.classList.add('on');
   document.getElementById('nat').textContent='at '+fmt(noteT);ntext.value='';ntext.focus()}
 async function saveNote(){const text=ntext.value.trim();if(!text||!cur)return;
+  if(SITE){if(!await SITE.addNote(cur.id,noteT,text))return}else
   await fetch('/api/notes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:cur.id,t:noteT,text})});
   nform.classList.remove('on');loadNotes()}
 document.getElementById('nbtn').onclick=startNote;
@@ -465,7 +552,8 @@ document.getElementById('nsave').onclick=saveNote;
 document.getElementById('ncancel').onclick=()=>nform.classList.remove('on');
 ntext.onkeydown=e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.isComposing){e.preventDefault();saveNote()}if(e.key==='Escape')nform.classList.remove('on');e.stopPropagation()};
 document.addEventListener('keydown',e=>{const a=document.activeElement;
-  if(cur&&e.key==='n'&&a!==ntext&&a!==document.getElementById('q')){e.preventDefault();startNote()}});
+  if(cur&&e.key==='n'&&a!==ntext&&a!==document.getElementById('q')){e.preventDefault();startNote()}
+  if(cur&&e.key==='c'&&a!==ntext&&a!==document.getElementById('q')&&vid.textTracks.length){cc=!cc;lset('cc',cc?'1':'0');showCC()}});
 function close(){nform.classList.remove('on');if(cur)save(cur.id,vid.currentTime);vid.pause();vid.removeAttribute('src');vid.load();player.classList.remove('on');cur=null;render()}
 document.getElementById('qual').onclick=()=>{small=!small;load(vid.currentTime)};
 document.getElementById('back').onclick=()=>history.back();
@@ -473,7 +561,7 @@ window.onpopstate=()=>{if(cur)close()};
 vid.ontimeupdate=()=>{if(cur&&Math.floor(vid.currentTime)%5===0)save(cur.id,vid.currentTime)};
 vid.onended=()=>{if(!cur)return;save(cur.id,0);const n=next();if(n)play(n,curPl)};
 document.getElementById('q').oninput=render;
-async function refresh(){try{const [n,p]=await Promise.all([fetch('/api/videos').then(r=>r.json()),fetch('/api/playlists').then(r=>r.json())]);
+async function refresh(){try{const [n,p]=SITE?await SITE.videos():await Promise.all([fetch('/api/videos').then(r=>r.json()),fetch('/api/playlists').then(r=>r.json())]);
   if(JSON.stringify([n,p])!==JSON.stringify([list,pls])){list=n;pls=p;if(!cur)render()}}catch(e){}
   const m=location.hash.match(/^#v=([^&]+)&t=(\d+)/);   // from a reel's Full button: open that video at that moment
   if(m){const v=list.find(x=>x.id===decodeURIComponent(m[1]));history.replaceState(null,'',location.pathname);

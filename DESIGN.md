@@ -432,10 +432,17 @@ labelled illustrative/schematic.
   helper that wraps its argument (`num(t)` builds `r"\textbf{" + t + "}"`) was not recognised as one, so
   every bold number on screen, which is every headline number, went unread (a planted 17 000 and 972 400
   passed); and the reference list and the `[12, 13]` citation marks hold nearly every year and small whole
-  number (a planted 1997, 238 and 70 all "matched"), so both are now left out of the source. What remains
-  cannot be closed: a wrong number that the paper prints somewhere else, or that is a rounding of one, still
-  passes (the planted 1700 does). The rule catches a number from nowhere, not a number in the wrong place,
-  so the grep by hand for the headline numbers stays.
+  number (a planted 1997, 238 and 70 all "matched"), so both are now left out of the source. That rule
+  still catches a number from nowhere, not a number in the wrong place.
+  **So every fact is cited where it is planned.** Under each narration block of `plan.md`, one line per
+  source: `cite: p8 "1.38 ± 0.06 for HMC-208"` (a quote, matched on that page of the PDF by paperstore's rules:
+  case, spacing, ligatures, dashes and line-end hyphens ignored), `cite: computed 37% = 1/2.73` (the working), or
+  `cite: figure p16 Fig. 7 bar heights` (read off a picture). Cites above the first scene hold everywhere: the
+  names said throughout ("208 keV photopeak"). `plan --check` fails a quote that is not on its page and every
+  number a block says that none of its own cites states, so 1.46 said of the 208 keV window fails even though
+  the paper prints 1.46 elsewhere. Quote the sentence that makes the claim, not just the number: writing the
+  cites is the re-read that catches a sentence gone loose (`lu177_dual`: "one minute for the analytical ones"
+  was the joint one's 1.0; the single windows take 0.5, so it became "at most one").
 - **Narrate a computed number only after computing it.** If a scene's own model produces a value
   (an error, a fraction), run the model before writing the sentence. The calibration video's k-NN
   demo was scripted as "about a millimetre", but the computed error was 0.4 mm.

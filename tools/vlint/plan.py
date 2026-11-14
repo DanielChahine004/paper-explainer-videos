@@ -55,6 +55,7 @@ ACTION = re.compile(r"^([A-Za-z0-9_]+)(?:(?:\s{2,}|\t)\s*(\S.*?))?\s*$")   # a b
 WHY = re.compile(r"\s+--\s+")                                             # "what happens  -- why it is shown"
 IN_PROSE = re.compile(r"\[([A-Za-z0-9_]+)\]")
 COMMENT = re.compile(r"<!--.*?-->")                                       # an aside to a reader, not narration
+CITE = re.compile(r"^cite:\s*(.*?)\s*$", re.I)                             # where a block's facts come from
 
 
 @dataclass
@@ -64,6 +65,7 @@ class Block:
     line: int
     prose: str = ""
     actions: dict = field(default_factory=dict)       # mark -> (line, what happens, why it is shown)
+    cites: list = field(default_factory=list)         # (line, text of a cite: line)
 
     @property
     def marks(self):
@@ -87,6 +89,7 @@ class Plan:
     path: Path
     scenes: dict = field(default_factory=dict)
     bad: list = field(default_factory=list)
+    cites: list = field(default_factory=list)         # (line, text): cites before the first scene hold for every block
 
 
 def _split_why(action):
@@ -125,6 +128,9 @@ def _load(path, _mtime):
             para = None
             continue
         if cur is None:
+            m = CITE.match(ln)
+            if m:
+                plan.cites.append((i, m.group(1)))     # before any scene: names said throughout (the 208 keV peak)
             continue                                   # the file's own title and any prose before the first scene
         m = PROSE.match(ln)
         if m:
@@ -139,6 +145,13 @@ def _load(path, _mtime):
             cur.focus, cur.focus_line = m.group(1) or "", i
             e = ENTITY.search(cur.focus)
             cur.entity = e.group(1) if e else ""
+            continue
+        m = CITE.match(ln)
+        if m:
+            if not cur.blocks:
+                cur.bad.append((i, "a cite: line before any narration in this section"))
+            else:
+                cur.blocks[-1].cites.append((i, m.group(1)))
             continue
         m = ACTION.match(ln)
         if m:
@@ -193,6 +206,7 @@ def check(path):
                 if mk not in b.marks:
                     bad.append((line, f"{st.name}: an action line for [{mk}], which this block never says"))
     bad += _facts(p, plan)
+    bad += _claims(p, plan)
     for line, msg in sorted(bad):
         print(f"{p.name}:{line}: {msg}")
     cues = sum(len(b.marks) for st in plan.scenes.values() for b in st.blocks)
@@ -243,6 +257,80 @@ def _facts(p, plan):
         if st.entity and st.entity in fns:
             bad.append((st.focus_line, f"{st.name}'s focus `{st.entity}` is a function: name the variable the scene "
                                        f"assigns its result to (e.g. `vs = {st.entity}(...)` and focus: `vs`)"))
+    return bad
+
+
+# ---- claims ---------------------------------------------------------------------------------------------------
+# Where each fact comes from, written under the narration block that says it (the paperstore idea: a quote has to
+# be found on its page, so a number can be traced to the place that states it):
+#     cite: p9 "2.73 ± 0.23 for FMC-113&208"        a quote, found on that page of src/paper.pdf
+#     cite: computed 1.447 = 1/(1 - 0.309)         a number the video works out, with the working
+#     cite: figure p16 Fig. 7 bar heights          read off a figure, which no text holds
+# number-unsourced only asks whether a number is anywhere in the paper, so 1.38 said of the wrong reconstruction
+# passed; here every number a block says must be inside one of that block's own cites.
+_QUOTE = re.compile(r'^p(\d+)\s+["“](.+)["”]$')
+_ELSE = re.compile(r"^(computed|figure\s+p\d+)\b", re.I)
+_DASHES = dict.fromkeys(map(ord, "‐‑‒–—−­"), "-")
+
+
+def _qnorm(s):
+    """paperstore.pdf.norm: ligatures folded, dashes unified, lower case, no whitespace or line-end hyphens."""
+    import unicodedata
+    s = unicodedata.normalize("NFKC", s).translate(_DASHES).lower()
+    return re.sub(r"\s+", "", re.sub(r"-\s*\n\s*", "", s))
+
+
+def _finder(pdf, txt):
+    """found(quote, page): paperstore's own matcher when it is installed (the PDF's words in reading order), else
+    the same normalised match on pdftotext's page, read both line by line and column by column."""
+    try:
+        from paperstore.pdf import find
+        return lambda q, pg: bool(find(pdf, q, pg))
+    except ImportError:
+        pass
+    streams = []
+    for pg in (txt.read_text(encoding="utf-8", errors="replace").split("\f") if txt.exists() else []):
+        lines = pg.split("\n")
+        mid = max((len(l) for l in lines), default=0) // 2
+        cols = ["", ""]
+        for l in lines:
+            for m in re.finditer(r"\S(?:.*?\S)?(?=\s{3,}|$)", l):
+                cols[m.start() >= mid] += m.group() + "\n"
+        streams.append([_qnorm(pg), _qnorm(cols[0]), _qnorm(cols[1])])
+    return lambda q, pg: 0 < pg <= len(streams) and any(_qnorm(q) in s for s in streams[pg - 1])
+
+
+def _claims(p, plan):
+    """Every cite line holds, and every number a block says is inside one of its cites. Only once a plan cites at
+    all, so plans written before cite lines existed are not failed by them."""
+    blocks = [(st, b) for st in plan.scenes.values() for b in st.blocks]
+    if not plan.cites and not any(b.cites for _, b in blocks):
+        return []
+    from .rules_static_source import _Numbers, _spoken, _worth_checking
+    src = p.parent / "src"
+    found = _finder(src / "paper.pdf", src / "paper.txt")
+    bad, common = [], []
+    for st, b in [(None, None), *blocks]:
+        held = list(common)
+        for line, c in (plan.cites if st is None else b.cites):
+            where = st.name if st else "before the scenes"
+            m, e = _QUOTE.match(c), _ELSE.match(c)
+            if m:
+                if found(m.group(2), int(m.group(1))):
+                    held.append(m.group(2))
+                else:
+                    bad.append((line, f"{where}: not on page {m.group(1)} of the paper: {m.group(2)[:50]!r}"))
+            elif e:
+                held.append(c)
+            else:
+                bad.append((line, f'{where}: a cite is p<page> "quote", computed <working> or figure p<page> <what>'))
+        if st is None:
+            common = held
+            continue
+        have = _Numbers(held)
+        for n in dict.fromkeys(_spoken(IN_PROSE.sub("", b.prose))):
+            if _worth_checking(n, 13) and not have.has(n):
+                bad.append((b.line, f"{st.name}: the voice says {n} and no cite under this block states it"))
     return bad
 
 

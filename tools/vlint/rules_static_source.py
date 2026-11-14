@@ -172,6 +172,18 @@ class _Source:
         return False
 
 
+class _Numbers(_Source):
+    """The numbers in a few given texts (a plan block's cited quotes), matched as _Source matches the paper's."""
+    def __init__(self, texts):
+        self.raw = set()
+        for t in texts:
+            self.raw.update(_digits(t))
+            self.raw.update(n for n, _ in _shown(t))
+            self.raw.update(_spoken(t))
+        self.vals = sorted(Decimal(n) for n in self.raw)
+        self.ratio = set(self.raw)
+
+
 def _said_at(s, vo, n):
     """The line of the voiceover's text that says n, so an ignore on the `with` line, which marks one computed
     number, does not silence every other number the voice says (pet_g4_configs: a wrong 0.464 passed this way).

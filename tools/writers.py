@@ -173,7 +173,7 @@ Your folder is {c}. Work only in it.
   dimension lines, tracks, detector drawings), tested under both engines. If the script imports kit, use them.
   If one is wrong for your scene, say so in your report rather than working round it silently.
 - {ex}- You may change the prefix of an action line in plan.md (new:, side:, mark:, morph:) when the check asks
-  for it. You may not change a spoken word, in the plan or in the script.
+  for it. You may not change a spoken word, in the plan or in the script, nor a cite: line.
 - Read DESIGN.md Part II and Part IV in {root} before you write.
 - Write code with the Write and Edit tools, never a shell heredoc: an apostrophe in a label breaks the quoting.
 

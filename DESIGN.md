@@ -219,7 +219,9 @@ voice has moved on. Neither repeats the other. Every rule below serves one of th
 - **A number sits on what it measures** (user, `subseasonal_pbc`: "printing a number in a box on screen doesn't
   show where in the image it is or what in the graph it is speaking to"). A value goes on its bar's end, a score on
   the distance it measures, a gain on an arrow from the old level up to the new top, a ratio as copies of the
-  smaller bar laid end to end along the larger, a percentage of cells as a grid of cells. Where it cannot sit on
+  smaller bar laid end to end along the larger, a percentage of cells as a grid of cells. A line marks the span its
+  number is: "×1.355" over the gap between two bar tops says the gap is 1.355 (user, `lu177_dual`: "the annotated
+  region is the 0.35?"), so a ratio measures both whole bars. Where it cannot sit on
   the thing, a leader line joins them. A number in a corner, or a "+30%" floating over a group of bars, is a
   caption, and the eye has to guess what it refers to. Test: cover the narration; can the viewer still point at
   what each number is the size of?

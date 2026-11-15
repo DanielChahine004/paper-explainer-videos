@@ -132,7 +132,7 @@ for s in $SCENES; do
   v=$(pixi run ffprobe -v error -select_streams v:0 -show_entries stream=duration -of csv=p=0 "$f")
   a=$(pixi run ffprobe -v error -select_streams a:0 -show_entries stream=duration -of csv=p=0 "$f")
   pad=$(python3 -c "print(f'{max(0.0, $a - $v):.3f}')")
-  if python3 -c "import sys; sys.exit(0 if $pad > 0.05 else 1)"; then
+  if python3 -c "import sys; sys.exit(0 if $pad > 0.01 else 1)"; then
     echo "   $s: holding the last frame ${pad}s, for narration that outlasts the picture"
     pixi run ffmpeg -nostdin -loglevel error -y -i "$f" -vf "tpad=stop_mode=clone:stop_duration=$pad" \
       -c:v libx264 -preset veryfast -crf 16 -pix_fmt yuv420p -c:a copy "${f%.mp4}.pad.mp4" \

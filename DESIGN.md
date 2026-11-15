@@ -439,7 +439,8 @@ labelled illustrative/schematic.
   still catches a number from nowhere, not a number in the wrong place.
   **So every fact is cited where it is planned.** Under each narration block of `plan.md`, one line per
   source: `cite: p8 "1.38 ± 0.06 for HMC-208"` (a quote, matched on that page of the PDF by paperstore's rules:
-  case, spacing, ligatures, dashes and line-end hyphens ignored), `cite: computed 37% = 1/2.73` (the working), or
+  case, spacing, ligatures, dashes and line-end hyphens ignored; on a two-column page the extracted text interleaves the columns line by line, so a quote must sit inside one printed line, and
+  `plenoptic_scint`'s first 33 failures were quotes that crossed a line or came from the wrong page), `cite: computed 37% = 1/2.73` (the working), or
   `cite: figure p16 Fig. 7 bar heights` (read off a picture). Cites above the first scene hold everywhere: the
   names said throughout ("208 keV photopeak"). `plan --check` fails a quote that is not on its page and every
   number a block says that none of its own cites states, so 1.46 said of the 208 keV window fails even though
@@ -1358,6 +1359,12 @@ CE 607 s, GX 12 s). ManimGL was ruled out: different API, no voiceover.
   `.animate` chain in `AnimationGroup(..., run_time=...)` (vlint: `gx-anim-setter`).
 
 **Shell (Windows → WSL)**
+- **Start `run_v.sh` once.** A second launch (a backgrounded command that looked as if it had not started) ran beside the first, and
+  the two fought over the same `m_<Scene>` folders: ten scenes "FAILED" with `os error 2` at `film.py _end` though their mp4s existed
+  (`plenoptic_scint`), and `vlint recheck` then adopted four clips cut off mid-write (Bound 5.6 s of a 27 s narration;
+  vlint `short-scene` now stops that join). Check `wsl pgrep -af run_v` before launching again, and delete a failed scene's
+  `m_<Scene>/videos` rather than adopting it; the join also now holds a scene's last frame for any
+  audio overhang over 0.01 s (it was 0.05, and 13 scenes' 0.04 s tails summed past `av-sync`'s 0.5 s).
 - `wsl bash -lc '... $var ...'` from Git Bash loses variables, so put loops in a `.sh` file.
   Run it with `MSYS_NO_PATHCONV=1 wsl bash /mnt/c/.../x.sh`, otherwise Git Bash rewrites `/mnt/c`.
 - Git Bash's `/tmp` is not Windows Python's `/tmp`; use the scratchpad.

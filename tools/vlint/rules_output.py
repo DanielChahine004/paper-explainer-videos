@@ -155,6 +155,46 @@ def gx_frame_edge(ctx):
             yield s, f"t={float(m.group(1)):.1f}s: {m.group(2)}"
 
 
+def _narration_seconds(ctx, scene):
+    """How long the scene's narration lasts: each voiceover(text=...) block of its class in the script, timed by the
+    last word boundary of its cached audio (m_<Scene>/voiceovers/cache.json, 100 ns ticks). None if any is uncached."""
+    import ast
+    tree = ast.parse(ctx.script.read_text(encoding="utf-8"))
+    cls = next((n for n in tree.body if isinstance(n, ast.ClassDef) and n.name == scene), None)
+    cache = ctx.video_dir / f"m_{scene}" / "voiceovers" / "cache.json"
+    if cls is None or not cache.exists():
+        return None
+    ends = {e["input_text"]: e["word_boundaries"][-1]["audio_offset"] / 1e7
+            for e in json.loads(cache.read_text(encoding="utf-8")) if e.get("word_boundaries")}
+    total = 0.0
+    for n in ast.walk(cls):
+        if isinstance(n, ast.Call) and getattr(n.func, "attr", "") == "voiceover":
+            t = next((k.value for k in n.keywords if k.arg == "text"), None)
+            if not (isinstance(t, ast.Constant) and isinstance(t.value, str)):
+                return None
+            if t.value not in ends:
+                return None
+            total += ends[t.value]
+    return total
+
+
+@rule("short-scene", "output", "error", "A scene's video is shorter than its own narration: the clip was cut off "
+      "mid-write (two renders at once in plenoptic_scint left Bound at 5.6 s of its 27 s), and the join ships it.",
+      "Part III, step 6", "delete m_<Scene>/videos and render again; never adopt or recheck a clip you have not watched")
+def short_scene(ctx):
+    if ctx.mode != "parts":
+        return
+    for s, p in ctx.parts.items():
+        if not p.exists():
+            continue
+        want = _narration_seconds(ctx, s)
+        if want is None:
+            continue
+        have = ctx.probe(p)["video"]
+        if have + 0.5 < want:
+            yield s, f"video lasts {have:.1f}s, its narration {want:.1f}s"
+
+
 @rule("unchecked-scene", "output", "warn", "A scene was rendered without the runtime monitor (old video, or a scene "
       "not built on common.Narrated), so runtime rules never saw it.", "", "re-render it once")
 def unchecked_scene(ctx):

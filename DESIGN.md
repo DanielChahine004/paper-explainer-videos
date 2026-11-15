@@ -317,7 +317,9 @@ concrete choices (what is computed, what is kept). Give derivations one line at 
   every corner at once (`subseasonal_pbc` Project).
 - **Why before how, then what it costs** (user, calibration video). Before a procedure, show the failure
   it prevents, as an animation with a live number (a gain error pushing the photopeak out of the window,
-  "photopeak kept 10%"). Then show the procedure step by step. Then say how often it is redone and how
+  "photopeak kept 10%"). Then show the procedure step by step, each step moving the quantity it fixes: values
+  sliding onto a mean show nothing, while the summed photopeak narrowing as they line up shows why (`semimono_preclinical`
+  Calibrate, user note). Then say how often it is redone and how
   long it takes, using reported times only. A topic the viewer can't yet see the need for gets a why-scene
   of its own. Length follows the content: going past 8 minutes is fine when each scene earns its place.
 - **Name each component by what goes in and what comes out** (user, flow_match). When a process or

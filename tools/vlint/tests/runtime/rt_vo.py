@@ -104,7 +104,8 @@ class Fixture(Checked, Scene):
         self.play(Create(good), run_time=0.2)
         self.remove(i1, i2, fp, good)
         plot = np.full((40, 80, 4), 255, dtype=np.uint8)
-        plot[20, 5:75, :3] = 0                                                      # a flat "curve" across the figure
+        for x in range(5, 75):                                                      # a curve rising across the figure (a
+            plot[18 + round(4 * (x - 5) / 70), x, :3] = 0                           # dead-flat line would read as a panel border)
         pim = ImageMobject(plot).set_height(1.2).move_to(LEFT * 3 + UP * 1.5)
         on_curve = Rectangle(width=1, height=0.3).move_to(pim)
         on_curve._fig_frame = (pim, (0.1, 0.3, 0.9, 20.5 / 40))                     # fig-box-cut (bottom edge on the curve)

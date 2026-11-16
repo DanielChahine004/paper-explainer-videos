@@ -997,7 +997,8 @@ class EnergyHow(Narrated):
                          for k in range(4)])
         l511 = VGroup(*[DashedLine(ax.c2p(511, 0), ax.c2p(511, 1.1), color=YELLOW, stroke_width=2) for ax in axes])
         table = VGroup(*[Tex(r"$\times$%.2f" % (511 / (511 * gn) * rng.uniform(0.98, 1.02) if k not in picks else fac[picks.index(k)]),
-                             font_size=12, color=GREY_A).move_to(lut[k]) for k, gn in enumerate(rng.uniform(0.8, 1.2, 64))])
+                             font_size=12, color=GREY_A).scale_to_fit_width(0.24).move_to(lut[k])   # clear of the 4 px rings
+                         for k, gn in enumerate(rng.uniform(0.8, 1.2, 64))])
         tl = Tex(r"one factor per crystal, applied to every event", font_size=24).to_edge(DOWN, buff=0.35)
         src = VGroup(icon_flood(0.8), Tex(r"same uniform data", font_size=22, color=GOOD_C)).arrange(RIGHT, buff=0.15).next_to(ll, UP, buff=0.2)
         with self.voiceover(text="So how is it done? <bookmark mark='s'/>Reuse the same uniform acquisition that made the flood map. "

@@ -214,7 +214,7 @@ def _label_ink(mon, box, own, tol):
     resid = np.abs(crop - (bg + a * d)).max(axis=2)
     expected = resid <= tol
     own_ink = expected & (a[..., 0] > 0.5)
-    return int((expected & ~own_ink).sum()), int(own_ink.sum()), int((~expected).sum()), (~expected), (x0, y0)
+    return int((expected & ~own_ink).sum()), int(own_ink.sum()), int((~expected).sum()), (~expected), (x0, y0), own_ink
 
 
 @rule("label-on-ink", "runtime", "warn", "A label is sitting on something. Counted in the rendered pixels: the "
@@ -242,6 +242,65 @@ def label_on_ink(mon, ev, p):
         n = b + o + fgn
         if n and fgn / n > most:
             yield id(t), f"{label(t)} is drawn on top of something: {100 * fgn / n:.0f}% of its box is "                          f"neither the background nor its own ink (over {100 * most:.0f}%)"
+
+
+@rule("ink-through-label", "runtime", "error", "A line, curve, edge or other label runs through a label's letters. "
+      "Counted in the rendered pixels: foreign ink touching the glyph strokes themselves, not merely inside the "
+      "label's box. label-on-ink asks whether a label sits on a drawing (over half its box foreign), so a thin "
+      "dimension line through one word passed it (user, pet_photon_ml: 'the text LYSO is hidden behind the "
+      "dimension line').", "Part II, Layout",
+      "move the label clear of the stroke (to the stroke's other side, or past its end); if it is meant to sit on "
+      "the drawing, give it a backing, or mark it vlint_ok(t, \"ink-through-label\")")
+def ink_through_label(mon, ev, p):
+    if ev != "play" or isinstance(mon.scene, M.ThreeDScene) or mon.frame() is None:
+        return
+    import numpy as np
+    tol = int(opt(mon, "label_tol", 42))
+    least = int(opt(mon, "ink_touch_px", 6))
+    # a strike-through is meant: a straight line spanning the word's width through its middle (Cross, or a Line
+    # from its left to its right) crosses a term out on purpose
+    lines = [bbox(m) for m, ok in walk(mon.scene.mobjects) if isinstance(m, M.Line) and visibility(m) >= 0.3]
+    for t in leaves(mon.scene, "ink-through-label"):
+        if not isinstance(t, TEXTS()) or visibility(t) < 0.5 or t.get_color() is None:
+            continue
+        x0, y0, x1, y1 = bbox(t)
+        if any(lx0 <= x0 + 0.15 * (x1 - x0) and lx1 >= x1 - 0.15 * (x1 - x0) and y0 <= (ly0 + ly1) / 2 <= y1
+               for lx0, ly0, lx1, ly1 in lines):
+            continue
+        box = (x0 - 0.04, y0 - 0.04, x1 + 0.04, y1 + 0.04)
+        # every colour the label is drawn in is its own ink (an equation with one term coloured is one label)
+        try:
+            cols = {M.ManimColor(c).to_hex() for c in [t.get_color()] + [m.get_color() for m in t.get_family()
+                    if isinstance(m, M.VMobject) and len(m.points) and m.get_fill_opacity() > 0.3]}
+        except (RecursionError, ValueError, TypeError):
+            cols = {M.ManimColor(t.get_color()).to_hex()}
+        own = fgn = None
+        for c in cols:
+            got = _label_ink(mon, box, M.ManimColor(c).to_rgb(), tol)
+            if not got or len(got) < 6:
+                break
+            own = got[5] if own is None else own | got[5]
+            fgn = got[3] if fgn is None else fgn & got[3]
+        if own is None or fgn is None or own.shape != fgn.shape:
+            continue
+        # a sign or letter on a marker (+ on a charge, N on a magnet) and a label on a filled backing sit on
+        # their drawing on purpose; whether that reads is label-on-ink's question, not this one
+        if own.sum() < 10 or len(label(t).strip("'\\$ ")) <= 1 or fgn.mean() > 0.4:
+            continue
+        near = own.copy()                    # the glyphs grown by one pixel: ink there is touching the letters
+        near[1:] |= own[:-1]; near[:-1] |= own[1:]; near[:, 1:] |= own[:, :-1]; near[:, :-1] |= own[:, 1:]
+        touch = int((fgn & near).sum())
+        # a stroke crossing the word: within the glyphs' own span, one column foreign over most of the letter
+        # height, or one row over most of the word's width. At check resolution a thin line through the gap
+        # between two letters touches almost none of their pixels (LYSO: 4), but it still crosses the word.
+        rows, cols = np.where(own)
+        r0, r1, c0, c1 = rows.min(), rows.max() + 1, cols.min(), cols.max() + 1
+        span = fgn[r0:r1, c0:c1]
+        cross = (span.shape[1] > 2 and span[:, 1:-1].mean(axis=0).max() >= 0.7) or \
+                (span.shape[0] > 2 and span[1:-1].mean(axis=1).max() >= 0.6)
+        if cross or touch >= max(least, 0.04 * own.sum()):
+            why = "a stroke crosses it" if cross else f"{touch} px touching its strokes"
+            yield id(t), f"{label(t)} has foreign ink running through its letters ({why})"
 
 
 def _flatten(anims):
@@ -1007,6 +1066,41 @@ def front_box_cut(mon, ev, p):
                            ("bottom", ink[Y1, X0:X1])):
             if line.size and line.mean() > 0.03:
                 yield (id(m), side), f"a frame on the front page crosses text along its {side} edge"
+
+
+@rule("fig-box-cut", "runtime", "error", "A frame on a reused figure (kit fig_box) is placed off what it marks: its top "
+      "or bottom edge runs along the plotted data or a line of text instead of the white around it, or a side runs "
+      "down through it. Placed by eye from page fractions, a box floats beside its curve or slices a row of points "
+      "(user, pet_photon_ml: 'the bounding box here might be misplaced slightly').", "Reusing a figure",
+      "read the fractions off tools/figgrid.py's grid and move the edge into the white between curves; a box that "
+      "cannot avoid touching points (two series overlap) should frame a narrower stretch where they part")
+def fig_box_cut(mon, ev, p):
+    if ev != "play":
+        return
+    flat, side_max = float(opt(mon, "figbox_flat", 0.1)), float(opt(mon, "figbox_side", 0.5))
+    for m, ok in walk(mon.scene.mobjects):
+        fr = getattr(m, "_fig_frame", None)
+        if fr is None or "fig-box-cut" in ok or "*" in ok or visibility(m) < 0.3:
+            continue
+        im, (x0, y0, x1, y1) = fr
+        lum = _ink(im)
+        if lum is None:
+            continue
+        ink = lum < 128
+        h, w = ink.shape
+        X0, X1 = min(int(x0 * w), w - 1), min(int(x1 * w), w - 1)
+        Y0, Y1 = min(int(y0 * h), h - 1), min(int(y1 * h), h - 1)
+        if Y1 - Y0 < 2 or X1 - X0 < 2 or ink[Y0:Y1, X0:X1].mean() > 0.4:
+            continue                         # a box on a photo or a heatmap: there is no white to put its edges in
+        def thin(horiz, k):                  # the edge rides one thin ruled line (a panel's border), white either side
+            g = lambda j: (ink[min(max(j, 0), h - 1), X0:X1] if horiz else ink[Y0:Y1, min(max(j, 0), w - 1)]).mean()
+            return g(k - 3) < 0.3 and g(k + 3) < 0.3
+        for side, line, most, horiz, k in (("top", ink[Y0, X0:X1], flat, True, Y0), ("bottom", ink[Y1, X0:X1], flat, True, Y1),
+                                           ("left", ink[Y0:Y1, X0], side_max, False, X0),
+                                           ("right", ink[Y0:Y1, X1], side_max, False, X1)):
+            if line.size and line.mean() > most and not (line.mean() > 0.85 and thin(horiz, k)):
+                yield (id(m), side), (f"a fig_box's {side} edge runs through the figure's ink for "
+                                      f"{100 * line.mean():.0f}% of its length (box {x0}, {y0}, {x1}, {y1})")
 
 
 _REPLACERS = {"Transform", "ReplacementTransform", "TransformMatchingTex", "TransformMatchingShapes", "FadeTransform",

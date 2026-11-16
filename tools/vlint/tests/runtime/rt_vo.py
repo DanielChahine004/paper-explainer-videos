@@ -8,7 +8,7 @@ from manim import *
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 from vlint.runtime import Checked, vlint_ok  # noqa: E402
 
-EXPECT = {"frame-clip": 1, "text-overlap": 1, "vanished-after-intro": 1, "bookmark-unfired": 2, "indicate-image": 1, "text-chain": 1, "arrow-over-label": 1, "layout-crowded": 1, "layout-balance": 1, "arrow-skew": 1, "title-margin": 1, "redraw-jitter": 1, "title-gap": 1, "faint-mark": 2, "frame-margin": 1, "icon-idle": 1, "intro-of-visible": 1, "number-undrawn": 1, "image-edge-cut": 1, "front-box-cut": 1, "number-flash": 1, "text-on-figure": 1, "label-on-ink": 2, "label-overhang": 1}
+EXPECT = {"frame-clip": 1, "text-overlap": 1, "vanished-after-intro": 1, "bookmark-unfired": 2, "indicate-image": 1, "text-chain": 1, "arrow-over-label": 1, "layout-crowded": 1, "layout-balance": 1, "arrow-skew": 1, "title-margin": 1, "redraw-jitter": 1, "title-gap": 1, "faint-mark": 2, "frame-margin": 1, "icon-idle": 1, "intro-of-visible": 1, "number-undrawn": 1, "image-edge-cut": 1, "front-box-cut": 1, "number-flash": 1, "text-on-figure": 1, "label-on-ink": 2, "label-overhang": 1, "fig-box-cut": 1, "ink-through-label": 1}
 
 
 class Fixture(Checked, Scene):
@@ -103,6 +103,21 @@ class Fixture(Checked, Scene):
         good._px_frame = (fp, (5, 15, 55, 35), (60, 80))                           # clear of the ink: fine
         self.play(Create(good), run_time=0.2)
         self.remove(i1, i2, fp, good)
+        plot = np.full((40, 80, 4), 255, dtype=np.uint8)
+        plot[20, 5:75, :3] = 0                                                      # a flat "curve" across the figure
+        pim = ImageMobject(plot).set_height(1.2).move_to(LEFT * 3 + UP * 1.5)
+        on_curve = Rectangle(width=1, height=0.3).move_to(pim)
+        on_curve._fig_frame = (pim, (0.1, 0.3, 0.9, 20.5 / 40))                     # fig-box-cut (bottom edge on the curve)
+        round_it = Rectangle(width=1, height=0.4).move_to(pim)
+        round_it._fig_frame = (pim, (0.1, 0.3, 0.9, 0.7))                           # around it, edges on white: fine
+        self.play(FadeIn(pim), Create(on_curve), Create(round_it), run_time=0.2)
+        self.remove(pim, on_curve, round_it)
+        word = Text("width", font_size=30).move_to(RIGHT * 3 + UP * 2.5)
+        pole = Line(word.get_center() + UP * 0.6, word.get_center() + DOWN * 0.6, color=BLUE)  # ink-through-label (a line through it)
+        crossed = Text("wrong", font_size=30).move_to(RIGHT * 3 + UP * 1.2)
+        strike = Line(crossed.get_left(), crossed.get_right(), color=RED)          # struck out on purpose: fine
+        self.play(FadeIn(word), Create(pole), FadeIn(crossed), Create(strike), run_time=0.2)
+        self.remove(word, pole, crossed, strike)
         e1, e2 = MathTex("a", "+", "b"), MathTex("b", "+", "a", "+", "c")
         self.add(e1)
         self.play(TransformMatchingShapes(e1, e2), run_time=0.2)                     # pieces fade in inside it: fine

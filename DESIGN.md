@@ -586,8 +586,11 @@ labelled illustrative/schematic.
 - **Label curves beside them, never on them** (user, recon video). A curve label goes next to one data point on
   the open side (left of a rising stretch, below-right of the last points), not centred on the peak
   where the line runs through it. A comparison arrow between two captions runs straight between
-  them; it never ends inside a caption. (vlint: `label-on-ink` for a label with something else's ink
-  through a text; `arrow-over-label` also flags an arrow that ends inside a text.)
+  them; it never ends inside a caption. The same holds for every stroke: a dimension line, a track or a
+  frame edge stops short of a word or passes on its far side (pet_photon_ml: "the text LYSO is hidden behind
+  the dimension line"). (vlint: `ink-through-label`, an error, for any stroke touching or crossing a label's
+  letters in the pixels -- a Line struck across a whole word is read as meant; `label-on-ink` for a label
+  sitting on a drawing; `arrow-over-label` for an arrow that ends inside a text.)
 - **A reading goes beside a bar thinner than the number** (user, capstone 1:19). A number belongs on the
   thing it measures, but "on" means beside it at the right height once the thing is narrower than the text:
   capstone's `53%` was centred on a 0.42-wide score bar, so both of the bar's edges ran through the digits.
@@ -745,7 +748,10 @@ labelled illustrative/schematic.
 - **Place a frame by reading numbers, never by eye** (pet_g4_configs, pet_entangled: frames cut through tick
   labels or were set by eye, and writers measured plot levels themselves). `pixi exec -s pillow python
   tools/figgrid.py <video>/assets/<fig>.png` writes a copy with a labelled fraction grid; read `fig_box` fractions
-  and any plot level off it while planning, and put them in the plan note. A frame holds a whole label or none of it.
+  and any plot level off it while planning, and put them in the plan note. A frame holds a whole label or none of it,
+  and every edge lies in the white between curves: a box set by eye floated above its curve and its neighbour's
+  bottom ran along a row of points (pet_photon_ml, user: "the bounding box might be misplaced"). Where two series
+  touch, frame the stretch where they part. (vlint: `fig-box-cut` reads the figure under each `fig_box` edge.)
 - **Pointer boxes on a lifted figure are never white** (user, `pet_dl_recon`: "white bounding box on white image -
   not a good idea"). Paper figures sit on white, so use the colour of what is pointed at (the method's colour,
   BAD_C for the worse result) or TEAL_L as the neutral (vlint: `pointer-white-on-page`).
@@ -1343,12 +1349,17 @@ CE 607 s, GX 12 s). ManimGL was ruled out: different API, no voiceover.
 - A point cloud drawn at the scale of a full-frame scene looks lost in half a frame: size each panel from its
   data's real extent, filling its half (`flow_match` Likelihood, Average, Reflow were redrawn bigger).
 - When a title changes, `ReplacementTransform` it.
+- **In a 3D detector scene put the entrance face on top and the SiPMs under the crystal**, so the camera looks down through the
+  translucent crystal onto an opaque array (`slab_crlb` `slab3d`). A fixed-in-frame label placed with an orthographic estimate
+  (`scr`) lands within a few tenths of the 3D part: leave that gap.
 - A wait that *ends* a GX scene writes no frames, so narration still being spoken over a last still frame has
   no picture to sit on: the scene file comes out shorter than its own audio, and in the concat that pushes
   every later scene's narration late (`mc_recon` Intro, Loop and Hardware, caught by `av-sync` and
   `join-duration` on the joined video, not by anything per scene). `render_lib.sh` now holds the last frame
   out to the audio before joining; a scene that wants to end on a held frame should still earn it with
-  something that moves.
+  something that moves. So the plan gives every scene's last sentence a motion that lasts as long as it does (a
+  swarm still flying, a gauge still filling): left to the writers, all five of `slab_crlb`'s bolted an `Indicate`
+  on the end to clear `short-scene`.
 - Whatever the CE scene gets from vlint's runtime monitor, the GX scene needs too, even as a no-op:
   `self.vlint_off("rule-id")` existed only under CE, so a scene that switched a layout rule off for a block
   passed every check and then died on the GPU with `AttributeError` (`mc_recon` Scatter). It is in

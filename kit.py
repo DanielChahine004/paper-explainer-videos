@@ -83,7 +83,9 @@ def fig_box(g, x0, y0, x1, y1, color=YELLOW, sw=4):
     ul = im.get_corner(UL)
     a = ul + RIGHT * x0 * im.width + DOWN * y0 * im.height
     b = ul + RIGHT * x1 * im.width + DOWN * y1 * im.height
-    return Rectangle(width=b[0] - a[0], height=a[1] - b[1], stroke_color=color, stroke_width=sw).move_to((a + b) / 2)
+    r = Rectangle(width=b[0] - a[0], height=a[1] - b[1], stroke_color=color, stroke_width=sw).move_to((a + b) / 2)
+    r._fig_frame = (im, (x0, y0, x1, y1))          # vlint fig-box-cut reads the figure's pixels under each edge
+    return r
 
 
 # ---- code: names and code as they are written ---------------------------------------------------------------

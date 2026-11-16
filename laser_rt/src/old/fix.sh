@@ -1,6 +1,6 @@
 # Re-render only the two scenes vlint fixed (intro-and-pulse), trusting the other 1080p scenes as rendered.
 export PATH="$HOME/.pixi/bin:$PATH"
-SRC=/mnt/c/Users/h/Desktop/slab_crlb_narrated_project
+SRC=/home/h/Code/manim_video_generation
 cd ~/slab_render
 cp $SRC/common.py $SRC/voices.py . && rm -rf tools && cp -r $SRC/tools . && find tools -name "*.sh" -exec sed -i 's/\r$//' {} +
 cp $SRC/laser_rt/laser_vo.py $SRC/laser_rt/render.sh laser_rt/ && sed -i 's/\r$//' laser_rt/render.sh

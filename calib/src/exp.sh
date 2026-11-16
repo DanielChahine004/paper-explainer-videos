@@ -1,4 +1,4 @@
 #!/bin/bash
 L="EnergyWhy EnergyHow Drift TimingWhy TimingHow NormWhy NormHow Upkeep"
-QUALITY=-ql JOBS=2 bash /mnt/c/Users/h/Desktop/slab_crlb_narrated_project/tools/run_v.sh calib
-bash /mnt/c/Users/h/Desktop/slab_crlb_narrated_project/tools/sheet.sh calib calib_vo 480p15 /mnt/c/Users/h/Desktop/slab_crlb_narrated_project/calib/src/sheets $L
+QUALITY=-ql JOBS=2 bash /home/h/Code/manim_video_generation/tools/run_v.sh calib
+bash /home/h/Code/manim_video_generation/tools/sheet.sh calib calib_vo 480p15 /home/h/Code/manim_video_generation/calib/src/sheets $L

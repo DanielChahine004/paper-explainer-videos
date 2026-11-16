@@ -40,12 +40,13 @@ from urllib.parse import unquote
 
 import captions
 import reels
+import videofolders as vf  # noqa: E402  (a video is at the root or under private/)
 
 ROOT = Path(__file__).resolve().parent.parent
 CACHE = ROOT / ".catalog"
 PORT = int(os.environ.get("CATALOG_PORT", "8765"))
 FFMPEG = os.environ.get("FFMPEG", "/home/h/slab_render/.pixi/envs/default/bin/ffmpeg")   # inside WSL
-PLAYLISTS = ROOT / "playlists.json"
+PLAYLISTS = vf.data("playlists.json")   # your own, in private/ when there is one
 PAPERS = ROOT / "papers.json"   # {video: {"cite", "url"}}: the paper each explains, linked under its title
 RENDER = Path(os.environ.get("RENDER_ROOT", r"\\wsl.localhost\Ubuntu\home\h\slab_render"))   # the WSL render mirror
 SKIP = {"voice_ab", "kit_gallery"}                       # voice tests and kit.py's gallery, not explainers
@@ -95,7 +96,7 @@ def scan():
     """All explainers, newest first: one entry per folder, its full render plus the small copy if there is one."""
     out = []
     newest = {}   # one render per folder: an older cut left beside it (v1_narrated.mp4) is not a second video
-    for full in ROOT.glob("*/*_narrated.mp4"):
+    for full in vf.glob("*/*_narrated.mp4", ROOT):
         if full.parent.name not in SKIP and (full.parent not in newest or full.stat().st_mtime > newest[full.parent].stat().st_mtime):
             newest[full.parent] = full
     for folder, full in newest.items():
@@ -110,8 +111,8 @@ def scan():
         small = max(folder.glob("*small*.mp4"), key=lambda p: p.stat().st_mtime, default=None)   # newest, if a stale one is left
         out.append({"id": folder.name, "notes": sum(n.get("status") == "open" for n in load_notes(folder.name)), "title": m["title"], "dur": m["dur"], "mtime": st.st_mtime,
                     "born": born(folder),
-                    "size": st.st_size, "src": f"/v/{folder.name}/{full.name}",
-                    "small": f"/v/{folder.name}/{small.name}" if small else None,
+                    "size": st.st_size, "src": f"/v/{full.relative_to(ROOT).as_posix()}",
+                    "small": f"/v/{small.relative_to(ROOT).as_posix()}" if small else None,
                     "thumb": f"/thumb/{folder.name}.jpg?{int(st.st_mtime)}"})
     ps = papers()
     for v in out:
@@ -164,21 +165,21 @@ _fb_lock = threading.Lock()
 
 def load_notes(vid):
     try:
-        return json.loads((ROOT / vid / "feedback.json").read_text(encoding="utf-8"))
+        return json.loads((vf.folder(vid, ROOT) / "feedback.json").read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return []
 
 
 def save_notes(vid, notes):
-    (ROOT / vid / "feedback.json").write_text(json.dumps(notes, indent=1, ensure_ascii=False), encoding="utf-8")
+    (vf.folder(vid, ROOT) / "feedback.json").write_text(json.dumps(notes, indent=1, ensure_ascii=False), encoding="utf-8")
 
 
 def grab(vid, t, nid):
     """The frame a note is about, cut once (in the background) so it survives a re-render."""
-    full = next(iter((ROOT / vid).glob("*_narrated.mp4")), None)
+    full = next(iter((vf.folder(vid, ROOT)).glob("*_narrated.mp4")), None)
     if full is None:
         return
-    out = ROOT / vid / "review" / "feedback" / f"{nid}.jpg"
+    out = vf.folder(vid, ROOT) / "review" / "feedback" / f"{nid}.jpg"
     out.parent.mkdir(parents=True, exist_ok=True)
     cmd = [FFMPEG, "-loglevel", "error", "-y", "-ss", f"{t:.2f}", "-i", wsl_path(full), "-frames:v", "1",
            "-vf", "scale=1280:-2", "-q:v", "3", wsl_path(out)]
@@ -189,7 +190,7 @@ def grab(vid, t, nid):
 
 
 def add_note(vid, t, text):
-    full = next(iter((ROOT / vid).glob("*_narrated.mp4")))
+    full = next(iter((vf.folder(vid, ROOT)).glob("*_narrated.mp4")))
     scene, local = scene_at(vid, t)
     n = {"nid": uuid.uuid4().hex[:8], "t": round(t, 1), "scene": scene, "scene_t": local, "text": text.strip(),
          "at": time.strftime("%Y-%m-%d %H:%M"), "render": int(full.stat().st_mtime), "status": "open"}
@@ -208,7 +209,7 @@ def wsl_path(p):
 
 def thumb(vid):
     """A 480-px frame from 30% of the way in, cut once per render and cached."""
-    full = next(iter((ROOT / vid).glob("*_narrated.mp4")), None)
+    full = next(iter((vf.folder(vid, ROOT)).glob("*_narrated.mp4")), None)
     if full is None:
         return None
     out = CACHE / f"{vid}_{int(full.stat().st_mtime)}.jpg"

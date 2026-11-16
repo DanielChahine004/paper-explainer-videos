@@ -11,9 +11,10 @@ export PATH="$HOME/.pixi/bin:$PATH"
 here="$(cd "$(dirname "$0")" && pwd)"
 SRC="$(cd "$here/.." && pwd)"
 V=${1:?usage: watch.sh <video>}
-F="$SRC/$V/${V}_explainer_narrated.mp4"
+VD="$SRC/$V"; [ -d "$VD" ] || VD="$SRC/private/$V"   # your own videos: private/
+F="$VD/${V}_explainer_narrated.mp4"
 [ -f "$F" ] || { echo "no joined video at $F"; exit 1; }
-OUT="$SRC/$V/watch"; rm -rf "$OUT"; mkdir -p "$OUT/f"
+OUT="$VD/watch"; rm -rf "$OUT"; mkdir -p "$OUT/f"
 # pixi from the render root, as review.sh does: the checkout's own .pixi may be a stale copy of another folder's env
 # (celeritas_optical: "environment directory has moved", 0 frames)
 cd ~/slab_render 2>/dev/null || cd "$SRC"

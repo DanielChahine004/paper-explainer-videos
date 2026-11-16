@@ -213,7 +213,7 @@ def pull(dest, index, dry=False):
     got = dropped = replied = 0
     for v in index.get("videos", []):
         n, vid = v.get("issue"), v["id"]
-        if not n or not (catalog.ROOT / vid).is_dir():
+        if not n or not (catalog.vf.folder(vid, catalog.ROOT)).is_dir():
             continue
         cs = dest.comments(n)
         if cs is None:
@@ -234,7 +234,7 @@ def pull(dest, index, dry=False):
                 except (ValueError, TypeError, AttributeError):
                     continue
                 text = MARK.sub("", "\n\n".join(body.split("\n\n")[1:])).strip()
-                full = next(iter((catalog.ROOT / vid).glob("*_narrated.mp4")), None)
+                full = next(iter((catalog.vf.folder(vid, catalog.ROOT)).glob("*_narrated.mp4")), None)
                 scene, local = catalog.scene_at(vid, t)
                 nid = f"gh{c['id']}"
                 ns.append({"nid": nid, "gh": c["id"], "by": (c.get("user") or {}).get("login"), "t": round(t, 1),
@@ -341,8 +341,8 @@ def main():
     videos, uploads, gone = [], [], []   # uploads: (video id, title, [(path or a maker, name)])
     for item in items:
         vid = item["id"]
-        full = root / vid / item["src"].rsplit("/", 1)[1]
-        small = root / vid / item["small"].rsplit("/", 1)[1] if item["small"] else None
+        full = catalog.vf.folder(vid, root) / item["src"].rsplit("/", 1)[1]
+        small = catalog.vf.folder(vid, root) / item["small"].rsplit("/", 1)[1] if item["small"] else None
         h = sha(full, hashes)[:12]
         names = {"src": f"{h}.mp4", "thumb": f"{h}.jpg", "small": f"{sha(small, hashes)[:12]}-s.mp4" if small else None}
         e = {"id": vid, "title": item["title"], "dur": round(item["dur"], 1), "v": h, "size": full.stat().st_size,

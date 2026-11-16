@@ -11,15 +11,16 @@
 # nobody had written down that the words were an output, not an input.)
 V=${1:?usage: bash tools/brief.sh <video>}
 R="$(cd "$(dirname "$0")/.." && { pwd -W 2>/dev/null || pwd; })"   # the native path: the agent reads files with it
-[ -f "$R/$V/brief.md" ] || { echo "no $V/brief.md: write the video's inputs down before starting an agent" >&2; exit 2; }
+VR="$V"; [ -d "$R/$V" ] || [ ! -d "$R/private/$V" ] || VR="private/$V"   # the folder, from the repo root
+[ -f "$R/$VR/brief.md" ] || { echo "no $V/brief.md: write the video's inputs down before starting an agent" >&2; exit 2; }
 # tools/prep.sh leaves the choices that are the user's as TODO lines; an agent started on one would take a default
 # nobody chose (geant4's audience, format and length were all assumed, because only a PDF was handed over)
-if grep -n "TODO" "$R/$V/brief.md" >&2; then echo "$V/brief.md still has the TODO lines above: decide them first" >&2; exit 2; fi
+if grep -n "TODO" "$R/$VR/brief.md" >&2; then echo "$V/brief.md still has the TODO lines above: decide them first" >&2; exit 2; fi
 cat <<PROMPT
-Make the narrated explainer video in $V, start to finish, on your own.
+Make the narrated explainer video in $VR, start to finish, on your own.
 
 Read DESIGN.md first -- Part I and Part II are the rules every frame is judged by, Part III is the
-workflow you follow step by step. Then read $V/brief.md: that video's source, its audience, the format it
+workflow you follow step by step. Then read $VR/brief.md: that video's source, its audience, the format it
 is in, and what has already been cut out of its source for you. Then do Part III, steps 1 to 8, for $V.
 
 Show, don't tell (Part I §1, the first rule): every event, piece of physics, calculation and geometry the
@@ -36,8 +37,8 @@ of this video may exist in git, or in the folder, or in the conversation that st
 read it, ask for it, or render it. Where you catch yourself about to copy a decision instead of making
 one, that is the thing this agent exists to prevent.
 
-The repository is $R; it is a local git repository with no remote. Render in WSL through the .sh files
-(Part III steps 4 to 7); never above 1080p. You may start scene writers of your own once $V/plan.md is
+The repository is $R. Render in WSL through the .sh files
+(Part III steps 4 to 7); never above 1080p. You may start scene writers of your own once $VR/plan.md is
 written -- a writer needs the plan, the palette and the helper inventory, not the source -- and they work
 in their own copy of the folder, checked by path. Start them on a cheaper model: what makes one writer per
 scene affordable is that the plan has already decided what the scene does.
@@ -46,7 +47,7 @@ Mark the phases as you pass them, so the build times itself:
 \`python tools/timelog.py mark $V <phase>\` with received, figures, script, check, render, sent in order
 (renders log themselves). A phase is marked once, when it ends: \`script\` after the writers are merged, not at the plan.
 
-Before splitting the plan for writers, run \`python -m vlint plan ../$V/plan.md --check\` from tools/ and clear it.
+Before splitting the plan for writers, run \`python -m vlint plan ../$VR/plan.md --check\` from tools/ and clear it.
 
 Hand back when the video is rendered at -qh, every gate is clear (static, runtime and the join), you have
 read the review sheets and watched the joined file, and you have folded what the video

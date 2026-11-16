@@ -11,7 +11,7 @@ export PATH="$HOME/.pixi/bin:$PATH"
 V=${1:?usage: bash tools/prep.sh <video> <paper.pdf>}
 PDF=${2:?usage: bash tools/prep.sh <video> <paper.pdf>}
 R="$(cd "$(dirname "$0")/.." && pwd)"
-D="$R/$V"
+D="$R/$V"; [ -d "$D" ] || [ ! -d "$R/private" ] || D="$R/private/$V"   # with a private/, new videos go there
 [ -f "$PDF" ] || { echo "no such file: $PDF" >&2; exit 2; }
 [ ! -f "$D/brief.md" ] || { echo "$V/brief.md exists: this video already has its inputs (delete it to start over)" >&2; exit 2; }
 PY=""; for p in python python3; do "$p" -c "" 2>/dev/null && { PY=$p; break; }; done   # Windows' python3 is a Store stub

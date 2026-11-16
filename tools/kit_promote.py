@@ -24,8 +24,8 @@ ALIASES = {"kernel": "slots_box", "chip": "card", "dimline": "dim", "dim_line": 
 
 
 def scripts():
-    """Every video's *_vo.py: a video is a folder at the root here, under videos/ in the public repo."""
-    return sorted(ROOT.glob("*/*_vo.py")) + sorted(ROOT.glob("videos/*/*_vo.py"))
+    """Every video's *_vo.py: a video is a folder at the root, or under private/ (your own videos)."""
+    return sorted(ROOT.glob("*/*_vo.py")) + sorted(ROOT.glob("private/*/*_vo.py"))
 
 
 def _body(fn):
@@ -75,7 +75,7 @@ def clashes(name, video_params):
 
 
 def one(video):
-    pys = sorted((ROOT / video).glob("*_vo.py")) or sorted((ROOT / "videos" / video).glob("*_vo.py"))
+    pys = sorted((ROOT / video).glob("*_vo.py")) or sorted((ROOT / "private" / video).glob("*_vo.py"))
     if not pys:
         sys.exit(f"kit_promote: no *_vo.py in {video}")
     mine, others, kit = helpers(pys[0]), corpus(), kit_names()

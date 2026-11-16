@@ -14,7 +14,8 @@ API both engines share, because vlint's runtime checks always run under Manim Co
 
 ## Making a video
 
-One folder per video, at the repo root (`calib/` and `laser_rt/` are worked examples).
+One folder per video, at the repo root (`calib/` and `laser_rt/` are worked examples) or under `private/` (your
+own videos; see the README, "Your own videos"). Every tool finds a video by name in either place.
 
 1. **Inputs:** `bash tools/prep.sh <video> <paper.pdf>` writes the paper's text, every page at 300 and
    80 dpi, the front page and `<video>/brief.md`. Fill in its TODO lines (audience, format, length).
@@ -32,6 +33,15 @@ One folder per video, at the repo root (`calib/` and `laser_rt/` are worked exam
 6. **Learn:** sharpen or add a rule in `DESIGN.md` (§0) before calling the video done. If a program could have
    caught the mistake, add a vlint rule with a planted bug (`tools/vlint/README.md`); `python tools/vlint selftest`
    must pass.
+
+## Changing the pipeline
+
+- **Keep what agents are handed short.** Every line in `brief.sh`, `WRITER.md` and `DESIGN.md` is read by every
+  build agent and writer, and a bloated context makes them slower and sloppier. Deepen or replace an existing line
+  rather than append; when DESIGN.md's §0 lessons pile up, fold them into the rules and cut them.
+- `DESIGN.md` holds judgement; vlint holds what a program can decide from the code or the frames. A rule that fires
+  more than about 20 times across the videos is a preference, and belongs removed rather than baselined.
+- Any edit touching a LaTeX backslash goes through an exact-string edit, never a regex replace or `sed`.
 
 ## Requirements
 

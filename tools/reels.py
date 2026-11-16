@@ -17,6 +17,8 @@ import subprocess
 import threading
 from pathlib import Path
 
+import videofolders as vf  # noqa: E402  (a video is at the root or under private/)
+
 ROOT = Path(__file__).resolve().parent.parent
 CACHE = ROOT / ".catalog" / "reels"
 _spans, _caps, _lock = {}, {}, threading.Lock()
@@ -125,7 +127,7 @@ def index(videos, render_root):
     """One account per video, newest first, each with its reels in order."""
     out = []
     for v in videos:
-        folder = ROOT / v["id"]
+        folder = vf.folder(v["id"], ROOT)
         caps = captions(folder)
         reels = []
         for i, (scene, a, b) in enumerate(spans(render_root, v["id"])):
@@ -160,7 +162,7 @@ def _ffmpeg(ffmpeg, args, out):
 
 
 def _full(vid):
-    return next(iter((ROOT / vid).glob("*_narrated.mp4")), None)
+    return next(iter((vf.folder(vid, ROOT)).glob("*_narrated.mp4")), None)
 
 
 def poster(ffmpeg, render_root, vid, i):
@@ -183,7 +185,7 @@ def avatar(ffmpeg, vid):
     full = _full(vid)
     if full is None:
         return None
-    front = ROOT / vid / "assets" / "front.png"
+    front = vf.folder(vid, ROOT) / "assets" / "front.png"
     out = CACHE / f"av_{vid}_{int(full.stat().st_mtime)}.jpg"
     if out.exists():
         return out

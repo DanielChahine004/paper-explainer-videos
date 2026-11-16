@@ -8,7 +8,7 @@
 here="$(cd "$(dirname "$0")" && pwd)"
 if [ "${1:-}" = all ]; then
   SRC="${SRC:-$(cd "$here/.." && pwd)}"   # the checkout these tools run from (tools/sync.sh)
-  vids=$(for d in "$SRC"/*/render.sh; do basename "$(dirname "$d")"; done)
+  vids=$(for d in "$SRC"/*/render.sh "$SRC"/private/*/render.sh; do [ -f "$d" ] && basename "$(dirname "$d")"; done)
   (V=$(echo "$vids" | head -1); source "$here/sync.sh") >/dev/null   # the shared code, once: side-by-side copies would race
   out=$(mktemp -d)
   n=${VIDEOS:-4}

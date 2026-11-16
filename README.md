@@ -73,6 +73,16 @@ Adding a rule: [`tools/vlint/README.md`](tools/vlint/README.md).
 | `tools/vlint/` | the checks and their tests |
 | `tools/catalog.py`, `reels.py`, `timelog.py` | home-network player with feedback notes; build timings |
 | `laser_rt/`, `calib/` | worked examples (scripts; videos on the release) |
+| `private/` | your own videos, a git repository of their own (ignored here) |
+
+## Your own videos
+
+Make your videos under `private/`, which this repo ignores, and make that folder a git repository of its own
+(private, if you like). The tools find a video by name there as well as at the root, so you work from the root as
+usual (`bash tools/check.sh myvideo`), and a change to the pipeline is a commit here that everyone gets, not a
+copy to keep in step. `private/playlists.json`, when there is one, is the catalogue's playlists; each video's
+`timelog.json` and `feedback.json` are yours and never tracked here. A `CLAUDE.local.md` at the root (ignored)
+containing `@private/CLAUDE.md` gives a coding agent your own notes.
 
 ## Examples
 

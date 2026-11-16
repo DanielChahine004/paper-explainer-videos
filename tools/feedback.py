@@ -17,6 +17,8 @@ import sys
 import time
 from pathlib import Path
 
+import videofolders as vf  # noqa: E402  (a video is at the root or under private/)
+
 ROOT = Path(__file__).resolve().parent.parent
 KINDS = ("incidental", "design", "vlint", "wontfix")
 
@@ -28,7 +30,7 @@ def fmt(t):
 
 def notes(vid):
     try:
-        return json.loads((ROOT / vid / "feedback.json").read_text(encoding="utf-8"))
+        return json.loads((vf.folder(vid, ROOT) / "feedback.json").read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return []
 
@@ -39,13 +41,13 @@ def show(vids, every):
         ns = [n for n in notes(vid) if every or n.get("status") == "open"]
         if not ns:
             continue
-        full = next(iter((ROOT / vid).glob("*_narrated.mp4")), None)
+        full = next(iter((vf.folder(vid, ROOT)).glob("*_narrated.mp4")), None)
         now = int(full.stat().st_mtime) if full else None
         print(f"== {vid}: {len(ns)} note(s)")
         for n in sorted(ns, key=lambda n: n["t"]):
             where = f"{n['scene']} @ {n['scene_t']} s" if n.get("scene") else "scene unknown"
             stale = "" if n.get("render") == now else "  [older render]"
-            grab = ROOT / vid / "review" / "feedback" / f"{n['nid']}.jpg"
+            grab = vf.folder(vid, ROOT) / "review" / "feedback" / f"{n['nid']}.jpg"
             print(f"  {n['nid']}  {fmt(n['t']):>6}  {where}{stale}  ({n['status']})")
             print("      " + n["text"].replace("\n", "\n      "))
             if grab.exists():
@@ -65,7 +67,7 @@ def resolve(vid, nid, kind, what):
     if not hit:
         sys.exit(f"no note {nid} in {vid}")
     hit[0].update(status="done", kind=kind, resolution=what, resolved=time.strftime("%Y-%m-%d %H:%M"))
-    (ROOT / vid / "feedback.json").write_text(json.dumps(ns, indent=1, ensure_ascii=False), encoding="utf-8")
+    (vf.folder(vid, ROOT) / "feedback.json").write_text(json.dumps(ns, indent=1, ensure_ascii=False), encoding="utf-8")
     print(f"{vid} {nid}: {kind}")
 
 
@@ -78,5 +80,5 @@ if __name__ == "__main__":
     else:
         every = "--all" in a
         a = [x for x in a if x != "--all"]
-        vids = a or sorted(p.parent.name for p in ROOT.glob("*/feedback.json"))
+        vids = a or sorted(p.parent.name for p in vf.glob("*/feedback.json", ROOT))
         show(vids, every)

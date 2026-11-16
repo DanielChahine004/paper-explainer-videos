@@ -33,13 +33,15 @@ import shutil
 import sys
 from pathlib import Path
 
+import videofolders as vf  # noqa: E402  (a video is at the root or under private/)
+
 ROOT = Path(__file__).resolve().parent.parent
 WORK = Path(os.environ.get("WRITERS_WORK", ROOT.parent / "slab_work"))
 MARK = "# ==== writer's scenes below this line; nothing above it is yours to edit " + "=" * 40 + "\n"
 
 
 def _video(v):
-    d = ROOT / v
+    d = vf.folder(v, ROOT)
     rsh = (d / "render.sh").read_text(encoding="utf-8")
     script = d / re.search(r'^SCRIPT=["\']?([\w.]+)', rsh, re.M).group(1)
     scenes = re.search(r'^SCENES=["\']([^"\']*)["\']', rsh, re.M).group(1).split()
@@ -262,7 +264,7 @@ def _clean(v):
     """Every copy merged: the copies, the state file and the lead's throwaway folders (<video>_words, _helpers...)
     go. slab_work held 70-odd of them by pet_mrpc. A name that starts with another video's name and an underscore is
     that video's (g4_inside_a is not g4's), so it stays."""
-    others = [p.name for p in ROOT.iterdir() if p.is_dir() and p.name != v]
+    others = [p.name for r in vf.roots(ROOT) if r.is_dir() for p in r.iterdir() if p.is_dir() and p.name != v]
     gone = []
     for p in WORK.glob(f"{v}_*"):
         if any(p.name.startswith(o + "_") and len(o) > len(v) for o in others):

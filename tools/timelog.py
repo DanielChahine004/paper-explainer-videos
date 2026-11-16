@@ -14,12 +14,14 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
+import videofolders as vf  # noqa: E402  (a video is at the root or under private/)
+
 ROOT = Path(__file__).resolve().parent.parent
 FMT = "%Y-%m-%d %H:%M:%S"
 
 
 def _load(video):
-    f = ROOT / video / "timelog.json"
+    f = vf.folder(video, ROOT) / "timelog.json"
     return f, (json.loads(f.read_text()) if f.exists() else {"marks": [], "events": []})
 
 
@@ -39,7 +41,7 @@ def mark(video, phase, at=None, note=None):
     # where others hold "script" and "check", and "design" for a feedback round, so no trend can be read off them.
     if phase not in PHASES:
         sys.exit(f"timelog: {phase!r} is not a phase. Use one of: {', '.join(PHASES)} (say the rest in --note)")
-    if not (ROOT / video).is_dir():
+    if not (vf.folder(video, ROOT)).is_dir():
         sys.exit(f"timelog: no video folder {video}")
     f, log = _load(video)
     # a phase is marked when it ends: a second "script" at the start of writing made its time read 0 min (pet_mrpc)
@@ -67,7 +69,7 @@ def _mins(a, b):
 
 def report(videos):
     if not videos:
-        videos = sorted(p.parent.name for p in ROOT.glob("*/timelog.json"))
+        videos = sorted(p.parent.name for p in vf.glob("*/timelog.json", ROOT))
     for v in videos:
         _, log = _load(v)
         ms = log["marks"]

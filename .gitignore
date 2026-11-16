@@ -34,3 +34,10 @@ t2.py
 */src/bbox.html
 # Resolved environment lock: kept local, pixi.toml is what is shared
 pixi.lock
+
+# Your own videos: a git repository of their own at private/ (see README, "Your own videos")
+/private/
+CLAUDE.local.md
+feedback.json
+timelog.json
+.wrangler/

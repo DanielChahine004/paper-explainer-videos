@@ -13,6 +13,8 @@ by more than 8% of the page is flagged, so look at it (it may have swallowed a c
 import sys
 from pathlib import Path
 
+import videofolders as vf  # noqa: E402  (a video is at the root or under private/)
+
 import numpy as np
 from PIL import Image
 
@@ -61,7 +63,7 @@ def main(argv):
             sys.exit(f"figcrop: cannot read {' '.join(rest)}")
         wh.append([float(x) for x in rest[1:5]])
         rest = rest[5:]
-    root = Path(__file__).resolve().parent.parent / v
+    root = vf.folder(v)
     src = next((root / "src" / f"hi-{page:0{k}d}.png" for k in (1, 2, 3)
                 if (root / "src" / f"hi-{page:0{k}d}.png").exists()), None)
     if src is None:

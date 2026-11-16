@@ -3,6 +3,7 @@
 #   bash tools/front_page.sh <video dir, relative to the repo>
 export PATH="$HOME/.pixi/bin:$PATH"
 D=$(cd "$(dirname "$0")/.." && pwd)/${1:?usage: front_page.sh <video>}
+[ -d "$D" ] || D="$(dirname "$D")/private/$1"   # your own videos: private/
 pdf=$(ls "$D"/src/*.pdf 2>/dev/null | head -1)
 [ -n "$pdf" ] || { echo "no PDF in $D/src"; exit 1; }
 mkdir -p "$D/assets"

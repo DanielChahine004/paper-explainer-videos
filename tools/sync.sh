@@ -13,7 +13,7 @@ SRC="${SRC:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
 # render root (named for the folder), so several can check at once without overwriting each other.
 case "$V" in
   */*) VDIR="$V"; V="$(basename "$V")" ;;
-  *)   VDIR="$SRC/$V" ;;
+  *)   VDIR="$SRC/$V"; [ -d "$VDIR" ] || [ ! -d "$SRC/private/$V" ] || VDIR="$SRC/private/$V" ;;   # your own videos: private/
 esac
 export VDIR          # where this video came from: renders and review sheets go back there
 [ -f "$VDIR/render.sh" ] || { echo "no video folder $VDIR (no render.sh)"; exit 1; }

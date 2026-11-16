@@ -15,6 +15,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from vlint import plan as vplan  # noqa: E402
+import videofolders as vf  # noqa: E402  (a video is at the root or under private/)
 
 _TS = re.compile(r"(\d+):(\d\d):(\d\d)\.(\d+)\s+-->")
 _QUOTE = re.compile(r'^p(\d+)\s+["“](.+)["”]$')
@@ -55,7 +56,7 @@ def _cite(c):
 def timed(vid, vtt):
     """[{t, scene, cites}] for every cited narration block found in the captions, in time order. [] when the
     video's plan cites nothing."""
-    p = ROOT / vid / "plan.md"
+    p = vf.folder(vid, ROOT) / "plan.md"
     if not p.exists() or not vtt:
         return []
     pl = vplan._load(p, p.stat().st_mtime_ns)

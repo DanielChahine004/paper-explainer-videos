@@ -147,6 +147,8 @@ def _ts(s):
 # ---- on Windows ---------------------------------------------------------------------------------------------------
 
 def _wsl(p):
+    if os.name != "nt":
+        return str(Path(p).resolve())   # on Linux a path is already a WSL path
     p = str(Path(p).resolve()).replace("\\", "/")
     return f"/mnt/{p[0].lower()}{p[2:]}"
 

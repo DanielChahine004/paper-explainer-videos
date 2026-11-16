@@ -48,7 +48,8 @@ PORT = int(os.environ.get("CATALOG_PORT", "8765"))
 FFMPEG = os.environ.get("FFMPEG", "/home/h/slab_render/.pixi/envs/default/bin/ffmpeg")   # inside WSL
 PLAYLISTS = vf.data("playlists.json")   # your own, in private/ when there is one
 PAPERS = ROOT / "papers.json"   # {video: {"cite", "url"}}: the paper each explains, linked under its title
-RENDER = Path(os.environ.get("RENDER_ROOT", r"\\wsl.localhost\Ubuntu\home\h\slab_render"))   # the WSL render mirror
+RENDER = Path(os.environ.get("RENDER_ROOT", r"\\wsl.localhost\Ubuntu\home\h\slab_render" if os.name == "nt"
+                              else str(Path.home() / "slab_render")))   # the render mirror (in WSL, seen from Windows)
 SKIP = {"voice_ab", "kit_gallery"}                       # voice tests and kit.py's gallery, not explainers
 _meta, _lock = {}, threading.Lock()
 
@@ -203,6 +204,9 @@ def add_note(vid, t, text):
 
 
 def wsl_path(p):
+    """A Windows path as WSL sees it; on Linux a path is already one."""
+    if os.name != "nt":
+        return str(p)
     p = str(p).replace("\\", "/")
     return f"/mnt/{p[0].lower()}{p[2:]}"
 

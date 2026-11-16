@@ -144,6 +144,8 @@ def index(videos, render_root):
 
 
 def wsl_path(p):
+    if os.name != "nt":
+        return str(p)   # on Linux a path is already a WSL path
     p = str(p).replace("\\", "/")
     return f"/mnt/{p[0].lower()}{p[2:]}"
 

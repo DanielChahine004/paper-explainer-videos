@@ -139,5 +139,9 @@
 	}
 	addEventListener("DOMContentLoaded", render);
 
+
+	// live.js holds a reload of a new version while a video plays or a note is being typed
+	window.liveBusy = () => [...document.querySelectorAll("video")].some((v) => !v.paused && !v.ended)
+		|| !!document.activeElement?.matches?.("input, textarea, [contenteditable]");
 	window.SITE = { videos, reels, notes, addNote, delNote, signIn, signOut, me };
 })();

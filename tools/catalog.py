@@ -595,7 +595,7 @@ async function refresh(){try{const [n,p]=SITE?await SITE.videos():await Promise.
   const m=location.hash.match(/^#v=([^&]+)&t=(\d+)/);   // from a reel's Full button: open that video at that moment
   if(m){const v=list.find(x=>x.id===decodeURIComponent(m[1]));history.replaceState(null,'',location.pathname);
     if(v){save(v.id,+m[2]);play(v)}}}
-refresh();setInterval(refresh,20000);window.addEventListener('hashchange',refresh);
+refresh();setInterval(()=>{refresh();if(cur&&!document.hidden&&document.activeElement!==ntext)loadNotes()},20000);window.addEventListener('hashchange',refresh);   // notes others leave appear within 20 s
 </script></body></html>"""
 
 

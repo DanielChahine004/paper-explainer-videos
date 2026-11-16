@@ -289,6 +289,7 @@ def feed(videos, site):
 def page(html, ver):
     """One of the catalogue's pages, with the site's adapter loaded before its own script."""
     inject = (f'<script src="config.js?v={ver}"></script><script src="site.js?v={ver}"></script>'
+              f'<script src="live.js?v={ver}" defer></script>'
               '<link rel="alternate" type="application/rss+xml" title="Explainers" href="feed.xml">')
     return html.replace("<head>", "<head>" + inject, 1).encode("utf-8")
 
@@ -433,11 +434,12 @@ def main():
             time.sleep(0.5 if a.to is None else 0)   # GitHub limits how fast new issues can be opened
 
     what = ", ".join(f"{len(x)} {k}" for k, x in (("new", new), ("updated", changed), ("removed", removed)) if x) or "no video changes"
-    ver = hashlib.sha1((PUBLIC / "site.js").read_bytes() + catalog.PAGE.encode() + reels.PAGE.encode()).hexdigest()[:8]
+    ver = hashlib.sha1((PUBLIC / "site.js").read_bytes() + (PUBLIC / "live.js").read_bytes() + catalog.PAGE.encode() + reels.PAGE.encode()).hexdigest()[:8]
     cfg = {"repo": dest.repo, "api": dest.api, "auth": AUTH, "base": dest.site if a.to is None else ""}
     out = {
         "index.html": page(catalog.PAGE, ver), "reels.html": page(reels.PAGE, ver),
         "site.js": (PUBLIC / "site.js").read_bytes(),
+        "live.js": (PUBLIC / "live.js").read_bytes(),   # an open page reloads itself on a new publish
         "config.js": f"window.SITE_CFG = {json.dumps(cfg)};\n".encode(),
         "index.json": json.dumps({"generated": now, "playlists": catalog.playlists(), "videos": videos}, ensure_ascii=False, indent=0).encode(),
         "reels.json": json.dumps([accounts[v["id"]] for v in videos if v["id"] in accounts], ensure_ascii=False).encode(),

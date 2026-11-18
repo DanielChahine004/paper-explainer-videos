@@ -447,7 +447,10 @@ labelled illustrative/schematic.
   number a block says that none of its own cites states, so 1.46 said of the 208 keV window fails even though
   the paper prints 1.46 elsewhere. Quote the sentence that makes the claim, not just the number: writing the
   cites is the re-read that catches a sentence gone loose (`lu177_dual`: "one minute for the analytical ones"
-  was the joint one's 1.0; the single windows take 0.5, so it became "at most one").
+  was the joint one's 1.0; the single windows take 0.5, so it became "at most one"). A quantity the paper names
+  and defines keeps its name, its symbol and its definition: plain words may gloss it once, never stand in for
+  it (`leaky_waveguide` said "crest speed" for the phase velocity and defined n as shear speed over crest speed,
+  losing the paper's reference speed, n = c_ref / v_ph, while its own cite quoted c_ref).
 - **Where the paper contradicts itself, pick one source and say so on screen.** `semimono_preclinical`'s abstract gives
   recovery coefficients 0.20 to 0.85 and Table II prints 0.22 to 0.89; the plot used the abstract's and carries a note.
 - **Narrate a computed number only after computing it.** If a scene's own model produces a value

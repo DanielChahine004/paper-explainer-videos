@@ -441,7 +441,8 @@ labelled illustrative/schematic.
   source: `cite: p8 "1.38 ± 0.06 for HMC-208"` (a quote, matched on that page of the PDF by paperstore's rules:
   case, spacing, ligatures, dashes and line-end hyphens ignored; on a two-column page the extracted text interleaves the columns line by line, so a quote must sit inside one printed line, and
   `plenoptic_scint`'s first 33 failures were quotes that crossed a line or came from the wrong page), `cite: computed 37% = 1/2.73` (the working), or
-  `cite: figure p16 Fig. 7 bar heights` (read off a picture). Cites above the first scene hold everywhere: the
+  `cite: figure p16 Fig. 7 bar heights` (read off a picture). `p<n>` is the PDF's page from 1, never the printed number (`sbs_theory`, a thesis chapter printed from page 27,
+  failed thirty quotes), and a quote is plain words, not a line with Greek letters the extraction garbles. Cites above the first scene hold everywhere: the
   names said throughout ("208 keV photopeak"). `plan --check` fails a quote that is not on its page and every
   number a block says that none of its own cites states, so 1.46 said of the 208 keV window fails even though
   the paper prints 1.46 elsewhere. Quote the sentence that makes the claim, not just the number: writing the
@@ -567,7 +568,7 @@ labelled illustrative/schematic.
   pass through a label, give it a background rectangle and `set_z_index(3)`. The y-axis title needs
   `buff >= 0.95`.
 - The bottom 0.5 units belong to the footnote or credit, so keep plots above y = -3.3.
-- **Use the space, evenly** (user, recon video). Lay panels out on a grid that fills the frame below
+- **Use the space, evenly** (user, recon video). A reused figure beside a small drawing is sized to its half of the frame, not to the drawing (`leaky_waveguide`: five figure scenes came back with 4 to 5 unit cards and a third of the frame empty). Lay panels out on a grid that fills the frame below
   the title: columns for things compared side by side, rows for stages, flow left to right and top to
   bottom. Keep at least ~0.3 units between panels; when they nearly touch while part of the screen is
   empty, spread them out instead of shrinking them. When a scene builds in two halves, centre the first
@@ -978,7 +979,7 @@ and knows where to look for information". It is laid out like this:
    wandered outside its scenes is caught rather than merged. Expect every writer to also edit its copy's
    `render.sh` so `run_v.sh` will run, and to hand that edit back: do not take it.
    In the plan, put each block's action lines directly under that block, or `plan --check` reports every mark twice,
-   and name no scene after a manim class (`Camera`).
+   and name no scene after a manim class (`Camera`, `Cylinder`, `Matrix`: check the headings against `dir(manim)` before writing the plan).
    **A writer's copy holds only what its `render.sh` lists.** geant4 handed five writers a base script that
    still carried two finished scenes as examples of the house style, and a `render.sh` naming only the
    writer's own. `scene-list` is an error (a class defined and not in SCENES), so every one of the five hit

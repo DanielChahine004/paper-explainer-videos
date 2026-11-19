@@ -11,6 +11,7 @@ on:
       - "tools/vlint/**"
       - "tools/kokoro_env/**"
       - "tools/voice_prepass.py"
+      - "tools/kokoro_synth.py"
       - "pixi.toml"
       - "pixi.lock"
       - "voices.py"

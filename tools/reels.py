@@ -18,6 +18,7 @@ import threading
 from pathlib import Path
 
 import videofolders as vf  # noqa: E402  (a video is at the root or under private/)
+import renderroot as rr  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 CACHE = ROOT / ".catalog" / "reels"
@@ -66,12 +67,10 @@ def spans(render_root, vid):
         if key in _spans:
             return _spans[key]
     out, t = [], 0.0
-    for line in lst.read_text().splitlines():
-        m = re.match(r"file '/home/h/slab_render/(.+)'", line.strip())
-        if m:
-            d = mp4_duration(Path(render_root) / m.group(1))
-            out.append((Path(m.group(1)).stem, round(t, 3), round(t + d, 3)))
-            t += d
+    for f in rr.scene_files(vid, render_root):
+        d = mp4_duration(f)
+        out.append((f.stem, round(t, 3), round(t + d, 3)))
+        t += d
     with _lock:
         _spans[key] = out
     return out
@@ -143,11 +142,7 @@ def index(videos, render_root):
     return out
 
 
-def wsl_path(p):
-    if os.name != "nt":
-        return str(p)   # on Linux a path is already a WSL path
-    p = str(p).replace("\\", "/")
-    return f"/mnt/{p[0].lower()}{p[2:]}"
+wsl_path = rr.inside   # a path as the render env's ffmpeg sees it
 
 
 def _ffmpeg(ffmpeg, args, out):
@@ -156,7 +151,7 @@ def _ffmpeg(ffmpeg, args, out):
         if out.exists():
             return out
         try:
-            subprocess.run((["wsl"] if os.name == "nt" else []) + [ffmpeg, "-loglevel", "error", "-y"] + args +
+            rr.run([ffmpeg, "-loglevel", "error", "-y"] + args +
                            [wsl_path(out)], timeout=60, capture_output=True)
         except (OSError, subprocess.TimeoutExpired):
             return None
@@ -230,7 +225,7 @@ def _make_rev(ffmpeg, vid, full, out):
             out.parent.mkdir(parents=True, exist_ok=True)
             src = max(full.parent.glob("*small*.mp4"), key=lambda p: p.stat().st_mtime, default=full)
             script = Path(__file__).resolve().parent / "reels_reverse.sh"
-            subprocess.run((["wsl"] if os.name == "nt" else []) + ["bash", wsl_path(script), ffmpeg, wsl_path(src),
+            rr.run(["bash", wsl_path(script), ffmpeg, wsl_path(src),
                            wsl_path(out)], timeout=1800, capture_output=True)
     except (OSError, subprocess.TimeoutExpired):
         pass

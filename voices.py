@@ -123,6 +123,10 @@ class KokoroService(_FileService):
 
     _proc = {}   # one kokoro_synth.py process per (voice, speed), kept alive so the model loads once
 
+    @staticmethod
+    def _log():
+        return Path.cwd() / "kokoro.log"   # kokoro_synth.py's stderr, quoted when it dies
+
     def synth_wav(self, text, wav_path):
         key = (self.voice, self.speed)
         p = KokoroService._proc.get(key)
@@ -133,7 +137,7 @@ class KokoroService(_FileService):
             p = subprocess.Popen([pixi, "run", "--manifest-path", str(env_dir / "pixi.toml"), "python",
                                   str(Path(__file__).resolve().parent / "tools" / "kokoro_synth.py"), self.voice,
                                   str(self.speed)], stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                                 stderr=subprocess.DEVNULL, text=True, env=env)
+                                 stderr=open(KokoroService._log(), "a"), text=True, encoding="utf-8", env=env)
             KokoroService._proc[key] = p
         out = str(Path(wav_path).resolve())
         p.stdin.write(f"{' '.join(text.split())}\t{out}\n")
@@ -141,7 +145,8 @@ class KokoroService(_FileService):
         while True:
             line = p.stdout.readline()
             if not line:
-                raise RuntimeError("kokoro_synth.py exited (run it by hand in ~/kokoro_env to see why)")
+                tail = "".join(KokoroService._log().read_text(errors="replace").splitlines(True)[-15:])
+                raise RuntimeError(f"kokoro_synth.py exited; the end of {KokoroService._log()}:\n{tail}")
             if line.strip() == out:
                 return
 

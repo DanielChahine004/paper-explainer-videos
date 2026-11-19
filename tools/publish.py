@@ -315,6 +315,7 @@ def main():
         catalog.PAPERS = root / "papers.json"
     if a.render:
         catalog.RENDER = Path(a.render)
+        catalog.rr.set_root(a.render)
     root = catalog.ROOT
     hashes_file = catalog.CACHE / "publish_hashes.json"
     try:
@@ -335,8 +336,7 @@ def main():
 
     items = catalog.scan()
     papers = catalog.papers()
-    r = str(catalog.RENDER).replace("\\", "/")
-    wsl_root = "/home/h/slab_render" if "wsl.localhost" in r.lower() else captions._wsl(catalog.RENDER)
+    wsl_root = catalog.rr.inside(catalog.RENDER)   # the render root as the captions' aligner sees it
     accounts = {acc["id"]: acc for acc in reels.index(items, catalog.RENDER)}
     videos, uploads, gone = [], [], []   # uploads: (video id, title, [(path or a maker, name)])
     for item in items:

@@ -1103,9 +1103,7 @@ and knows where to look for information". It is laid out like this:
      under a road of five stations; at label size (a message at 0.14 a character, a crystal 3 units wide)
      sixty per cent of the frame was empty in every settled sheet, and no rule minds: `layout-balance` is a
      note. The lead's sheet pass scaled each one up.
-   - `GrowArrow` on a `CurvedArrow` crashes CE (`scale_tips`): `Create` it. `QUALITY=-ql wsl bash ...` from
-     Git Bash does not carry QUALITY into WSL, so a writer following WRITER.md to the letter renders at
-     1080p; `writers.py` now prints the command with the variable inside. A shell heredoc holding an
+   - `GrowArrow` on a `CurvedArrow` crashes CE (`scale_tips`): `Create` it. A shell heredoc holding an
      apostrophe fails under this harness's Git Bash: write the file with the Write tool.
    - Whisper again, on a video full of file names: `'dot' not heard`, `'c make lists dot' heard as
      'cmakelist'`, `'dot jason' heard as 'json'`, `'num pie' heard as 'numpy'` are all the voice saying it
@@ -1137,7 +1135,7 @@ and knows where to look for information". It is laid out like this:
    the same helper bugs one by one (a dimension label on a slanted line, a flag whose pennant fell under its
    foot). What a video draws is still its own decision: kit has parts, never scenes, and a primitive that is
    wrong for a picture is passed different arguments or left alone, not bent until it fits.
-4. Check: `bash tools/check.sh <video> [Scene ...]` in WSL after every edit: the static checks, then
+4. Check: `bash tools/check.sh <video> [Scene ...]` after every edit: the static checks, then
    every scene in skip mode (each play() jumps to its end; ~25 s for a whole video, nothing rendered)
    with all the runtime rules, as one sorted list. Fix every error. Read the warnings as questions (is
    this label a sentence? is the eye left alone here?). Findings a video is already recorded as making are
@@ -1154,7 +1152,7 @@ and knows where to look for information". It is laid out like this:
    errors. When the rules change, render.sh re-checks the scenes it would not re-render (the rule set
    is part of each record), so old findings never pass for current ones; `check.sh all` re-checks
    every video.
-5. Draft: `QUALITY=-ql bash tools/run_v.sh <video>` in WSL, run through a `.sh` file. Narration is
+5. Draft: `QUALITY=-ql bash tools/run_v.sh <video>`. Narration is
    generated before any scene renders, by `tools/voice_prepass.py` (check.sh and render.sh both call
    it): two workers (`VOICE_WORKERS`; for Chatterbox ~4.6 GB of GPU each, for Kokoro one kept-alive process each) share out whole scenes and fill
    each scene's cache, so the scenes themselves only read audio. The pre-pass starts before anything else, so the voice model loads while vlint checks the script. A scene starts rendering as soon as its own narration is cached, while the rest is still being voiced. By default every scene renders at once: ManimGX up to 8, CE capped by cores and RAM; `JOBS=n` overrides. **A page-walk video needs `JOBS=3`**: each scene holds several 2484x3509 page renders, and 8 at `-qh` dies with a PIL `MemoryError` and a pyo3 panic. The slowest scene by its last render time goes first. Each scene's CE check runs beside its GPU render. The small copy is encoded scene by scene in parallel while the review sheets (8 at once) are made. Profiled 2026-10-25: the GPU stays under 35% busy. The limits are each scene's Python (an `always_redraw` doing heavy numpy every frame) and Kokoro's ~7 s start-up. metamono rebuilds in 1:31 with its sheets.
@@ -1232,7 +1230,7 @@ and knows where to look for information". It is laid out like this:
    shape goes outside the shape on the mark's line, never on its edge, where the outline strikes through it.
 
 Tooling (since 2026-10-25): **ManimGX renders, Manim CE checks.** `ENGINE=gx` (the default) renders each
-scene with ManimGX on the Windows GPU, called from WSL through interop (`GX_EXE`; inside WSL it has no GPU).
+scene with ManimGX on the GPU (`GX_EXE`; from WSL, the Windows install through interop, since WSL has no Vulkan GPU).
 `common.py` dispatches to `common_gx.py`, whose `Narrated` replays the voice pre-pass cache with
 `add_sound` and times `self.at()` from the word timings. vlint's runtime record still comes from CE in
 skip mode (`ENGINE=ce`, seconds per scene), so **every scene must run under both engines**: write the
@@ -1373,13 +1371,15 @@ CE 607 s, GX 12 s). ManimGL was ruled out: different API, no voiceover.
   'set_run_time'`). Give the animation the value in its constructor (`run_time=`, `rate_func=`), or wrap an
   `.animate` chain in `AnimationGroup(..., run_time=...)` (vlint: `gx-anim-setter`).
 
-**Shell (Windows → WSL)**
+**Shell**
 - **Start `run_v.sh` once.** A second launch (a backgrounded command that looked as if it had not started) ran beside the first, and
   the two fought over the same `m_<Scene>` folders: ten scenes "FAILED" with `os error 2` at `film.py _end` though their mp4s existed
   (`plenoptic_scint`), and `vlint recheck` then adopted four clips cut off mid-write (Bound 5.6 s of a 27 s narration;
-  vlint `short-scene` now stops that join). Check `wsl pgrep -af run_v` before launching again, and delete a failed scene's
+  vlint `short-scene` now stops that join). Check `pgrep -af run_v` before launching again, and delete a failed scene's
   `m_<Scene>/videos` rather than adopting it; the join also now holds a scene's last frame for any
   audio overhang over 0.01 s (it was 0.05, and 13 scenes' 0.04 s tails summed past `av-sync`'s 0.5 s).
-- `wsl bash -lc '... $var ...'` from Git Bash loses variables, so put loops in a `.sh` file.
-  Run it with `MSYS_NO_PATHCONV=1 wsl bash /mnt/c/.../x.sh`, otherwise Git Bash rewrites `/mnt/c`.
+- The tools run on Linux, macOS (bash 3.2, BSD userland) and Git Bash. What differs is `tools/platform.sh`'s
+  (`ncpu`, `mem_gb`, `natpath`, `strip_cr`, `pyhost`, `envbin`): a tool never calls `nproc`, `sed -i`, `python3`,
+  `wait -n` or a GNU-only flag itself, strips `\r` from what a Windows program prints, and writes a path into a file
+  ffmpeg reads with `natpath`. CI runs `check.sh` and a draft render on all three (`.github/workflows/platforms.yml`).
 - Git Bash's `/tmp` is not Windows Python's `/tmp`; use the scratchpad.

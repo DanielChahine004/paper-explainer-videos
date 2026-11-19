@@ -2,14 +2,16 @@
 authors = ["DanielChahine004 <danielchahine001@gmail.com>"]
 channels = ["conda-forge"]
 name = "slab_crlb_narrated"
-platforms = ["linux-64"]
+platforms = ["linux-64", "osx-arm64", "win-64"]
 version = "0.1.0"
-# Linux only (run it from WSL on Windows): Chatterbox needs CUDA torch, and manim's
-# LaTeX comes from TinyTeX (render.sh installs it in ~/.TinyTeX). Shared by every video
-# folder here; each folder's render.sh drives its build, and voices.py is the shared narrator.
+# Linux, macOS (Apple silicon) and Windows (from Git Bash). Chatterbox needs CUDA torch, so it is installed on Linux
+# and Windows only; the default voice, Kokoro, has its own env (tools/kokoro_env) and runs on any CPU. manim's
+# LaTeX comes from TinyTeX (tools/platform.sh installs it). Shared by every video folder here; each folder's
+# render.sh drives its build, and voices.py is the shared narrator.
 
-[system-requirements]
-cuda = "12"
+[activation.env]
+PYTHONUTF8 = "1"   # Windows' Python reads and writes cp1252 otherwise; every script, plan and narration is UTF-8
+KMP_DUPLICATE_LIB_OK = "TRUE"   # Windows: torch and Whisper's ctranslate2 each bring an OpenMP runtime; the second aborts
 
 [dependencies]
 python = "3.13.*"  # chatterbox-tts pins numpy<2 below 3.13, which manim 0.19 cannot use
@@ -23,11 +25,18 @@ hatchling = ">=1.27"  # builds paperstore: an isolated build resolves from the c
 
 [pypi-dependencies]
 manim-voiceover = "*"
-chatterbox-tts = "==0.1.7"
 soundfile = "*"
 faster-whisper = "*"
 num2words = "*"
+audioop-lts = "*"   # pydub (manim-voiceover) needs audioop, gone from Python 3.13; Chatterbox brought it on Linux, nothing on a Mac
 paperstore = { git = "https://github.com/DanielChahine004/paperstore" }   # vlint plan: cite quotes found on their page (paperstore.pdf.find)
+
+# CUDA torch: Chatterbox runs on an NVIDIA GPU (CUDA 12), so not on a Mac
+[target.linux-64.pypi-dependencies]
+chatterbox-tts = "==0.1.7"
+
+[target.win-64.pypi-dependencies]
+chatterbox-tts = "==0.1.7"
 
 [pypi-options]
 extra-index-urls = ["https://download.pytorch.org/whl/cu124"]

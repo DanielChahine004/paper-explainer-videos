@@ -13,17 +13,21 @@ Turn a research paper into a narrated, animated explainer video, with a coding a
 
 ## Quick start
 
-Needs Linux or WSL2, an NVIDIA GPU (CUDA 12) and [pixi](https://pixi.sh).
+Runs on Linux, macOS (Apple silicon) and Windows. Needs [pixi](https://pixi.sh) and bash: on Windows, the Git Bash
+that comes with [Git for Windows](https://git-scm.com/download/win) (run every command below in it). No GPU needed:
+Manim Community and the Kokoro voice run on the CPU; a GPU only speeds things up (ManimGX, below).
 
 ```bash
 git clone https://github.com/DanielChahine004/paper-explainer-videos
 cd paper-explainer-videos
-pixi install
-mkdir -p ~/kokoro_env && cp tools/kokoro_env/pixi.toml ~/kokoro_env/ && pixi install --manifest-path ~/kokoro_env/pixi.toml
-bash tools/check.sh kit_gallery   # smoke test
+bash tools/check.sh kit_gallery                            # smoke test: installs everything on its first run
+ENGINE=ce QUALITY=-ql bash tools/run_v.sh kit_gallery      # a 480p draft render
 ```
 
-The first run downloads the Kokoro and Whisper weights and TinyTeX. `TTS=chatterbox` switches voice.
+The first run installs the render env, the Kokoro voice env (`~/kokoro_env`) and TinyTeX, and downloads the Kokoro
+and Whisper weights. Renders happen in `~/slab_render` (`RENDER_ROOT`), where narration and scenes stay cached.
+`TTS=chatterbox` switches voice: it needs an NVIDIA GPU with CUDA 12 (Linux or Windows, about 4 GB per narration job).
+CI runs the smoke test on all three systems (`.github/workflows/platforms.yml`).
 
 ## Making a video
 
@@ -46,8 +50,8 @@ Feedback on one video goes into `DESIGN.md`, so the next starts from it.
 ## Rendering engines
 
 - **ManimGX** (`ENGINE=gx`, default when found): about 4x faster than Manim Community, and about 50x for 3D. Install it in its own env
-  (Python 3.13+, `pip install manimgx`); put it on PATH or set `GX_EXE`. Under WSL2, install it on Windows and set
-  `GX_EXE=/mnt/c/.../manimgx.exe` (WSL has no NVIDIA Vulkan driver).
+  (Python 3.13+, `pip install manimgx`); put it on PATH or set `GX_EXE`. A venv at `~/manimgx_venv` on Windows is
+  found by itself, from Git Bash or from WSL (WSL has no NVIDIA Vulkan driver of its own, so it borrows Windows').
 - **Manim Community** (`ENGINE=ce`): CPU fallback. vlint's runtime checks always run here, so write scenes in
   the shared API. ManimGX typesets LaTeX through Typst; packages mitex lacks fail.
 

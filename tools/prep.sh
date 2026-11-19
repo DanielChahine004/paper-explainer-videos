@@ -1,5 +1,5 @@
 # A paper's inputs, made in one go: what a generating agent needs beside DESIGN.md before it can start.
-#   bash tools/prep.sh <video> <paper.pdf>          (Git Bash or WSL; needs pixi, which fetches poppler)
+#   bash tools/prep.sh <video> <paper.pdf>          (Linux, macOS or Git Bash; needs pixi, which fetches poppler)
 # Writes <video>/src/paper.pdf, src/paper.txt (pdftotext -layout, UTF-8), src/hi-NN.png (300 dpi) and
 # src/lo-NN.png (80 dpi) for every page, assets/front.png for front_page(), and a brief.md with the source
 # section filled in from the PDF and the three choices that are the user's -- audience, format, length --
@@ -7,32 +7,24 @@
 # accident. Marks `received` and `figures` in the video's timelog.
 # On geant4 this was fourteen minutes done by hand, most of it finding which PDF tool was installed where.
 set -euo pipefail
-export PATH="$HOME/.pixi/bin:$PATH"
+source "$(dirname "$0")/platform.sh"
 V=${1:?usage: bash tools/prep.sh <video> <paper.pdf>}
 PDF=${2:?usage: bash tools/prep.sh <video> <paper.pdf>}
 R="$(cd "$(dirname "$0")/.." && pwd)"
 D="$R/$V"; [ -d "$D" ] || [ ! -d "$R/private" ] || D="$R/private/$V"   # with a private/, new videos go there
 [ -f "$PDF" ] || { echo "no such file: $PDF" >&2; exit 2; }
 [ ! -f "$D/brief.md" ] || { echo "$V/brief.md exists: this video already has its inputs (delete it to start over)" >&2; exit 2; }
-PY=""; for p in python python3; do "$p" -c "" 2>/dev/null && { PY=$p; break; }; done   # Windows' python3 is a Store stub
-[ -n "$PY" ] || { echo "no python on PATH" >&2; exit 2; }
-# paperstore checks the plan's cite quotes (vlint plan): take its latest for each new video, here and in the render env
-PS="git+https://github.com/DanielChahine004/paperstore"
-upd='cd ~/slab_render && cp "$0" . && ~/.pixi/bin/pixi update -q paperstore'
-if grep -qi microsoft /proc/version 2>/dev/null; then
-  bash -c "$upd" "$R/pixi.toml" >&2 || echo "prep: paperstore not refreshed in the render env" >&2
-else
-  uv pip install -q --reinstall-package paperstore --python "$("$PY" -c 'import sys; print(sys.executable)')" "$PS" >&2 || echo "prep: paperstore not refreshed here" >&2
-  MSYS_NO_PATHCONV=1 wsl bash -c "$upd" "/mnt${R}/pixi.toml" >&2 || echo "prep: paperstore not refreshed in the render env" >&2
-fi
+# paperstore checks the plan's cite quotes (vlint plan): take its latest for each new video, in the render env
+[ -d "$RENDER_ROOT" ] && { (cd "$RENDER_ROOT" && cp "$R/pixi.toml" . && pixi update -q paperstore) >&2 \
+  || echo "prep: paperstore not refreshed in the render env" >&2; }
 pp() { pixi exec -s poppler "$@" 2> >(grep -v -E "Invalid XRef entry|No display font|Syntax (Error|Warning)" >&2); }
 
 mkdir -p "$D/src" "$D/assets"
-"$PY" "$R/tools/timelog.py" mark "$V" received
+pyhost "$R/tools/timelog.py" mark "$V" received
 cp "$PDF" "$D/src/paper.pdf"
 cd "$D/src"
-"$PY" "$R/tools/timelog.py" mark "$V" figures --note "tools/prep.sh"
-pp pdftotext -layout -enc UTF-8 paper.pdf paper.txt
+pyhost "$R/tools/timelog.py" mark "$V" figures --note "tools/prep.sh"
+pp pdftotext -layout -enc UTF-8 -eol unix paper.pdf paper.txt
 pp pdftoppm -r 300 -png paper.pdf hi
 pp pdftoppm -r 80 -png paper.pdf lo
 # pdftoppm pads the page number to the width of the page count, so a 9-page paper comes out as hi-1.png

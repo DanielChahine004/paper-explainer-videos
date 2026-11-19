@@ -1,0 +1,53 @@
+name: platforms
+# The smoke test on Linux, macOS (Apple silicon) and Windows (Git Bash): kit_gallery's checks, then a 480p draft
+# render with Manim Community and the Kokoro voice, everything installed from scratch the way a new user's first
+# run installs it. Runs when the pipeline itself changes, not when a video does.
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "tools/*.sh"
+      - "tools/vlint/**"
+      - "tools/kokoro_env/**"
+      - "tools/voice_prepass.py"
+      - "pixi.toml"
+      - "pixi.lock"
+      - "voices.py"
+      - "common*.py"
+      - "kit.py"
+      - "kit_gallery/**"
+      - ".github/workflows/platforms.yml"
+
+jobs:
+  smoke:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 120
+    defaults:
+      run:
+        shell: bash
+    env:
+      ENGINE: ce
+    steps:
+      - uses: actions/checkout@v4
+      - uses: prefix-dev/setup-pixi@v0.8.1
+        with:
+          pixi-version: v0.84.2
+          run-install: false
+      - name: check
+        run: bash tools/check.sh kit_gallery
+      - name: draft render
+        run: QUALITY=-ql bash tools/run_v.sh kit_gallery
+      - name: collect logs
+        if: always()
+        run: mkdir -p logs; cp ~/slab_render/kit_gallery/*.log logs/ || true; cp -r ~/slab_render/kit_gallery/chk logs/ || true; cp kit_gallery/*_narrated.mp4 logs/ || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: kit_gallery-${{ matrix.os }}
+          path: logs
+          if-no-files-found: ignore

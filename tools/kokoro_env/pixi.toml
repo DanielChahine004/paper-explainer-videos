@@ -1,9 +1,12 @@
-# The Kokoro voice env (Python 3.12; the render env's 3.13 cannot load kokoro). Install once:
-#   mkdir -p ~/kokoro_env && cp tools/kokoro_env/pixi.toml ~/kokoro_env/ && pixi install --manifest-path ~/kokoro_env/pixi.toml
+# The Kokoro voice env (Python 3.12; the render env's 3.13 cannot load kokoro), in ~/kokoro_env (KOKORO_ENV). The
+# tools copy this file there the first time (tools/platform.sh) and the first narration installs it.
 [workspace]
 name = "kokoro_env"
 channels = ["conda-forge"]
-platforms = ["linux-64"]
+platforms = ["linux-64", "osx-arm64", "win-64"]
+
+[activation.env]
+KMP_DUPLICATE_LIB_OK = "TRUE"   # Windows: torch's libiomp5md and conda's libomp both load; OpenMP aborts on the second
 
 [dependencies]
 python = "3.12.*"

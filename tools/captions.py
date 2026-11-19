@@ -13,13 +13,26 @@ prints the VTT.
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-PY = "/home/h/slab_render/.pixi/envs/default/bin/python"   # the render env, inside WSL
-BIN = Path(PY).parent
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import renderroot as rr  # noqa: E402
+
+PY = rr.env_bin("python")   # the render env's (through WSL when it lives there)
+def _tool(name):
+    """ffmpeg or ffprobe from the env this Python runs in (run as a bare interpreter, its bin is not on PATH)."""
+    exe = Path(sys.executable).parent
+    for d in (exe, exe / "Library" / "bin"):
+        for n in (name, name + ".exe"):
+            if (d / n).exists():
+                return str(d / n)
+    return shutil.which(name) or name
+
+
 SR = 8000          # Hz: plenty to find a clip, cheap to correlate
 MIN_SCORE = 0.6    # normalised correlation an exact copy of a clip reaches easily (~0.9+); a different line, ~0.1
 
@@ -28,13 +41,13 @@ MIN_SCORE = 0.6    # normalised correlation an exact copy of a clip reaches easi
 
 def _pcm(path):
     import numpy as np
-    out = subprocess.run([str(BIN / "ffmpeg"), "-v", "error", "-i", str(path), "-vn", "-ac", "1", "-ar", str(SR),
+    out = subprocess.run([_tool("ffmpeg"), "-v", "error", "-i", str(path), "-vn", "-ac", "1", "-ar", str(SR),
                           "-f", "s16le", "-"], capture_output=True).stdout
     return np.frombuffer(out, dtype=np.int16).astype(np.float32)
 
 
 def _duration(path):
-    r = subprocess.run([str(BIN / "ffprobe"), "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0",
+    r = subprocess.run([_tool("ffprobe"), "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0",
                         str(path)], capture_output=True, text=True).stdout.strip()
     return float(r or 0)
 
@@ -72,11 +85,7 @@ def align(render_root, vid):
     import numpy as np
     render_root = Path(render_root)
     words, t0 = [], 0.0   # words: [(time, text, end of its clip)]
-    for line in (render_root / vid / "list.txt").read_text().splitlines():
-        m = re.match(r"file '/home/h/slab_render/(.+)'", line.strip())
-        if not m:
-            continue
-        mp4 = render_root / m.group(1)
+    for mp4 in rr.scene_files(vid, render_root):
         dur = _duration(mp4)
         cache = render_root / vid / f"m_{mp4.stem}" / "voiceovers"   # each scene renders in <video>/m_<Scene>
         try:
@@ -146,14 +155,7 @@ def _ts(s):
 
 # ---- on Windows ---------------------------------------------------------------------------------------------------
 
-def _wsl(p):
-    if os.name != "nt":
-        return str(Path(p).resolve())   # on Linux a path is already a WSL path
-    p = str(Path(p).resolve()).replace("\\", "/")
-    return f"/mnt/{p[0].lower()}{p[2:]}"
-
-
-def make(vid, key, cache_dir, render_root="/home/h/slab_render"):
+def make(vid, key, cache_dir, render_root=None):
     """The video's .vtt in cache_dir, named by key (the render it belongs to), aligned in WSL the first time.
     None when it could not be made (no WSL, no render mirror, no narration found)."""
     out = Path(cache_dir) / f"{vid}-{key}.vtt"
@@ -161,8 +163,8 @@ def make(vid, key, cache_dir, render_root="/home/h/slab_render"):
         return out if out.stat().st_size > 20 else None
     out.parent.mkdir(parents=True, exist_ok=True)
     try:
-        r = subprocess.run((["wsl"] if os.name == "nt" else []) + [PY, _wsl(__file__) if os.name == "nt" else __file__,
-                           "--align", render_root, vid], capture_output=True, text=True, encoding="utf-8", timeout=1200)
+        r = rr.run([rr.env_bin("python"), rr.inside(__file__), "--align", render_root or rr.inside(rr.RENDER), vid],
+                   capture_output=True, text=True, encoding="utf-8", timeout=1200)
     except (OSError, subprocess.TimeoutExpired):
         return None
     if r.returncode != 0 or not r.stdout.startswith("WEBVTT"):

@@ -8,6 +8,8 @@ import numpy as np
 import soundfile as sf
 from kokoro import KPipeline
 
+sys.stdin.reconfigure(encoding="utf-8")    # voices.py writes UTF-8; Windows would read cp1252
+sys.stdout.reconfigure(encoding="utf-8", newline="\n")
 voice, speed = sys.argv[1], float(sys.argv[2])
 pipe = KPipeline(lang_code=voice[0], repo_id="hexgrad/Kokoro-82M")
 for line in sys.stdin:

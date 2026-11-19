@@ -149,10 +149,8 @@ def split(v, assign, per, sheet=None):
             shutil.copytree(d / "assets", c / "assets")
         if hp:
             shutil.copy2(hp, c / "helpers.png")
-        wsl = "/mnt/" + c.drive[0].lower() + c.as_posix()[2:] if c.drive else c.as_posix()
-        wroot = "/mnt/" + ROOT.drive[0].lower() + ROOT.as_posix()[2:] if ROOT.drive else ROOT.as_posix()
-        (c / "WRITER.md").write_text(_BRIEF.format(v=v, scenes=", ".join(mine), script=script.name, c=c.as_posix(), wsl=wsl,
-                                                   root=ROOT.as_posix(), wroot=wroot, ex="examples.py holds the scenes already written: "
+        (c / "WRITER.md").write_text(_BRIEF.format(v=v, scenes=", ".join(mine), script=script.name, c=c.as_posix(),
+                                                   root=ROOT.as_posix(), ex="examples.py holds the scenes already written: "
                                                    "read it for the house style.\n" if examples else ""),
                                      encoding="utf-8", newline="\n")
         state["writers"][name] = {"dir": str(c), "scenes": mine}
@@ -180,10 +178,9 @@ Your folder is {c}. Work only in it.
 - Write code with the Write and Edit tools, never a shell heredoc: an apostrophe in a label breaks the quoting.
 
 Check after every edit, and render once, at the end:
-    wsl bash {wroot}/tools/check.sh {wsl}
-    wsl bash -c 'QUALITY=-ql bash {wroot}/tools/run_v.sh {wsl}'
-(from Git Bash, prefix both with MSYS_NO_PATHCONV=1, or it rewrites the /mnt/c paths. QUALITY is set inside the
-wsl command because a variable set in front of `wsl` does not cross into it, and the render then runs at 1080p)
+    bash {root}/tools/check.sh {c}
+    QUALITY=-ql bash {root}/tools/run_v.sh {c}
+(in a terminal with bash: Linux, macOS, or Git Bash on Windows)
 The first is static checks and every scene in skip mode, about 25 s, nothing rendered: loop on it until it is
 clean. Only then run the second, which renders your scenes at 480p (minutes) and leaves a sheet per scene in
 review/: read them, fix what they show, check again, and render again only if a fix changed the picture.
@@ -256,7 +253,7 @@ def merge(v, keep=False):
     (WORK / f"{v}_writers.json").write_text(json.dumps(state, indent=1), encoding="utf-8")
     if ok and not keep:
         _clean(v)
-    print(f"== {v}: now run  wsl bash tools/check.sh {v}" + ("" if ok else "   (after the copies above are put right and merged)"))
+    print(f"== {v}: now run  bash tools/check.sh {v}" + ("" if ok else "   (after the copies above are put right and merged)"))
     return 0 if ok else 1
 
 

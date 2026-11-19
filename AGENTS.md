@@ -26,7 +26,7 @@ own videos; see the README, "Your own videos"). Every tool finds a video by name
    `python tools/kit_promote.py <video>` names the helpers another video also wrote.
 4. **Scene writers (optional):** once `plan.md` exists, `python tools/writers.py split <video>` cuts one folder
    per writer and `python tools/writers.py merge <video>` splices them back.
-5. **Check and render** (in WSL or Linux, through the `.sh` files, never manim directly):
+5. **Check and render** (in bash: Linux, macOS or Git Bash on Windows; through the `.sh` files, never manim directly):
    - `bash tools/check.sh <video>`: static checks, then every scene in skip mode (~25 s).
    - `QUALITY=-ql bash tools/run_v.sh <video>` to draft, `QUALITY=-qh` for the final. Never above 1080p.
    - `bash tools/watch.sh <video>`: the finished video sampled where the picture changes.
@@ -45,10 +45,11 @@ own videos; see the README, "Your own videos"). Every tool finds a video by name
 
 ## Requirements
 
-Linux or WSL2, an NVIDIA GPU with CUDA 12 (about 4 GB per narration job), and
-[pixi](https://pixi.sh). Everything else (manim, ffmpeg, Chatterbox, Whisper, TinyTeX) is installed, apart from the Kokoro env (README, Quick start),
-by `pixi install` and the first run of `render.sh`. Optional: [ManimGX](https://github.com/academa-labs/manimgx)
-for GPU rendering (Python 3.13+, its own environment); see the README's "Rendering engines" section.
+Linux, macOS (Apple silicon) or Windows (from Git Bash), and [pixi](https://pixi.sh). Everything else (manim, ffmpeg,
+Whisper, the Kokoro env, TinyTeX) is installed by the first check or render. Scripts run under bash 3.2 too (macOS's),
+so the tools keep what differs between systems in `tools/platform.sh`: no GNU-only flags, no `python3`. Optional:
+an NVIDIA GPU with CUDA 12 for Chatterbox (Linux or Windows), and [ManimGX](https://github.com/academa-labs/manimgx)
+for GPU rendering (README, "Rendering engines").
 
 ## Voice
 

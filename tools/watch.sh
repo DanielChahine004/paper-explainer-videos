@@ -3,12 +3,12 @@
 # BETWEEN the narration blocks, which the review sheets (tools/review.sh, one frame per settled block) cannot
 # see: a head fading in over the front page, a label crossing another on its way, a shape still sliding when the
 # next cue starts. Which frames to take is tools/watch_times.py.
-#   wsl bash tools/watch.sh <video>            the joined 1080p video in the project folder
-#   T=0.012 wsl bash tools/watch.sh <video>    look harder (lower = more frames; 0.02 is ~150 for ten minutes)
+#   bash tools/watch.sh <video>            the joined 1080p video in the project folder
+#   T=0.012 bash tools/watch.sh <video>    look harder (lower = more frames; 0.02 is ~150 for ten minutes)
 #   FPS=12 ...                                 sample the video more finely before choosing (default 8)
 # Needs no render root and no GPU: it reads the finished mp4.
-export PATH="$HOME/.pixi/bin:$PATH"
 here="$(cd "$(dirname "$0")" && pwd)"
+source "$here/platform.sh"
 SRC="$(cd "$here/.." && pwd)"
 V=${1:?usage: watch.sh <video>}
 VD="$SRC/$V"; [ -d "$VD" ] || VD="$SRC/private/$V"   # your own videos: private/
@@ -17,14 +17,15 @@ F="$VD/${V}_explainer_narrated.mp4"
 OUT="$VD/watch"; rm -rf "$OUT"; mkdir -p "$OUT/f"
 # pixi from the render root, as review.sh does: the checkout's own .pixi may be a stale copy of another folder's env
 # (celeritas_optical: "environment directory has moved", 0 frames)
-cd ~/slab_render 2>/dev/null || cd "$SRC"
-FF="$(pixi run which ffmpeg)"
+cd "$RENDER_ROOT" 2>/dev/null || cd "$SRC"
+FF="$(envbin ffmpeg)"
 # one scene score per sampled frame: how much the picture moved since the frame before it
-"$FF" -nostdin -loglevel error -y -i "$F" -an \
-  -vf "fps=${FPS:-8},scale=480:-1,select='gte(scene,0)',metadata=print:file=$OUT/scores.txt" -f null -
-python3 "$here/watch_times.py" "$OUT/scores.txt" "${T:-0.02}" > "$OUT/times.txt"
+# (run from $OUT: a path in a filter would need its drive colon escaped on Windows)
+(cd "$OUT" && "$FF" -nostdin -loglevel error -y -i "$F" -an \
+  -vf "fps=${FPS:-8},scale=480:-1,select='gte(scene,0)',metadata=print:file=scores.txt" -f null -)
+pyhost "$here/watch_times.py" "$OUT/scores.txt" "${T:-0.02}" | tr -d '\r' > "$OUT/times.txt"
 n=$(wc -l < "$OUT/times.txt")
-d=$(pixi run ffprobe -v error -show_entries format=duration -of csv=p=0 "$F")
+d=$(pixi run ffprobe -v error -show_entries format=duration -of csv=p=0 "$F" | tr -d '\r')
 echo "== $V: $n frames worth looking at over ${d%.*}s"
 i=0
 while read -r t; do

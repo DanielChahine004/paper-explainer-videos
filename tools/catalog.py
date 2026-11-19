@@ -40,16 +40,16 @@ from urllib.parse import unquote
 
 import captions
 import reels
+import renderroot as rr
 import videofolders as vf  # noqa: E402  (a video is at the root or under private/)
 
 ROOT = Path(__file__).resolve().parent.parent
 CACHE = ROOT / ".catalog"
 PORT = int(os.environ.get("CATALOG_PORT", "8765"))
-FFMPEG = os.environ.get("FFMPEG", "/home/h/slab_render/.pixi/envs/default/bin/ffmpeg")   # inside WSL
 PLAYLISTS = vf.data("playlists.json")   # your own, in private/ when there is one
 PAPERS = ROOT / "papers.json"   # {video: {"cite", "url"}}: the paper each explains, linked under its title
-RENDER = Path(os.environ.get("RENDER_ROOT", r"\\wsl.localhost\Ubuntu\home\h\slab_render" if os.name == "nt"
-                              else str(Path.home() / "slab_render")))   # the render mirror (in WSL, seen from Windows)
+RENDER = rr.RENDER                                       # the render root (tools/renderroot.py)
+FFMPEG = os.environ.get("FFMPEG") or rr.env_bin("ffmpeg")   # the render env's own
 SKIP = {"voice_ab", "kit_gallery"}                       # voice tests and kit.py's gallery, not explainers
 _meta, _lock = {}, threading.Lock()
 
@@ -142,13 +142,10 @@ def scene_spans(vid):
     """[(scene, start, end)] in seconds of the joined video, from the render's scene list in the WSL mirror."""
     out, t = [], 0.0
     try:
-        for line in (RENDER / vid / "list.txt").read_text().splitlines():
-            m = re.match(r"file '/home/h/slab_render/(.+)'", line.strip())
-            if m:
-                f = RENDER / m.group(1)
-                d = duration(f)
-                out.append((f.stem, t, t + d))
-                t += d
+        for f in rr.scene_files(vid, RENDER):
+            d = duration(f)
+            out.append((f.stem, t, t + d))
+            t += d
     except OSError:
         return []
     return out
@@ -185,7 +182,7 @@ def grab(vid, t, nid):
     cmd = [FFMPEG, "-loglevel", "error", "-y", "-ss", f"{t:.2f}", "-i", wsl_path(full), "-frames:v", "1",
            "-vf", "scale=1280:-2", "-q:v", "3", wsl_path(out)]
     try:
-        subprocess.run((["wsl"] if os.name == "nt" else []) + cmd, timeout=60, capture_output=True)
+        rr.run(cmd, timeout=60, capture_output=True)
     except (OSError, subprocess.TimeoutExpired):
         pass
 
@@ -203,12 +200,7 @@ def add_note(vid, t, text):
     return n
 
 
-def wsl_path(p):
-    """A Windows path as WSL sees it; on Linux a path is already one."""
-    if os.name != "nt":
-        return str(p)
-    p = str(p).replace("\\", "/")
-    return f"/mnt/{p[0].lower()}{p[2:]}"
+wsl_path = rr.inside   # a path as the render env's ffmpeg sees it
 
 
 def thumb(vid):
@@ -223,7 +215,7 @@ def thumb(vid):
         cmd = [FFMPEG, "-loglevel", "error", "-y", "-ss", f"{t:.1f}", "-i", wsl_path(full), "-frames:v", "1",
                "-vf", "scale=480:-2", "-q:v", "4", wsl_path(out)]
         try:
-            subprocess.run((["wsl"] if os.name == "nt" else []) + cmd, timeout=60, capture_output=True)
+            rr.run(cmd, timeout=60, capture_output=True)
         except (OSError, subprocess.TimeoutExpired):
             return None
         for old in CACHE.glob(f"{vid}_*.jpg"):

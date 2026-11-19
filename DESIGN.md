@@ -442,7 +442,7 @@ labelled illustrative/schematic.
   case, spacing, ligatures, dashes and line-end hyphens ignored; on a two-column page the extracted text interleaves the columns line by line, so a quote must sit inside one printed line, and
   `plenoptic_scint`'s first 33 failures were quotes that crossed a line or came from the wrong page), `cite: computed 37% = 1/2.73` (the working), or
   `cite: figure p16 Fig. 7 bar heights` (read off a picture). `p<n>` is the PDF's page from 1, never the printed number (`sbs_theory`, a thesis chapter printed from page 27,
-  failed thirty quotes), and a quote is plain words, not a line with Greek letters the extraction garbles. Cites above the first scene hold everywhere: the
+  failed thirty quotes; `c12_pet_dose` read the printed footers off `paper.txt` and was one page off in 40 cites: split `paper.txt` on form feeds and let a script write each `p<n>` from where the quote is found), and a quote is plain words, not a line with Greek letters the extraction garbles. Cites above the first scene hold everywhere: the
   names said throughout ("208 keV photopeak"). `plan --check` fails a quote that is not on its page and every
   number a block says that none of its own cites states, so 1.46 said of the 208 keV window fails even though
   the paper prints 1.46 elsewhere. Quote the sentence that makes the claim, not just the number: writing the
@@ -1193,7 +1193,7 @@ and knows where to look for information". It is laid out like this:
    Two more of the same family, both from geant4 and both invisible on the settled sheets. **A pointer box
    leaves with the thing it points at**: the title's ink box was faded out in the same play that shrank the
    front page, so for half a second it hung in mid-air at full size while the page slid out from under it;
-   it now rides the page down (`Group(page, box).animate...`). **An arrival waits for the move that makes room
+   it now rides the page down (`Group(page, box).animate...`); a frame faded in the same play as its card's slide hangs beside it the same way (`c12_pet_dose`): fade, then move. **An arrival waits for the move that makes room
    for it**: Fig. 8 faded in while Fig. 7 was still sliding left through the place it lands, and the two cards
    were on top of each other for the length of the cue. Two plays, the move and then the FadeIn.
    **Read a scene's own duration from `list.txt`, never from `m_<Scene>/videos/*/*/<Scene>.mp4`.** The render

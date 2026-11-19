@@ -11,6 +11,13 @@ API both engines share, because vlint's runtime checks always run under Manim Co
    workflow and known pitfalls. Most mistakes a new video can make are already written down there.
 2. Look at the worked example closest to the task: `laser_rt/` for a single paper,
    `calib/` for a topic drawn from several papers.
+3. On a new machine, set up once (Requirements, below), then `bash tools/check.sh kit_gallery` must end with
+   0 errors before you start: the first run installs the rest (render env, Kokoro env, TinyTeX; ~10 min, several GB).
+   - pixi missing: `curl -fsSL https://pixi.sh/install.sh | bash` (Linux, macOS), or on Windows
+     `powershell -ExecutionPolicy ByPass -c "irm -useb https://pixi.sh/install.ps1 | iex"`; then open a new shell.
+   - Windows: run every command in Git Bash (Git for Windows), never PowerShell or cmd: the tools are bash scripts.
+   - A failure names its line (`render_lib.sh: stopped at line N`) or its log (`m_<Scene>.log`, `voice.log`,
+     `kokoro.log` in `~/slab_render/<video>/`); read it before retrying.
 
 ## Making a video
 

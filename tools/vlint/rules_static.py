@@ -853,8 +853,8 @@ def authors_brief(s):
 
 @rule("front-page", "static", "warn", "The video credits a paper (an 'et al.' citation) but never shows the paper's "
       "front page, so a viewer who knows the paper cannot recognise it (user, pet_explorer).", "Part I §1, opening",
-      "tools/front_page.sh <video> writes assets/front.png; show front_page() in the first scene while the voice names "
-      "the paper, its authors and its journal")
+      "tools/front_page.sh <video> writes assets/front.png; show front_page() in the first scene while the voice poses "
+      "the problem the paper solves, then names the paper in one clause (DESIGN, open on the problem)")
 def front_page_shown(s):
     if any(call_name(n) == "front_page" for n in ast.walk(s.tree)):
         return

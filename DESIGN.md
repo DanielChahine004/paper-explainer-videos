@@ -51,6 +51,14 @@ are counted (Part III step 1): about a tenth of the narration, 90 to 130 words i
 Its pictures are the ones the viewer already knows, brought back as each is named (below, "the closing scene
 returns to the video's main picture"), never a bullet list of the claims.
 
+**Open on the problem, not the citation** (study of six 3Blue1Brown videos, 2026-11-21: nine of our openings began
+"This paper appeared in..." or "This is a preprint by...", while each of his opens on the thing itself -- a script with
+its answer torn off, a hologram on an empty table, a prism and "why exactly does this work?"). The front page is on
+screen while the first sentences say what the paper is for, as something the viewer can see: the measurement no one
+can make directly, the two profiles that do not match, the step that fails. Authors and journal get one clause after
+that, or only the page. Draw the question as a visible gap (the dose missing under the PET profile, a "?" where the
+answer will sit) and fill that same gap in that same picture at the end.
+
 | Resource | What the viewer wants to leave with | Shape of the video |
 |---|---|---|
 | **Survey / review** | a map of the field: the taxonomy of approaches, how they relate, where each wins, the state of the results, and the open problems | build the map branch by branch, one scene per branch; keep a small map on screen as navigation; end on the full map with gaps marked (`laser_rt`: three mechanisms, then energy reached vs needed) |
@@ -161,7 +169,12 @@ voice has moved on. Neither repeats the other. Every rule below serves one of th
   acted on in under 60% of its narration blocks; calibrated on this repo, where the median scene reaches half and
   a scene built round one figure reaches three quarters). A decorative copy of the subject parked in a corner and
   never touched is the tell: that is the thing the scene should have been built on.
-  The same holds across scenes: one shared helper drawing that several scenes rebuild and mutate (`pet_entangled`'s
+  To look closer at a part, enlarge the figure about that part and shrink it back (`fig.animate.scale(2.5, about_point=p)`),
+  rather than opening an inset copy beside it: 3Blue1Brown's commonest transition is a camera move onto the part,
+  almost never a cut.
+  The same holds across the video: **carry one concrete case through every stage** (the attention video keeps one
+  eight-word sentence for twenty minutes, the Laplace video cos t throughout), so each new step happens to something the
+  viewer already holds: one beam, one event, one patient's scan. And across scenes: one shared helper drawing that several scenes rebuild and mutate (`pet_entangled`'s
   `dphi_plot` carried five scenes, `pet_mrpc`'s `rpc_stack`, `pico40l`'s `rsu`, `mono_review`'s `crystal_view` eight, its
   counts computed from the paper's own light model so the picture reproduced the paper's claims before they were said).
 - **Every visual does work: draw the form the viewer should think in** (user, after `flow_match` and
@@ -538,7 +551,11 @@ labelled illustrative/schematic.
   its own cue, so the picture moves roughly every three to four seconds and never stands still for ten.
   Count words, not sentences: a block can look busy on average and still hold one frame through
   thirty words of talking (vlint: `cue-gap`, 24 words ≈ 9 s). The tail of a block counts too — a last
-  sentence delivered over a finished picture is the commonest dead stretch.
+  sentence delivered over a finished picture is the commonest dead stretch. A continuous change the clauses describe
+  (a tracker sweeping, a dot walking, a cloud filling) serves each of them: split it at their bookmarks, one leg each.
+- **Let the payoff land.** Where a scene's result arrives (the curves meet, the answer fills the gap), hold 1.5 to 3 s
+  with no voice, the result still moving or just settled, before the next block (`self.wait(2)` after it).
+  3Blue1Brown leaves 5 to 15 s at his payoffs; a result talked straight over is gone before it is seen.
 - A cue is something **happening**, not a label landing: the step the voice describes is performed on the
   picture at the moment it is described — the mixer turns, the frames shuffle, the bar grows, the dot walks
   the path. Where the voice says a thing is shuffled, shifted, split, stacked or averaged, show that verb
@@ -665,6 +682,14 @@ labelled illustrative/schematic.
   scattering, at two lengths, and Mie scattering kink its path"; "tiles, each five point eight millimetres wide"). Give
   it a verb and usually its own sentence: "The slab measures fifty by fifty by ten millimetres." Read every line aloud
   as a listener who cannot see the screen (vlint: `narration-appendage` catches the colon and dash cases only).
+- **Narrate the reasoning, not the inventory** (3Blue1Brown study). Each step says what it is needed for, and the
+  sentences join with *because*, *so* and *which means*. A block of specs read in turn is a table read aloud
+  (`c12_pet_dose` Library: "The authors first simulate single-energy beams. Eleven energies run from..."). Say instead
+  "A network needs thousands of matched dose and PET pairs, and no one can measure that many, so the authors simulate
+  them." Where a viewer would stop and ask something, ask it once in plain words, then answer it with the picture
+  ("Why not just measure the dose?"). That is a real question, not the straw-man knockdown below. Early on, say the
+  route in one sentence, and name the one fact a scene must leave ("the thing to keep from this is...") at most twice
+  a video.
 - **No LLM writing tics, spoken or on screen** (user, from a list of them). Each one makes a colleague's explanation
   sound like a pitch, so state the plain fact once with its verb:
   negation-first reveals ("It is not a wrong answer. It is a non-answer."), clipped fragments ("Six legs. One

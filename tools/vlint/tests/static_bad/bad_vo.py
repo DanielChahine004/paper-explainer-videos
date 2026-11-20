@@ -51,6 +51,8 @@ class Flash(Narrated):  # expect: shadows-manim, scene-protagonist
         with self.voiceover(text="One <bookmark mark='a'/>two. Three <bookmark mark='b'/>four, five <bookmark mark='a'/>six."):  # expect: bookmark-duplicate
             self.at("a", FadeIn(e))
             self.at("b", FadeIn(f))
+        with self.voiceover(text="Panel a shows the <bookmark mark='pa'/>spectrum we measured."):  # expect: letter-label-lowercase
+            self.at("pa", FadeIn(ok))
         with self.voiceover(text="First <bookmark mark='x'/>thing here. Then <bookmark mark='y'/>the next thing."):
             self.at("y", FadeIn(ok))
             self.at("x", Indicate(ok))  # expect: bookmark-order

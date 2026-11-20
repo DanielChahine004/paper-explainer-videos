@@ -675,7 +675,11 @@ labelled illustrative/schematic.
     letters may need to be seperated for the pronounciation but not in the videos text"; vlint:
     `acronym-spaced-on-screen`). An abbreviation a viewer may not know is said in full the first time, "magnetic
     resonance, or M R, scan" (user, `pet_dl_recon`: "build for mr? - you mean MR like magnetic resonance?");
-  - chemical names: "caesium iodide", not "CsI".
+  - chemical names: "caesium iodide", not "CsI";
+  - a letter used as a label is a capital: "panel A", "site B", never "panel a" (vlint: `letter-label-lowercase`).
+    Kokoro reads a lone A before a lower-case word as the article, a quick "uh" run into the word before
+    (`c12_pet_dose`: "a P M M A block" was heard as "P M Emma"), so `voices.py` pins every lone capital A that does not
+    open a sentence to its letter name; a sentence-opening "A" stays the article.
 - **Full spoken sentences** (user, twice: `subseasonal_pbc`, "more full sentences, less ';-style' appendages";
   `celeritas_optical`, "speaking with ; kind of pauses can be confusing"). A phrase without its own verb, hung on after
   a colon, semicolon, dash *or comma*, reads like slide notes; the voice pauses flatly and the listener loses which noun

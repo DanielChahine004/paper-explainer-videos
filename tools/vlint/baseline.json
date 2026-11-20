@@ -224,6 +224,7 @@
    "scene-protagonist": 4
   },
   "pet_hetero_nanocomposites": {
+   "letter-label-lowercase": 3,
    "pulse-for-event": 2,
    "scene-protagonist": 1
   },
@@ -257,6 +258,7 @@
   },
   "pet_nn_monolithic": {
    "cue-gap": 1,
+   "letter-label-lowercase": 1,
    "pulse-for-event": 2,
    "scene-protagonist": 2
   },
@@ -269,6 +271,7 @@
   },
   "pet_perovskite": {
    "cue-gap": 2,
+   "letter-label-lowercase": 2,
    "number-unsourced": 8,
    "pulse-for-event": 2,
    "scene-protagonist": 4

@@ -84,10 +84,14 @@ class _FileService(SpeechService):
     def synth_wav(self, text, wav_path):
         raise NotImplementedError
 
+    def cache_key(self, spoken):
+        """What a cached line is looked up by (voice_prepass.py uses this too)."""
+        return {"input_text": spoken, "service": self.name, "voice": getattr(self, "voice", "")}
+
     def generate_from_text(self, text, cache_dir=None, path=None, **kwargs):
         cache_dir = cache_dir or self.cache_dir
         spoken = " ".join(remove_bookmarks(text).split())
-        input_data = {"input_text": spoken, "service": self.name, "voice": getattr(self, "voice", "")}
+        input_data = self.cache_key(spoken)
         cached = self.get_cached_result(input_data, cache_dir)
         if cached is not None:
             audio = cached["original_audio"]
@@ -112,6 +116,20 @@ class EspeakService(_FileService):
         subprocess.run(["espeak-ng", "-v", self.voice, "-s", str(self.speed), "-w", str(wav_path), text], check=True)
 
 
+_LONE_A = re.compile(r"(?<![\w'’\-\[])A(?![\w'’\-\]])")
+
+
+def letters_for_kokoro(text):
+    """Pin each lone capital A that is a letter to its name, /eɪ/ ("ay"). Kokoro's phonemiser reads a lone A before a
+    lowercase word as the article, a quick "uh" that runs into the word before (c12_pet_dose's "a P M M A block" was
+    heard as "P M Emma"; "site A", "t A", "A major" likewise). A sentence's first word is left alone: there "A" is
+    the article ("A beam enters", "A G A N"). Only the text sent to the voice changes, never the script."""
+    def pin(m):
+        before = text[:m.start()].rstrip()
+        return "A" if not before or before[-1] in ".?!:" else "[A](/ˈA/)"
+    return _LONE_A.sub(pin, text)
+
+
 class KokoroService(_FileService):
     """Kokoro-82M, run in its own env (KOKORO_ENV, default ~/kokoro_env: Python 3.12 with kokoro, misaki[en] and
     espeakng_loader; without espeak, out-of-dictionary words come out garbled) by tools/kokoro_synth.py."""
@@ -122,6 +140,12 @@ class KokoroService(_FileService):
         super().__init__(**kwargs)
 
     _proc = {}   # one kokoro_synth.py process per (voice, speed), kept alive so the model loads once
+
+    def cache_key(self, spoken):
+        # a line the letter pinning changes is keyed by what is said, so audio voiced before the pinning is redone
+        key = super().cache_key(spoken)
+        said = letters_for_kokoro(spoken)
+        return {**key, "said": said} if said != spoken else key
 
     @staticmethod
     def _log():
@@ -140,7 +164,7 @@ class KokoroService(_FileService):
                                  stderr=open(KokoroService._log(), "a"), text=True, encoding="utf-8", env=env)
             KokoroService._proc[key] = p
         out = str(Path(wav_path).resolve())
-        p.stdin.write(f"{' '.join(text.split())}\t{out}\n")
+        p.stdin.write(f"{' '.join(letters_for_kokoro(text).split())}\t{out}\n")
         p.stdin.flush()
         while True:
             line = p.stdout.readline()

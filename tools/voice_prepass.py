@@ -105,7 +105,7 @@ def main():
                 skipped += 1
                 continue
             spoken = " ".join(remove_bookmarks(t).split())
-            data = {"input_text": spoken, "service": svc.name, "voice": getattr(svc, "voice", "")}
+            data = svc.cache_key(spoken)
             cache.mkdir(parents=True, exist_ok=True)
             if svc.get_cached_result(data, cache) is not None:
                 continue
@@ -179,7 +179,7 @@ def heard_report(svc, scenes, texts):
             if t is None:
                 continue
             spoken = " ".join(remove_bookmarks(t).split())
-            e = svc.get_cached_result({"input_text": spoken, "service": svc.name, "voice": getattr(svc, "voice", "")}, cache)
+            e = svc.get_cached_result(svc.cache_key(spoken), cache)
             for was, got in heard_wrong(cache / e["original_audio"]) if e else ():
                 if not all(w in ok for w in was.split()):
                     bad.append((sc, was, got, spoken))
@@ -196,7 +196,7 @@ def work(items, wid):
         t1 = time.time()
         ear.said = None
         svc._wrap_generate_from_text(t)
-        e = svc.get_cached_result({"input_text": spoken, "service": svc.name, "voice": getattr(svc, "voice", "")}, cache)
+        e = svc.get_cached_result(svc.cache_key(spoken), cache)
         if e and ear.said is not None:
             (cache / e["original_audio"]).with_suffix(".heard.json").write_text(
                 json.dumps({"score": round(voices._match(spoken, ear.said), 3), "text": spoken, "heard": ear.said}))

@@ -567,6 +567,24 @@ SAID_AS_WORD = {"PET", "MAP", "NASA", "LASER", "RADAR", "SONAR", "CERN", "SPECT"
                 "ADAM", "BOLD", "STIR", "POET", "NEMA", "CAT", "DRAMA", "COMET", "LANCE", "DOPE"}
 
 
+_LABEL_NOUN = r"(?i:panel|figure|fig|point|site|option|design|plan|case|part|type|route|scenario|arm|configuration|version|model)"
+_LOWER_LABEL = re.compile(r"\b" + _LABEL_NOUN + r" ([a-h])\b(?=\s*(?:[,.;:?!)]|$|and\b|or\b|is\b|shows\b|draws\b|plots\b|"
+                          r"sorts\b|gives\b|has\b|was\b))")
+
+
+@rule("letter-label-lowercase", "static", "warn", "A letter used as a label is written in lower case in the narration "
+      "(\"Panel a draws...\"), so the voice reads it as the word \"a\", a quick \"uh\" run into the word before (user: "
+      "\"option a\" and \"design b\" came out contracted).", "Part II, Narration: spell out what must be said",
+      "write the label as a capital (\"panel A\"); voices.py pins a lone capital A to its letter name")
+def letter_label_lowercase(s):
+    for vo in s.voiceovers:
+        if vo.text is None:
+            continue
+        m = _LOWER_LABEL.search(MARK.sub("", vo.text))
+        if m:
+            yield vo.node, f"lower-case letter label: {m.group(0)!r}"
+
+
 @rule("acronym-unspelled", "static", "warn", "An acronym is written in capitals in the narration, so the voice reads it as "
       "a word: 'EM' came out as 'em' and 'MR' as 'mister' (user, pet_fbsem).", "Narration, spell out what must be "
       "said", "write it letter by letter, 'E M', 'M R', 'O S E M'; leave as a word only the ones said as words "

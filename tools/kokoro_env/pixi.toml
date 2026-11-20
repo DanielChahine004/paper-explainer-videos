@@ -17,3 +17,6 @@ pip = "*"
 kokoro = ">=0.9.4"
 soundfile = "*"
 misaki = { version = "*", extras = ["en"] }
+# misaki's English needs spaCy's small model and pip-installs it on first use; two voice workers doing that at once
+# collide on Windows (WinError 5 on en_core_web_sm, Windows CI), so it is part of the env instead
+en-core-web-sm = { url = "https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl" }

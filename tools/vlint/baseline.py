@@ -33,8 +33,10 @@ FILE = HERE / "baseline.json"
 
 
 def videos(root):
-    """Every video folder: the ones with a render.sh beside their scene script."""
-    return sorted(d for d in root.iterdir() if d.is_dir() and (d / "render.sh").is_file())
+    """Every video folder: the ones with a render.sh beside their scene script, at the root and under private/
+    (your own videos since 2026-11-17: without it the baseline lost every one of them and read as rules gone dead)."""
+    return sorted((d for r in (root, root / "private") if r.is_dir() for d in r.iterdir()
+                   if d.is_dir() and (d / "render.sh").is_file()), key=lambda d: d.name)
 
 
 def measure(root):

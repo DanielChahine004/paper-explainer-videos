@@ -46,7 +46,7 @@ class Flash(Narrated):  # expect: shadows-manim, scene-protagonist
         self.play(Succession(FadeIn(c), Indicate(c)))   # in turn: fine
         self.play(FadeIn(d))
         self.play(Indicate(d))                          # separate plays: fine
-        with self.voiceover(text="<bookmark mark='au'/>Its authors, led by Ann Lee, Bo Chen, Cy Diaz and Di Evans, work at three universities in two countries."):  # expect: authors-brief
+        with self.voiceover(text="This paper appeared in a journal last year. <bookmark mark='au'/>Its authors, led by Ann Lee, Bo Chen, Cy Diaz and Di Evans, work at three universities in two countries."):  # expect: authors-brief, opening-citation
             self.at("au", Indicate(ok))
         with self.voiceover(text="One <bookmark mark='a'/>two. Three <bookmark mark='b'/>four, five <bookmark mark='a'/>six."):  # expect: bookmark-duplicate
             self.at("a", FadeIn(e))

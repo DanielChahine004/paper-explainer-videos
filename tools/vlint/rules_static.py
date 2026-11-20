@@ -851,6 +851,29 @@ def authors_brief(s):
                 break
 
 
+_CITE_OPEN = re.compile(r"^(?:this|the) (?:paper|preprint|article|thesis|study|review|report|video)\b"
+                        r"|^this is (?:a|an|the)\b[^.]{0,60}?\b(?:paper|preprint|article|thesis|review|report)\b"
+                        r"|\b(?:published|appeared in)\b", re.I)
+
+
+@rule("opening-citation", "static", "warn", "The video's first sentence is about the document (\"This paper appeared "
+      "in...\", \"This is a preprint by...\") rather than the problem it solves, so the viewer meets a citation before "
+      "any reason to care (study of six 3Blue1Brown videos: each opens on the phenomenon or the puzzle).",
+      "Part I, Start here: open on the problem, not the citation",
+      "open on what the paper is for, as something the viewer can see; name the paper in one clause after that")
+def opening_citation(s):
+    first = next((c for c in s.tree.body if isinstance(c, ast.ClassDef)
+                  and any(getattr(b, "id", None) == "Narrated" for b in c.bases)), None)
+    if first is None:
+        return
+    vos = sorted((vo for vo in s.voiceovers if vo.text and first.lineno <= vo.node.lineno <= first.end_lineno),
+                 key=lambda vo: vo.node.lineno)
+    if vos:
+        sens = _sentences(vos[0].text)
+        if sens and _CITE_OPEN.search(sens[0]):
+            yield vos[0].node, f"the video opens on the citation: {sens[0][:70]!r}"
+
+
 @rule("front-page", "static", "warn", "The video credits a paper (an 'et al.' citation) but never shows the paper's "
       "front page, so a viewer who knows the paper cannot recognise it (user, pet_explorer).", "Part I §1, opening",
       "tools/front_page.sh <video> writes assets/front.png; show front_page() in the first scene while the voice poses "

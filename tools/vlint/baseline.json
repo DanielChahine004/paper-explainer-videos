@@ -1,14 +1,31 @@
 {
  "videos": {
+  "bgo_compton": {
+   "authors-brief": 1,
+   "narration-appendage": 1,
+   "number-unsourced": 2,
+   "opening-citation": 1,
+   "plan-why": 10,
+   "pulse-for-event": 3
+  },
   "bone_putty": {
    "property-scope": 1,
-   "pulse-for-event": 8,
+   "pulse-for-event": 3,
    "scene-protagonist": 6
   },
   "brain_swin": {
    "narration-appendage": 6,
+   "opening-citation": 1,
    "property-scope": 2,
    "scene-protagonist": 4
+  },
+  "c12_pet_dose": {
+   "authors-brief": 1,
+   "cue-gap": 6,
+   "narration-appendage": 1,
+   "number-unsourced": 1,
+   "opening-citation": 1,
+   "pulse-for-event": 1
   },
   "calib": {
    "cue-gap": 8,
@@ -20,18 +37,24 @@
   "capstone": {
    "scene-protagonist": 3
   },
+  "celeritas_optical": {
+   "cue-gap": 2,
+   "opening-citation": 1,
+   "plan-why": 5,
+   "pulse-for-event": 4
+  },
   "einstein1905": {
    "cue-gap": 2,
    "number-unsourced": 7,
    "property-scope": 1,
-   "pulse-for-event": 3,
+   "pulse-for-event": 2,
    "scene-protagonist": 6
   },
   "feynman2": {
    "cue-gap": 4,
    "narration-appendage": 10,
-   "property-scope": 1,
-   "pulse-for-event": 1
+   "opening-citation": 1,
+   "property-scope": 1
   },
   "flow_match": {
    "narration-appendage": 9,
@@ -42,15 +65,25 @@
   "fourier": {
    "narration-appendage": 4
   },
+  "g4_inside": {
+   "property-scope": 2
+  },
+  "g4_setup": {
+   "narration-tic": 1,
+   "scene-protagonist": 4
+  },
+  "g4_tutorial": {
+   "pulse-for-event": 1
+  },
   "geant4": {
    "algebra-shown": 1,
-   "pulse-for-event": 2
+   "opening-citation": 1
   },
   "guitar_theory": {
    "cue-gap": 4,
    "narration-appendage": 40,
    "property-scope": 2,
-   "pulse-for-event": 7,
+   "pulse-for-event": 5,
    "scene-protagonist": 3,
    "unresolved-narration": 1
   },
@@ -58,47 +91,81 @@
    "cue-gap": 5,
    "narration-appendage": 9,
    "object-morph": 2,
+   "opening-citation": 1,
    "property-scope": 2,
-   "pulse-for-event": 5
+   "pulse-for-event": 2
+  },
+  "kit_gallery": {
+   "scene-protagonist": 1
   },
   "laser_rt": {
    "cue-gap": 7,
    "narration-appendage": 15,
+   "opening-citation": 1,
    "property-scope": 9,
-   "pulse-for-event": 5
+   "pulse-for-event": 3
+  },
+  "leaky_waveguide": {
+   "cue-gap": 1,
+   "object-morph": 1,
+   "opening-citation": 1,
+   "property-scope": 1
   },
   "liquid_tc": {
    "cue-gap": 5,
    "narration-appendage": 11,
    "property-scope": 1,
-   "pulse-for-event": 2,
    "scene-protagonist": 4
   },
   "lnp_comet": {
    "number-unsourced": 3,
    "object-morph": 9,
+   "opening-citation": 1,
    "plan-why": 176
   },
-  "mc_recon": {},
+  "lu177_dual": {
+   "cue-gap": 2,
+   "plan-why": 7,
+   "pulse-for-event": 4
+  },
+  "lxe_tpc": {
+   "authors-brief": 1,
+   "cue-gap": 3,
+   "opening-citation": 1,
+   "plan-why": 1
+  },
+  "mc_recon": {
+   "opening-citation": 1
+  },
   "metamono": {
    "cue-gap": 10,
    "narration-appendage": 11,
    "number-unsourced": 4,
+   "opening-citation": 1,
    "property-scope": 8,
-   "pulse-for-event": 4
+   "pulse-for-event": 1
+  },
+  "mono_review": {
+   "cue-gap": 3,
+   "narration-appendage": 2,
+   "number-unsourced": 2,
+   "object-morph": 3,
+   "opening-citation": 1,
+   "plan-why": 7
   },
   "mouse_pet": {
    "cue-gap": 3,
    "narration-appendage": 7,
    "property-scope": 5,
-   "pulse-for-event": 7,
+   "pulse-for-event": 4,
    "scene-protagonist": 3
   },
   "pet_10ps": {
    "cue-gap": 1,
    "number-unsourced": 1,
+   "opening-citation": 1,
    "property-scope": 3,
-   "pulse-for-event": 4,
+   "pulse-for-event": 1,
    "scene-protagonist": 5
   },
   "pet_3dcnn_tof": {
@@ -120,18 +187,27 @@
    "cue-gap": 2,
    "number-unsourced": 2,
    "property-scope": 1,
-   "pulse-for-event": 5,
+   "pulse-for-event": 2,
    "scene-protagonist": 4
   },
   "pet_dl_review": {
    "cue-gap": 5,
-   "number-unsourced": 10,
-   "pulse-for-event": 2,
+   "number-unsourced": 15,
+   "pulse-for-event": 1,
    "scene-protagonist": 3
+  },
+  "pet_entangled": {
+   "narration-appendage": 1,
+   "number-unsourced": 2,
+   "object-morph": 2,
+   "opening-citation": 1,
+   "plan-why": 3,
+   "pulse-for-event": 6
   },
   "pet_explorer": {
    "narration-appendage": 1,
    "number-unsourced": 15,
+   "opening-citation": 1,
    "property-scope": 2,
    "pulse-for-event": 1,
    "scene-protagonist": 3,
@@ -143,75 +219,110 @@
    "pulse-for-event": 2,
    "scene-protagonist": 4
   },
+  "pet_g4_configs": {
+   "opening-citation": 1,
+   "scene-protagonist": 4
+  },
   "pet_hetero_nanocomposites": {
-   "pulse-for-event": 6,
+   "pulse-for-event": 2,
    "scene-protagonist": 1
   },
   "pet_hetero_nn": {
    "cue-gap": 3,
    "number-unsourced": 3,
+   "pulse-for-event": 1
+  },
+  "pet_mrpc": {
+   "algebra-shown": 1,
+   "cue-gap": 2,
+   "narration-appendage": 1,
+   "object-morph": 1,
+   "opening-citation": 1,
+   "plan-why": 1,
    "pulse-for-event": 2
   },
   "pet_nanocomposites": {
    "number-unsourced": 2,
+   "opening-citation": 1,
    "property-scope": 1,
-   "pulse-for-event": 3,
+   "pulse-for-event": 1,
    "scene-protagonist": 2
   },
   "pet_neuroexplorer": {
-   "number-unsourced": 2,
+   "number-unsourced": 4,
+   "opening-citation": 1,
    "property-scope": 5,
-   "pulse-for-event": 5,
+   "pulse-for-event": 4,
    "scene-protagonist": 5
   },
   "pet_nn_monolithic": {
    "cue-gap": 1,
-   "pulse-for-event": 4,
+   "pulse-for-event": 2,
    "scene-protagonist": 2
   },
   "pet_nn_timestamp": {
    "cue-gap": 3,
    "number-unsourced": 4,
    "property-scope": 1,
-   "pulse-for-event": 5,
+   "pulse-for-event": 1,
    "scene-protagonist": 5
   },
   "pet_perovskite": {
    "cue-gap": 2,
    "number-unsourced": 8,
-   "pulse-for-event": 5,
+   "pulse-for-event": 2,
    "scene-protagonist": 4
+  },
+  "pet_photon_ml": {
+   "plan-why": 1,
+   "scene-protagonist": 1
   },
   "pet_realtime_nn": {
    "number-unsourced": 7,
    "property-scope": 4,
-   "pulse-for-event": 6,
+   "pulse-for-event": 2,
    "scene-protagonist": 3
   },
   "pet_recon_free": {
+   "opening-citation": 1,
    "property-scope": 1,
-   "pulse-for-event": 4,
+   "pulse-for-event": 3,
    "scene-protagonist": 2
   },
   "pet_semimono_nn": {
    "cue-gap": 1,
    "number-unsourced": 3,
    "property-scope": 3,
-   "pulse-for-event": 3,
+   "pulse-for-event": 2,
    "scene-protagonist": 2
+  },
+  "pico40l": {
+   "cue-gap": 2,
+   "narration-appendage": 1,
+   "opening-citation": 1,
+   "plan-why": 10,
+   "pulse-for-event": 1
+  },
+  "plenoptic_scint": {
+   "acronym-unspelled": 2,
+   "cue-gap": 1,
+   "narration-appendage": 2,
+   "object-morph": 3,
+   "plan-why": 38
   },
   "prism_loc": {
    "cue-gap": 5,
    "narration-appendage": 10,
    "number-unsourced": 2,
+   "opening-citation": 1,
    "property-scope": 2,
-   "pulse-for-event": 4
+   "pulse-for-event": 3
   },
   "prism_pet": {
    "cue-gap": 2,
    "narration-appendage": 9,
    "property-scope": 1,
-   "pulse-for-event": 7,
+   "pulse-for-event": 4,
    "scene-protagonist": 1
   },
   "recon": {
@@ -223,51 +334,64 @@
   "relativity": {
    "cue-gap": 2,
    "property-scope": 1,
-   "pulse-for-event": 6,
+   "pulse-for-event": 2,
    "scene-protagonist": 3
+  },
+  "rydberg_radar": {
+   "number-unsourced": 2,
+   "opening-citation": 1,
+   "plan-why": 20
+  },
+  "sbs_theory": {
+   "cue-gap": 1,
+   "pulse-for-event": 1
   },
   "scintillation": {
    "narration-appendage": 6,
    "pulse-for-event": 3,
    "scene-protagonist": 5
   },
+  "semimono_preclinical": {
+   "plan-why": 17,
+   "pulse-for-event": 2
+  },
   "shell_pet": {
    "cue-gap": 3,
    "narration-appendage": 11,
    "object-morph": 2,
+   "opening-citation": 1,
    "property-scope": 2,
-   "pulse-for-event": 5,
+   "pulse-for-event": 2,
    "scene-protagonist": 3
+  },
+  "si_psf": {
+   "opening-citation": 1
   },
   "simultaneity": {
    "property-scope": 1,
-   "pulse-for-event": 2
+   "pulse-for-event": 1
   },
   "slab_crlb": {
    "cue-gap": 1,
-   "narration-appendage": 8,
-   "property-scope": 1,
-   "pulse-for-event": 7,
-   "scene-protagonist": 9,
-   "unresolved-narration": 5
+   "plan-why": 16
   },
   "slab_timing": {
    "narration-appendage": 7,
-   "pulse-for-event": 6,
+   "pulse-for-event": 2,
    "scene-protagonist": 6,
    "unresolved-narration": 1
   },
   "subseasonal_pbc": {
    "cue-gap": 2,
    "property-scope": 1,
-   "pulse-for-event": 4,
+   "pulse-for-event": 3,
    "scene-protagonist": 1
   },
   "wt_pet": {
    "cue-gap": 6,
    "narration-appendage": 15,
    "property-scope": 4,
-   "pulse-for-event": 3,
+   "pulse-for-event": 2,
    "scene-protagonist": 1
   },
   "zzb_slab": {
@@ -275,7 +399,7 @@
    "narration-appendage": 17,
    "object-morph": 2,
    "property-scope": 6,
-   "pulse-for-event": 7,
+   "pulse-for-event": 5,
    "scene-protagonist": 5,
    "unresolved-narration": 19
   }

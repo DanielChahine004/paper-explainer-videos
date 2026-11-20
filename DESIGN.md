@@ -57,7 +57,8 @@ its answer torn off, a hologram on an empty table, a prism and "why exactly does
 screen while the first sentences say what the paper is for, as something the viewer can see: the measurement no one
 can make directly, the two profiles that do not match, the step that fails. Authors and journal get one clause after
 that, or only the page. Draw the question as a visible gap (the dose missing under the PET profile, a "?" where the
-answer will sit) and fill that same gap in that same picture at the end.
+answer will sit) and fill that same gap in that same picture at the end (vlint: `opening-citation`, which found 27 of
+67 videos opening on the document).
 
 | Resource | What the viewer wants to leave with | Shape of the video |
 |---|---|---|

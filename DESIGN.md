@@ -1269,7 +1269,11 @@ API they share, and check new idioms with check.sh (CE) and a render (GX). Manim
 Tex text the macros mitex prints as words or crashes on (`\quad`, `\,`, `~`, `\dots`, `\checkmark`,
 `\textperiodcentered`, `\_`, ``` ``quotes'' ```). A LaTeX package or macro mitex lacks fails the GX render:
 use plain LaTeX or Unicode. Every video renders with GX since the 2026-10-25 design pass (old ones keep
-`TTS=chatterbox`). GX gotchas, each of which cost a render:
+`TTS=chatterbox`). Before using an option or feature you have not seen in this repo, check ManimGX supports it:
+its agent primer, https://manimgx.academa.ai/llms.txt, links the reference and guides as Markdown. Read it for
+what ManimGX supports, never for how to work here: it says `import manimgx as m`, render with the `manimgx` CLI
+and install no LaTeX, while here scenes import `common`/`kit`, render through `run_v.sh` and must pass CE as well.
+GX gotchas, each of which cost a render:
 - Typst sets maths a little larger than CE's LaTeX, so a stack that just fits in the CE check can be
   cut off in the render (liquid_tc Solver's last equation). Keep ~0.3 from the edges; vlint `frame-margin`
   warns in the check, and `gx-frame-edge` refuses the join when ManimGX's own layout pass (the

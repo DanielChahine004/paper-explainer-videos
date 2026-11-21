@@ -42,5 +42,6 @@
   "feynman2": {"cite": "Feynman, Leighton & Sands · The Feynman Lectures, Vol. II", "url": "https://www.feynmanlectures.caltech.edu/II_toc.html"},
   "metamono": {"cite": "Konstantinou et al. · IEEE TRPMS 2022, and a second review", "url": "https://doi.org/10.1109/trpms.2021.3069624"},
   "pet_explorer": {"cite": "Badawi et al. · J Nucl Med 2019", "url": "https://doi.org/10.2967/jnumed.119.226498"},
-  "c12_pet_dose": {"cite": "Rutherford, Saha Turai et al. · Phys Med Biol 2022", "url": "https://doi.org/10.1088/1361-6560/ac88b2"}
+  "c12_pet_dose": {"cite": "Rutherford, Saha Turai et al. · Phys Med Biol 2022", "url": "https://doi.org/10.1088/1361-6560/ac88b2"},
+  "diff_optical_det": {"cite": "Alterkait et al. · arXiv 2026", "url": "https://arxiv.org/abs/2602.24129"}
 }

@@ -71,7 +71,10 @@ def _sections(plan):
 
 
 def _spoken(section):
-    return " ".join(" ".join(l.lstrip("> ").strip() for l in section.splitlines() if l.startswith(">")).split())
+    # [marks] are not words: a writer may add one where cue-gap asks (pet_proton_dose_dl: two writers did, and the
+    # merge refused both copies for "changed words"); the plan section a copy hands back carries the new mark
+    text = " ".join(l.lstrip("> ").strip() for l in section.splitlines() if l.startswith(">"))
+    return " ".join(re.sub(r"\[[A-Za-z0-9_]+\]\s?", "", text).split())
 
 
 def _helpers_sheet(d, text, sheet):

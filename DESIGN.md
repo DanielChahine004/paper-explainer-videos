@@ -842,7 +842,7 @@ labelled illustrative/schematic.
   never through tick numbers, an axis title or a slice. `figcrop.py` takes a rough box and grows each edge until
   2 mm of white lies beyond it (6% of the page at most), so give it a box that stops above the caption, and
   when it warns that an edge reached its limit, that edge is in text: move it into the white gap; `--whiten` paints a neighbour's panel
-  letter out rather than cutting through it (vlint: `image-edge-cut`, ink touching an edge of a mostly white image).
+  letter out rather than cutting through it (vlint: `image-edge-cut`, ink touching an edge of a mostly white image). Where panels abut and an edge stays at its limit, crop with PIL between all-white runs of rows and columns, and read fig_box fractions off that crop.
 - Anything holding an image is a `Group`, not a `VGroup`, including inside `fit_frame` (vlint:
   `vgroup-non-vmobject`).
 
@@ -1040,7 +1040,7 @@ and knows where to look for information". It is laid out like this:
    structure, not the words, and two facts a writer would otherwise work round: a figure or table cited on a page
    its caption is not on, and a `focus:` that names a function (`rsu`, a kit primitive) instead of the variable the
    scene assigns its result to (pico40l: both, found by five writers). Run it before splitting.
-   **Every item a clause lists gets its own mark in the plan** (writers may not add bookmarks): four named tiles under one
+   **Every item a clause lists gets its own mark in the plan** (a writer may add a mark where cue-gap asks, never a word; `writers.py merge` compares words with the marks left out): four named tiles under one
    mark, and an equation's two terms under one, ran on timers that can drift from the voice (`semimono_preclinical` Intro, Calibrate).
    **A figure driven by a number carries the number.** A plain action line passes `plan-action` only if the cue
    changes something that names the focus, and a `ValueTracker` swept on its own names nothing, which pushes
@@ -1226,7 +1226,7 @@ and knows where to look for information". It is laid out like this:
    front page, so for half a second it hung in mid-air at full size while the page slid out from under it;
    it now rides the page down (`Group(page, box).animate...`); a frame faded in the same play as its card's slide hangs beside it the same way (`c12_pet_dose`): fade, then move. **An arrival waits for the move that makes room
    for it**: Fig. 8 faded in while Fig. 7 was still sliding left through the place it lands, and the two cards
-   were on top of each other for the length of the cue. Two plays, the move and then the FadeIn.
+   were on top of each other for the length of the cue. Two plays, the move and then the FadeIn; a card that replaces another card in the same place waits for the first to fade out (`pet_proton_dose_dl` Result: two cross-fading cards showed both at half strength).
    **Read a scene's own duration from `list.txt`, never from `m_<Scene>/videos/*/*/<Scene>.mp4`.** The render
    root is shared between videos and keeps old quality folders, so that glob can match a stale 1080p60 file
    from a version that no longer exists. On capstone it made three scenes look thirty seconds too long and

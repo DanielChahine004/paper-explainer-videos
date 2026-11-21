@@ -468,7 +468,8 @@ labelled illustrative/schematic.
 - **Where the paper contradicts itself, pick one source and say so on screen.** `semimono_preclinical`'s abstract gives
   recovery coefficients 0.20 to 0.85 and Table II prints 0.22 to 0.89; the plot used the abstract's and carries a note.
 - **Narrate a computed number only after computing it.** If a scene's own model produces a value
-  (an error, a fraction), run the model before writing the sentence. The calibration video's k-NN
+  (an error, a fraction), run the model before writing the sentence, and before a plan note promises it
+  (`prototwin_pet` Gamma: planned 0.67 and 1.5, computed 0.62 and 1.2). The calibration video's k-NN
   demo was scripted as "about a millimetre", but the computed error was 0.4 mm.
 - **Animate through reported values only.** Use `np.interp` between them, with no invented curve
   shapes. Keep scales fixed during a move.
@@ -981,7 +982,8 @@ and knows where to look for information". It is laid out like this:
    `plan-action` would pass. Write the plan asking, per line, "does this arrive, change, pulse, or morph?" --
    the four prefixes are the question, not a label applied afterwards. A cue that fades in a frame, a figure, a
    leg, a label or a bar is `new:`, never `side:`: writers re-prefixed 9 to 11 such lines in each of pet_entangled,
-   pet_mrpc, pico40l and mono_review (`vlint plan --check` now flags a `side:` line whose action starts by arriving).
+   pet_mrpc, pico40l and mono_review, and 25 of `prototwin_pet`'s 116; a dot landing on an axis or a flag planted is
+   `new:` too (`vlint plan --check` now flags a `side:` line whose action starts by arriving).
    **Work a moving cue's geometry out in the plan note** (what a moving point drags with it, what stays collinear):
    a writer cannot stage a cue that is geometrically impossible (`lxe_tpc` Crystal), and a helper documented as live
    must read its state live.

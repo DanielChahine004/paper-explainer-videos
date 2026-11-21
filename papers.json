@@ -45,5 +45,6 @@
   "c12_pet_dose": {"cite": "Rutherford, Saha Turai et al. · Phys Med Biol 2022", "url": "https://doi.org/10.1088/1361-6560/ac88b2"},
   "diff_optical_det": {"cite": "Alterkait et al. · arXiv 2026", "url": "https://arxiv.org/abs/2602.24129"},
   "pet_proton_dose_dl": {"cite": "Rahman et al. · Phys Med Biol 2022", "url": "https://doi.org/10.1088/1361-6560/ac8af5"},
-  "prototwin_pet": {"cite": "Cabrales et al. · IEEE TRPMS 2025", "url": "https://doi.org/10.1109/trpms.2025.3531536"}
+  "prototwin_pet": {"cite": "Cabrales et al. · IEEE TRPMS 2025", "url": "https://doi.org/10.1109/trpms.2025.3531536"},
+  "hofmann_emitters": {"cite": "Hofmann et al. · Phys Med Biol 2019", "url": "https://doi.org/10.1088/1361-6560/ab17f9"}
 }

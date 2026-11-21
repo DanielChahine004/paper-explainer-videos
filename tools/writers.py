@@ -179,6 +179,7 @@ Your folder is {c}. Work only in it.
 - {ex}- You may change the prefix of an action line in plan.md (new:, side:, mark:, morph:) when the check asks
   for it. You may not change a spoken word, in the plan or in the script, nor a cite: line.
 - Read DESIGN.md Part II and Part IV in {root} before you write.
+- Keep scratch files in your own folder, never the shared scratchpad: writers running together overwrote each other's `scenes.py` there.
 - Write code with the Write and Edit tools, never a shell heredoc: an apostrophe in a label breaks the quoting.
 
 Check after every edit, and render once, at the end:

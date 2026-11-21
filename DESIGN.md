@@ -843,7 +843,7 @@ labelled illustrative/schematic.
   never through tick numbers, an axis title or a slice. `figcrop.py` takes a rough box and grows each edge until
   2 mm of white lies beyond it (6% of the page at most), so give it a box that stops above the caption, and
   when it warns that an edge reached its limit, that edge is in text: move it into the white gap; `--whiten` paints a neighbour's panel
-  letter out rather than cutting through it (vlint: `image-edge-cut`, ink touching an edge of a mostly white image). Where panels abut and an edge stays at its limit, crop with PIL between all-white runs of rows and columns, and read fig_box fractions off that crop.
+  letter out rather than cutting through it (vlint: `image-edge-cut`, ink touching an edge of a mostly white image). Where panels abut, or `figcrop` grows through a caption or a neighbour's axis label (`hofmann_emitters`: four of six crops), crop with PIL at the all-white gaps between ink runs of rows and columns. Settle every crop before the plan quotes `fig_box` fractions: a re-crop moves them.
 - Anything holding an image is a `Group`, not a `VGroup`, including inside `fit_frame` (vlint:
   `vgroup-non-vmobject`).
 
@@ -983,7 +983,8 @@ and knows where to look for information". It is laid out like this:
    the four prefixes are the question, not a label applied afterwards. A cue that fades in a frame, a figure, a
    leg, a label or a bar is `new:`, never `side:`: writers re-prefixed 9 to 11 such lines in each of pet_entangled,
    pet_mrpc, pico40l and mono_review, and 25 of `prototwin_pet`'s 116; a dot landing on an axis or a flag planted is
-   `new:` too (`vlint plan --check` now flags a `side:` line whose action starts by arriving).
+   `new:` too, and so is a `point()` box or a recolour of part of a curve (drawn as an overlay); a box moving between
+   items is `side:` (`hofmann_emitters`: 14 of 81 re-prefixed) (`vlint plan --check` flags a `side:` line whose action starts by arriving).
    **Work a moving cue's geometry out in the plan note** (what a moving point drags with it, what stays collinear):
    a writer cannot stage a cue that is geometrically impossible (`lxe_tpc` Crystal), and a helper documented as live
    must read its state live.

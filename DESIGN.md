@@ -481,7 +481,8 @@ labelled illustrative/schematic.
   missing, a schematic labelled illustrative often explains the method as well as a computed one. The
   user's reaction to `zzb_slab`'s from-scratch light Monte Carlo and GPU Monte Carlo of P_min: "no need
   to code it all yourself; it could just be theoretical/illustrative". Compute only what the argument
-  needs, and say on screen which parts are computed here and on what assumptions.
+  needs, and say on screen which parts are computed here and on what assumptions. Never draw the paper's threshold or count on a demo whose own data cross it elsewhere: say it instead
+  (`rib_pet_dose`: the paper needed 13 beams, the demo converged at 4).
 - **A shape on a scale states a value, label or no label.** A second bar standing on the axis a measured bar
   stands on is read off that axis: its height is a claim whether or not a number sits on it, and leaving the
   number off hides the claim rather than withdrawing it. capstone's rebuild drew "the subject it does best on"

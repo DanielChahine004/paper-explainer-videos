@@ -533,7 +533,8 @@ labelled illustrative/schematic.
   the 3D effect doesn't get maximally employed"). A camera that never moves shows a slanted flat picture: depth
   is read from parallax. Plan the move in the plan: orbit or swing while the shape is built (round the ring,
   along the beam into the phantom, down through the crystal), aimed at the depth the narration relies on, then
-  hold still for anything measured (§III-3D). A 3D scene with no move needs a reason in the plan.
+  hold still for anything measured (§III-3D). Move to a chosen end view with `move_camera`, never an ambient
+  rotation left running: `rib_pet_dose` Ring drifted to an end-on view where the block lost its length. A 3D scene with no move needs a reason in the plan.
 - **Readable at 1080p.** Keep everything 0.3 units inside the frame, with text at least 24 pt and
   labels in empty space. Nothing overlaps; check every frame of the contact sheet.
 - **One look across videos.** Dark background, one accent colour per concept used consistently,
@@ -742,8 +743,9 @@ labelled illustrative/schematic.
   the insides, and the outline `Line`s last with `bring_to_front` after each addition (`wt_pet`
   Block). Markers that must sit in front (arrows, rays) get `shade_in_3d = False` (`slab_crlb` Intro).
 - **Cost** (under CE; ManimGX renders 3D ~50× faster, see Tooling). A rotating scene with hundreds of prisms took about 40 minutes at 1080p. Stop the
-  rotation before the last voiceover, so a static camera reuses frames. Use flat `Dot`s for clouds
-  and render 3D scenes first. Recolouring a surface every frame costs about 10 minutes
+  rotation before the last voiceover, so a static camera reuses frames. Use flat `Dot`s for clouds of
+  hundreds, but a few particles the narration follows are small `Sphere`s: a flat dot in 3D reads as a
+  disc (user, `rib_pet_dose` Ring). Render 3D scenes first. Recolouring a surface every frame costs about 10 minutes
   (`brain_swin`).
 - **Anything that must touch a 3D part is itself 3D** (a track ending on a hit, a flag on a module, a spot over an
   event); only labels go fixed in frame, with a gap, since their screen place is an orthographic guess the

@@ -47,5 +47,6 @@
   "pet_proton_dose_dl": {"cite": "Rahman et al. · Phys Med Biol 2022", "url": "https://doi.org/10.1088/1361-6560/ac8af5"},
   "prototwin_pet": {"cite": "Cabrales et al. · IEEE TRPMS 2025", "url": "https://doi.org/10.1109/trpms.2025.3531536"},
   "hofmann_emitters": {"cite": "Hofmann et al. · Phys Med Biol 2019", "url": "https://doi.org/10.1088/1361-6560/ab17f9"},
-  "rib_pet_dose": {"cite": "Hamato et al. · Nucl Instrum Methods A 2024", "url": "https://doi.org/10.1016/j.nima.2024.169643"}
+  "rib_pet_dose": {"cite": "Hamato et al. · Nucl Instrum Methods A 2024", "url": "https://doi.org/10.1016/j.nima.2024.169643"},
+  "cion_pet_physics": {"cite": "Kraan · Front Oncol 2015, with Rutherford et al. 2022 and Hamato et al. 2024", "url": "https://doi.org/10.3389/fonc.2015.00150"}
 }

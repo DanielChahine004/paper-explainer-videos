@@ -529,6 +529,11 @@ labelled illustrative/schematic.
   `class S(Narrated, ThreeDScene)`, `set_camera_orientation(phi=65*DEGREES, theta=-55*DEGREES)`, the
   title fixed in frame, a slow `move_camera` only while the shape is discussed (`shell_pet`, `prism_loc`).
   Check draw order (§III-3D).
+- **A 3D scene earns its depth by moving** (user, `rib_pet_dose` Ring: "if there's no viewing position change
+  the 3D effect doesn't get maximally employed"). A camera that never moves shows a slanted flat picture: depth
+  is read from parallax. Plan the move in the plan: orbit or swing while the shape is built (round the ring,
+  along the beam into the phantom, down through the crystal), aimed at the depth the narration relies on, then
+  hold still for anything measured (§III-3D). A 3D scene with no move needs a reason in the plan.
 - **Readable at 1080p.** Keep everything 0.3 units inside the frame, with text at least 24 pt and
   labels in empty space. Nothing overlaps; check every frame of the contact sheet.
 - **One look across videos.** Dark background, one accent colour per concept used consistently,

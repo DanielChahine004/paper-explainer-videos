@@ -43,6 +43,19 @@
    "plan-why": 5,
    "pulse-for-event": 4
   },
+  "cion_pet_physics": {
+   "number-unsourced": 1,
+   "plan-why": 21,
+   "pulse-for-event": 2,
+   "scene-protagonist": 1
+  },
+  "diff_optical_det": {
+   "acronym-unspelled": 1,
+   "cue-gap": 4,
+   "plan-why": 8,
+   "property-scope": 1,
+   "scene-protagonist": 1
+  },
   "einstein1905": {
    "cue-gap": 2,
    "number-unsourced": 7,
@@ -86,6 +99,12 @@
    "pulse-for-event": 5,
    "scene-protagonist": 3,
    "unresolved-narration": 1
+  },
+  "hofmann_emitters": {
+   "cue-gap": 2,
+   "narration-appendage": 1,
+   "plan-why": 7,
+   "pulse-for-event": 1
   },
   "i3m_pet": {
    "cue-gap": 5,
@@ -280,6 +299,11 @@
    "plan-why": 1,
    "scene-protagonist": 1
   },
+  "pet_proton_dose_dl": {
+   "acronym-unspelled": 1,
+   "cue-gap": 1,
+   "plan-why": 12
+  },
   "pet_realtime_nn": {
    "number-unsourced": 7,
    "property-scope": 4,
@@ -328,6 +352,7 @@
    "pulse-for-event": 4,
    "scene-protagonist": 1
   },
+  "prototwin_pet": {},
   "recon": {
    "cue-gap": 5,
    "narration-appendage": 12,
@@ -340,15 +365,21 @@
    "pulse-for-event": 2,
    "scene-protagonist": 3
   },
+  "rib_pet_dose": {
+   "acronym-unspelled": 1,
+   "cue-gap": 11,
+   "equation-talked-over": 1,
+   "opening-citation": 1,
+   "plan-why": 13,
+   "property-scope": 2,
+   "scene-protagonist": 1
+  },
   "rydberg_radar": {
    "number-unsourced": 2,
    "opening-citation": 1,
    "plan-why": 20
   },
-  "sbs_theory": {
-   "cue-gap": 1,
-   "pulse-for-event": 1
-  },
+  "sbs_theory": {},
   "scintillation": {
    "narration-appendage": 6,
    "pulse-for-event": 3,

@@ -162,12 +162,16 @@ pyhost "$ROOT/tools/timelog.py" event "$TLOG" render_end 2>/dev/null || true
 if [ "$RES" = 1080p60 ]; then
   # A smaller copy for upload limits: same 1080p, stronger compression (never a downscale).
   SMALL="${OUT%_narrated.mp4}"; SMALL="${SMALL%.mp4}_small.mp4"
-  # Encoded scene by scene, all at once (one encode of the whole video is bound by decoding a single stream: ~90 s
-  # for 10 min), each kept as m_<Scene>/small.mp4 until its scene changes, then joined with the joined video's
-  # audio; in the background while AFTER_JOIN (run_v.sh: the review sheets) runs.
-  ( echo $SCENES | tr ' ' '\n' | RES=$RES xargs -P "$(ncpu)" -n 1 sh -c \
+  # Encoded scene by scene (one encode of the whole video is bound by decoding a single stream: ~90 s for 10 min),
+  # each kept as m_<Scene>/small.mp4 until its scene changes, then joined with the joined video's audio; in the
+  # background while AFTER_JOIN (run_v.sh: the review sheets) runs. Three at a time, splitting the thread budget
+  # between them: one per scene with x264's own thread count ran 12 encodes of 77 threads and 1.4 GB each on a
+  # shared machine (sbs_theory, 16 GB and every core).
+  SMALL_P=3; SMALL_T=$(( ${JOB_THREADS:-$(ncpu)} / SMALL_P )); [ "$SMALL_T" -ge 1 ] || SMALL_T=1
+  ( echo $SCENES | tr ' ' '\n' | RES=$RES SMALL_T=$SMALL_T xargs -P "$SMALL_P" -n 1 sh -c \
       'f="m_$1/videos/$STEM/$RES/$1.mp4"; s="m_$1/small.mp4"; [ -f "$s" ] && [ "$s" -nt "$f" ] && exit 0
-       pixi run ffmpeg -nostdin -loglevel error -y -i "$f" -an -c:v libx264 -crf 26 -preset slow "$s.tmp.mp4" && mv "$s.tmp.mp4" "$s"' _
+       pixi run ffmpeg -nostdin -loglevel error -threads "$SMALL_T" -y -i "$f" -an -c:v libx264 -crf 26 -preset slow \
+         -threads "$SMALL_T" "$s.tmp.mp4" && mv "$s.tmp.mp4" "$s"' _
     : > list_small.txt; for s in $SCENES; do echo "file '$(natpath "$PWD")/m_$s/small.mp4'" >> list_small.txt; done
     pixi run ffmpeg -nostdin -loglevel error -y -f concat -safe 0 -i list_small.txt -i "$OUT" -map 0:v -map 1:a -c:v copy \
       -c:a aac -b:a 128k -movflags +faststart "$SMALL" ) & SP=$!

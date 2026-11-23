@@ -570,6 +570,9 @@ SAID_AS_WORD = {"PET", "MAP", "NASA", "LASER", "RADAR", "SONAR", "CERN", "SPECT"
 _LABEL_NOUN = r"(?i:panel|figure|fig|point|site|option|design|plan|case|part|type|route|scenario|arm|configuration|version|model)"
 _LOWER_LABEL = re.compile(r"\b" + _LABEL_NOUN + r" ([a-h])\b(?=\s*(?:[,.;:?!)]|$|and\b|or\b|is\b|shows\b|draws\b|plots\b|"
                           r"sorts\b|gives\b|has\b|was\b))")
+# a symbol named with a lower-case a ("the pump, which we write a one": sbs_theory, heard as "uh one")
+_LOWER_SYMBOL = re.compile(r"\b(?:write|writes|call|calls|denote|denotes|label|labels)(?: it| them| this)? a\b"
+                           r"(?=\s*(?:[,.;:]|one\b|two\b|three\b|zero\b|sub\b|prime\b|dagger\b|hat\b|and\b))")
 
 
 @rule("letter-label-lowercase", "static", "warn", "A letter used as a label is written in lower case in the narration "
@@ -580,7 +583,8 @@ def letter_label_lowercase(s):
     for vo in s.voiceovers:
         if vo.text is None:
             continue
-        m = _LOWER_LABEL.search(MARK.sub("", vo.text))
+        said = MARK.sub("", vo.text)
+        m = _LOWER_LABEL.search(said) or _LOWER_SYMBOL.search(said)
         if m:
             yield vo.node, f"lower-case letter label: {m.group(0)!r}"
 

@@ -53,6 +53,8 @@ class Flash(Narrated):  # expect: shadows-manim, scene-protagonist
             self.at("b", FadeIn(f))
         with self.voiceover(text="Panel a shows the <bookmark mark='pa'/>spectrum we measured."):  # expect: letter-label-lowercase
             self.at("pa", FadeIn(ok))
+        with self.voiceover(text="The field, which we write a one, <bookmark mark='pw'/>is the pump."):  # expect: letter-label-lowercase
+            self.at("pw", FadeIn(ok))
         with self.voiceover(text="First <bookmark mark='x'/>thing here. Then <bookmark mark='y'/>the next thing."):
             self.at("y", FadeIn(ok))
             self.at("x", Indicate(ok))  # expect: bookmark-order

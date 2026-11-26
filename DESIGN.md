@@ -455,7 +455,7 @@ labelled illustrative/schematic.
   source: `cite: p8 "1.38 ± 0.06 for HMC-208"` (a quote, matched on that page of the PDF by paperstore's rules:
   case, spacing, ligatures, dashes and line-end hyphens ignored; on a two-column page the extracted text interleaves the columns line by line, so a quote must sit inside one printed line, and
   `plenoptic_scint`'s first 33 failures were quotes that crossed a line or came from the wrong page), `cite: computed 37% = 1/2.73` (the working), or
-  `cite: figure p16 Fig. 7 bar heights` (read off a picture). `p<n>` is the PDF's page from 1, never the printed number (`sbs_theory`, a thesis chapter printed from page 27,
+  `cite: figure p16 Fig. 7 bar heights` (read off a picture). A topic video's other sources are cited by file name, `cite: kraan2015 p4 "..."` for `src/kraan2015.pdf`. `p<n>` is the PDF's page from 1, never the printed number (`sbs_theory`, a thesis chapter printed from page 27,
   failed thirty quotes; `c12_pet_dose` read the printed footers off `paper.txt` and was one page off in 40 cites: split `paper.txt` on form feeds and let a script write each `p<n>` from where the quote is found), and a quote is plain words, not a line with Greek letters the extraction garbles. Cites above the first scene hold everywhere: the
   names said throughout ("208 keV photopeak"). `plan --check` fails a quote that is not on its page and every
   number a block says that none of its own cites states, so 1.46 said of the 208 keV window fails even though

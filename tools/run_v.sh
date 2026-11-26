@@ -15,4 +15,7 @@ grep -E "START|== |done|FAILED|error\[|warn\[|vlint:|EXIT|wrote|review sheets" r
 [ "$rc" = 0 ] || { echo "render FAILED (exit $rc): no video copied back; see $PWD/run.log"; exit "$rc"; }
 for f in *_explainer_narrated.mp4 *_explainer_small.mp4; do [ -f "$f" ] && cp "$f" "${VDIR:-$SRC/$V}/"; done
 ls -la "${VDIR:-$SRC/$V}/"*.mp4 2>/dev/null
+# the joined video sampled where the picture changes (<video>/watch/): made on every final render, because the
+# glitches between narration blocks (a stray dot, a smeared morph, a page left on screen) were only ever found there
+[ "$RES" = 1080p60 ] && bash "$SRC/tools/watch.sh" "$V" | tail -1
 exit 0

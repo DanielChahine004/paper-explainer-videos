@@ -18,7 +18,7 @@ from vlint import plan as vplan  # noqa: E402
 import videofolders as vf  # noqa: E402  (a video is at the root or under private/)
 
 _TS = re.compile(r"(\d+):(\d\d):(\d\d)\.(\d+)\s+-->")
-_QUOTE = re.compile(r'^p(\d+)\s+["“](.+)["”]$')
+_QUOTE = re.compile(r'^(?:(?!figure\b|computed\b)([A-Za-z][\w.-]*)\s+)?p(\d+)\s+["“](.+)["”]$')
 _FIG = re.compile(r"^figure\s+p(\d+)\s*(.*)$", re.I)
 _COMP = re.compile(r"^computed\s*(.*)$", re.I)
 
@@ -44,8 +44,10 @@ def _cues(vtt):
 def _cite(c):
     """[page or None, text, kind] for one cite line."""
     m = _QUOTE.match(c)
+    if m and m.group(1):                               # a second source: the panel opens pages of paper.pdf only
+        return [None, f"{m.group(1)} p{m.group(2)}: {m.group(3)}", "quote"]
     if m:
-        return [int(m.group(1)), m.group(2), "quote"]
+        return [int(m.group(2)), m.group(3), "quote"]
     m = _FIG.match(c)
     if m:
         return [int(m.group(1)), m.group(2), "figure"]

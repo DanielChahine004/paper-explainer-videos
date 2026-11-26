@@ -38,6 +38,8 @@ n_static=$(echo "$static" | grep -c ": error\[" || true)
 if [ -f plan.md ]; then
   pc="$(pixi run python ../tools/vlint plan plan.md --check 2>&1)"
   np=$(echo "$pc" | sed -n 's/.* \([0-9][0-9]*\) problem(s).*/\1/p' | tail -1)
+  # no count means the check itself died (a missing src/paper.pdf was a traceback read as "0 problems")
+  [ -n "$np" ] || { echo "  plan: the plan check crashed:"; echo "$pc" | tail -2 | sed 's/^/    /'; np=1; }
   if [ "${np:-0}" != 0 ]; then echo "$pc" | grep -v "problem(s)" | sed 's/^/  plan: /'; n_static=$((n_static + np)); fi
 fi
 # one voice model for all scenes, not one per scene; a voice that cannot run is an error, not a silent pass (macOS CI)

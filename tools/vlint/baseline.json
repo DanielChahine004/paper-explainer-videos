@@ -5,7 +5,6 @@
    "narration-appendage": 1,
    "number-unsourced": 2,
    "opening-citation": 1,
-   "plan-why": 10,
    "pulse-for-event": 3
   },
   "bone_putty": {
@@ -40,19 +39,18 @@
   "celeritas_optical": {
    "cue-gap": 2,
    "opening-citation": 1,
-   "plan-why": 5,
+   "plan-why": 1,
    "pulse-for-event": 4
   },
   "cion_pet_physics": {
    "number-unsourced": 1,
-   "plan-why": 21,
+   "plan-why": 3,
    "pulse-for-event": 2,
    "scene-protagonist": 1
   },
   "diff_optical_det": {
    "acronym-unspelled": 1,
    "cue-gap": 4,
-   "plan-why": 8,
    "property-scope": 1,
    "scene-protagonist": 1
   },
@@ -103,7 +101,6 @@
   "hofmann_emitters": {
    "cue-gap": 2,
    "narration-appendage": 1,
-   "plan-why": 7,
    "pulse-for-event": 1
   },
   "i3m_pet": {
@@ -144,14 +141,12 @@
   },
   "lu177_dual": {
    "cue-gap": 2,
-   "plan-why": 7,
    "pulse-for-event": 4
   },
   "lxe_tpc": {
    "authors-brief": 1,
    "cue-gap": 3,
-   "opening-citation": 1,
-   "plan-why": 1
+   "opening-citation": 1
   },
   "mc_recon": {
    "opening-citation": 1
@@ -169,8 +164,7 @@
    "narration-appendage": 2,
    "number-unsourced": 2,
    "object-morph": 3,
-   "opening-citation": 1,
-   "plan-why": 7
+   "opening-citation": 1
   },
   "mouse_pet": {
    "cue-gap": 3,
@@ -220,7 +214,6 @@
    "number-unsourced": 2,
    "object-morph": 2,
    "opening-citation": 1,
-   "plan-why": 3,
    "pulse-for-event": 6
   },
   "pet_explorer": {
@@ -258,7 +251,6 @@
    "narration-appendage": 1,
    "object-morph": 1,
    "opening-citation": 1,
-   "plan-why": 1,
    "pulse-for-event": 2
   },
   "pet_nanocomposites": {
@@ -296,13 +288,11 @@
    "scene-protagonist": 4
   },
   "pet_photon_ml": {
-   "plan-why": 1,
    "scene-protagonist": 1
   },
   "pet_proton_dose_dl": {
    "acronym-unspelled": 1,
-   "cue-gap": 1,
-   "plan-why": 12
+   "cue-gap": 1
   },
   "pet_realtime_nn": {
    "number-unsourced": 7,
@@ -327,7 +317,7 @@
    "cue-gap": 2,
    "narration-appendage": 1,
    "opening-citation": 1,
-   "plan-why": 10,
+   "plan-why": 2,
    "pulse-for-event": 1
   },
   "plenoptic_scint": {
@@ -335,7 +325,7 @@
    "cue-gap": 1,
    "narration-appendage": 2,
    "object-morph": 3,
-   "plan-why": 38
+   "plan-why": 3
   },
   "prism_loc": {
    "cue-gap": 5,
@@ -370,14 +360,14 @@
    "cue-gap": 11,
    "equation-talked-over": 1,
    "opening-citation": 1,
-   "plan-why": 13,
+   "plan-why": 1,
    "property-scope": 2,
    "scene-protagonist": 1
   },
   "rydberg_radar": {
    "number-unsourced": 2,
    "opening-citation": 1,
-   "plan-why": 20
+   "plan-why": 1
   },
   "sbs_theory": {},
   "scintillation": {
@@ -386,7 +376,7 @@
    "scene-protagonist": 5
   },
   "semimono_preclinical": {
-   "plan-why": 17,
+   "plan-why": 2,
    "pulse-for-event": 2
   },
   "shell_pet": {
@@ -407,7 +397,7 @@
   },
   "slab_crlb": {
    "cue-gap": 1,
-   "plan-why": 16
+   "plan-why": 1
   },
   "slab_timing": {
    "narration-appendage": 7,

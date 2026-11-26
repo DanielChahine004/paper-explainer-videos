@@ -35,7 +35,14 @@ TLOG="${VDIR:-.}"
 pyhost "$ROOT/tools/timelog.py" event "$TLOG" "render_start $QUALITY" 2>/dev/null || true
 # ManimGX when it is installed (GX_EXE, or manimgx on PATH; a Windows manimgx.exe works from WSL), else Manim CE
 GX_EXE="${GX_EXE:-$(command -v manimgx || true)}"
-if [ -z "${ENGINE:-}" ]; then [ -n "$GX_EXE" ] && ENGINE=gx || ENGINE=ce; fi
+if [ -z "${ENGINE:-}" ]; then
+  [ -n "$GX_EXE" ] && ENGINE=gx || ENGINE=ce
+  # a GPU already at work belongs to someone else's job: a render started beside it slows both and can run the card
+  # out of memory under the other one. Nobody chose the engine, so take the CPU; ENGINE=gx renders there regardless.
+  if [ "$ENGINE" = gx ] && gpu_busy; then
+    echo "== the GPU is busy: rendering on the CPU with Manim CE (ENGINE=gx to use the GPU anyway)"; ENGINE=ce
+  fi
+fi
 if [ "$ENGINE" = gx ] && [ ! -x "$GX_EXE" ]; then echo "ENGINE=gx needs ManimGX: set GX_EXE (README)"; exit 1; fi
 export ENGINE GX_EXE
 export VLINT_ENGINE="$ENGINE"   # saved in each scene's record: a scene made by the other engine is re-rendered (vlint stale)

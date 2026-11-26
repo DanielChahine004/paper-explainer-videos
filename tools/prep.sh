@@ -56,6 +56,13 @@ caps=$(awk 'BEGIN { p = 1 }
 # a table whose caption is in the text and whose cells are not is an image in the PDF: number-unsourced
 # cannot see its numbers either way (pet_hetero_nn, Tables II and IV)
 words=$(wc -w < paper.txt)
+# What may be reused: the paper's own licence line, and every figure credited to someone else. A CC BY paper's
+# licence does not cover a figure it reproduced "with permission" (Kraan 2015: Figs 3, 9 and 11, cropped before
+# anyone read the captions), and "NoDerivatives" rules out a crop (prototwin_pet). Found by hand twice.
+lic=$(grep -iE "creative ?commons|CC[ -]BY|open[ -]access|all rights reserved|no ?derivative" paper.txt | sed 's/^ */  - /; s/  */ /g' | cut -c1-160 | sort -u | head -4)
+cred=$(awk 'BEGIN { p = 1 } { p += gsub(/\f/, "") }
+  tolower($0) ~ /(reproduced|adapted|reprinted|redrawn|taken) (from|with)|with permission|courtesy of/ {
+    s = $0; gsub(/^ +| +$/, "", s); gsub(/  +/, " ", s); print "  - page " p ": " substr(s, 1, 130) }' paper.txt | head -12)
 
 cat > "$D/brief.md" <<BRIEF
 # $V: brief (the inputs, and nothing else)
@@ -72,6 +79,15 @@ TODO: authors, venue and year if the line above lacks them; where the body ends;
 The front page names the authors, so nothing on screen needs to list them again (vlint \`authors-brief\`).
 Its text is \`src/paper.txt\` (\`pdftotext -layout\`, UTF-8, $words words). Its pages are \`src/hi-NN.png\`
 (300 dpi) and \`src/lo-NN.png\` (80 dpi, for reading a page at a glance).
+
+## What may be reused
+
+Licence lines found in the text (none found means all rights reserved until the front page says otherwise):
+${lic:-  - (none found)}
+Figures credited to another source, which this paper's licence does not cover (redraw them from their numbers):
+${cred:-  - (none found)}
+An open licence without "NoDerivatives" lets a figure be cropped; anything else is redrawn, or shown whole and small
+as the paper's page (DESIGN Part II, "Reusing a figure").
 
 ## Audience
 

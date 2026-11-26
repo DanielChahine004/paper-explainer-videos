@@ -231,7 +231,9 @@ def plan_why(s):
                 if not why:
                     yield ("plan.md", line), \
                         f"{cls.name}: [{mk}] says what happens ({action[:44]}) and not what it illustrates"
-                elif len(why.split()) < 4 or set(_words(why)) <= set(_words(action)):
+                # only a why made of the action's own words: a short one ("ten times wider", "the detector count")
+                # is a why, and flagging every why under four words was 373 findings nobody acted on
+                elif set(_words(why)) <= set(_words(action)):
                     yield ("plan.md", line), \
                         f"{cls.name}: [{mk}]'s why repeats what happens rather than saying what it shows: {why[:48]!r}"
 

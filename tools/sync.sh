@@ -43,6 +43,12 @@ cp "$VDIR"/*.py "$VDIR/render.sh" "$V/"
 # and the source's text, for the same reason: number-unsourced reads src/*.txt, and without it here the rule
 # stood down in check.sh and render.sh and ran only when vlint was pointed at the project folder (geant4)
 if ls "$VDIR"/src/*.txt >/dev/null 2>&1; then mkdir -p "$V/src" && cp "$VDIR"/src/*.txt "$V/src/"; fi
+# ...and the PDFs, which the plan's cite quotes are matched against (vlint plan --check): without them here the
+# check crashed on its first quote and check.sh counted no problems, for every video that cites
+for f in "$VDIR"/src/*.pdf; do
+  [ -f "$f" ] || continue
+  mkdir -p "$V/src"; t="$V/src/$(basename "$f")"; [ -f "$t" ] && [ ! "$f" -nt "$t" ] || cp "$f" "$t"
+done
 [ -d "$VDIR/assets" ] && cp -r "$VDIR/assets" "$V/"
 strip_cr "$V/render.sh"
 cd "$V"

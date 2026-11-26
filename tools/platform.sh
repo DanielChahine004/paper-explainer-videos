@@ -21,6 +21,16 @@ if [ "$OS" = windows ]; then export PATH="$HOME/.pixi/bin:$PATH:$TEX_BIN"
 else export PATH="$HOME/.pixi/bin:$TEX_BIN:$HOME/.local/bin:$PATH"; fi
 
 ncpu() { nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || getconf _NPROCESSORS_ONLN 2>/dev/null || echo 4; }
+# Whether someone else is using the GPU: over 30% busy in both of two looks a second apart (a desktop idles under
+# 10%). False where there is no nvidia-smi, so a machine without one renders as before.
+gpu_busy() {
+  local smi u1 u2
+  smi="$(command -v nvidia-smi 2>/dev/null || true)"; [ -n "$smi" ] || smi=/usr/lib/wsl/lib/nvidia-smi
+  [ -x "$smi" ] || return 1
+  u1=$("$smi" --query-gpu=utilization.gpu --format=csv,noheader,nounits 2>/dev/null | head -1 | tr -dc 0-9); sleep 1
+  u2=$("$smi" --query-gpu=utilization.gpu --format=csv,noheader,nounits 2>/dev/null | head -1 | tr -dc 0-9)
+  [ "${u1:-0}" -gt 30 ] && [ "${u2:-0}" -gt 30 ]
+}
 # memory free for renders, in GB (macOS reports no "available": take 60% of the total)
 mem_gb() {
   if [ -r /proc/meminfo ]; then awk '/MemAvailable/ {print int($2 / 1048576)}' /proc/meminfo

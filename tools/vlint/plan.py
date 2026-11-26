@@ -264,11 +264,12 @@ def _facts(p, plan):
 # Where each fact comes from, written under the narration block that says it. A quote has to be found on its page
 # by paperstore's matcher, so a number can be traced to the place that states it:
 #     cite: p9 "2.73 ± 0.23 for FMC-113&208"        a quote, found on that page of src/paper.pdf
+#     cite: kraan2015 p4 "half of the ions"         the same, in src/kraan2015.pdf (a topic video's other sources)
 #     cite: computed 1.447 = 1/(1 - 0.309)         a number the video works out, with the working
 #     cite: figure p16 Fig. 7 bar heights          read off a figure, which no text holds
 # number-unsourced only asks whether a number is anywhere in the paper, so 1.38 said of the wrong reconstruction
 # passed; here every number a block says must be inside one of that block's own cites.
-_QUOTE = re.compile(r'^p(\d+)\s+["“](.+)["”]$')
+_QUOTE = re.compile(r'^(?:(?!figure\b|computed\b)([A-Za-z][\w.-]*)\s+)?p(\d+)\s+["“](.+)["”]$')
 _ELSE = re.compile(r"^(computed|figure\s+p\d+)\b", re.I)
 def find_quote(pdf, quote, page):
     """Where a quote is on a page of the paper: paperstore's matcher (github.com/DanielChahine004/paperstore), used
@@ -300,10 +301,14 @@ def _claims(p, plan):
             where = st.name if st else "before the scenes"
             m, e = _QUOTE.match(c), _ELSE.match(c)
             if m:
-                if find_quote(pdf, m.group(2), int(m.group(1))):
-                    held.append(m.group(2))
+                src = pdf.with_name(m.group(1) + ".pdf") if m.group(1) else pdf
+                if not src.exists():
+                    bad.append((line, f"{where}: no src/{src.name} for this cite"))
+                elif find_quote(src, m.group(3), int(m.group(2))):
+                    held.append(m.group(3))
                 else:
-                    bad.append((line, f"{where}: not on page {m.group(1)} of the paper: {m.group(2)[:50]!r}"))
+                    bad.append((line, f"{where}: not on page {m.group(2)} of {'the paper' if not m.group(1) else src.name}: "
+                                      f"{m.group(3)[:50]!r}"))
             elif e:
                 held.append(c)
             else:

@@ -332,7 +332,7 @@ def _sentences(text):
       "happens (user, lnp_comet: 'when something is said, it happens visually, synchronised').",
       "Part II, Sync: nothing is said for long over a still picture",
       "give every clause of the stretch its own bookmark and act on that word: draw the part being named, pulse it, "
-      "move the dot along, put the number on the thing")
+      "move the dot along, put the number on the thing. A bookmark adds no spoken word and re-voices nothing")
 def cue_gap(s):
     """Spoken words between one cue and the next. Roughly 2.6 words a second, so 24 words is about nine seconds."""
     lim = int(opt(s, "max_words_per_cue", 24))

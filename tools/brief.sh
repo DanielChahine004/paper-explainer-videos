@@ -20,7 +20,9 @@ cat <<PROMPT
 Make the narrated explainer video in $VR, start to finish, on your own.
 
 Read DESIGN.md first -- Part I and Part II are the rules every frame is judged by, Part III is the
-workflow you follow step by step. Then read $VR/brief.md: that video's source, its audience, the format it
+workflow you follow step by step. Four parts of it are for when you need them, and cost context until then: read
+"3D, when it is used" before staging a 3D scene, "Reusing a figure" before a paper figure goes on screen, "Walking
+through the paper" only if the brief's format is a walk, and search Part IV (pitfalls) when something breaks. Then read $VR/brief.md: that video's source, its audience, the format it
 is in, and what has already been cut out of its source for you. Then do Part III, steps 1 to 8, for $V.
 
 Show, don't tell (Part I §1, the first rule): every event, piece of physics, calculation and geometry the
@@ -50,7 +52,7 @@ Mark the phases as you pass them, so the build times itself:
 Before splitting the plan for writers, run \`python -m vlint plan ../$VR/plan.md --check\` from tools/ and clear it.
 
 Hand back when the video is rendered at -qh, every gate is clear (static, runtime and the join), you have
-read the review sheets and watched the joined file, and you have folded what the video
+read the review sheets and every watch sheet (\`$VR/watch/\`, made by each -qh render: say per sheet what you saw and fixed), and you have folded what the video
 taught you into the DESIGN.md rule it sharpens (§0: fold, don't log -- no per-video entry). Report what you made, what you decided and what you are unsure of, in 15 lines or fewer. Work
 fast and keep your writers' prompts short. Time the script phase (plan, narration, scene writing), name the two or
 three things that slowed it most and what would cut them, apply the quick safe ones and list the rest. Do not commit.

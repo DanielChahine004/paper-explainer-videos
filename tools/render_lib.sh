@@ -6,6 +6,7 @@
 #   JOBS=n        scenes rendered at once (CPU only: narration comes from tools/voice_prepass.py, so no scene
 #                 loads the voice model); default: all of them, capped by cores - 2 and ~1.2 GB of RAM each
 #   FRESH=1       re-render every scene; otherwise only missing scenes and scenes whose code changed
+#   MIX_ENGINES=1 keep scenes the other engine rendered (default: they are re-rendered, one look per video)
 #   TTS=espeak    timing check only;  TTS_VOICE=clip.wav  clone a voice with Chatterbox
 #   VLINT_ALLOW=1 report vlint errors without stopping
 #   ENGINE=gx     (default when ManimGX is found: GX_EXE, or manimgx on PATH) ManimGX on the GPU. From WSL, point
@@ -37,6 +38,10 @@ GX_EXE="${GX_EXE:-$(command -v manimgx || true)}"
 if [ -z "${ENGINE:-}" ]; then [ -n "$GX_EXE" ] && ENGINE=gx || ENGINE=ce; fi
 if [ "$ENGINE" = gx ] && [ ! -x "$GX_EXE" ]; then echo "ENGINE=gx needs ManimGX: set GX_EXE (README)"; exit 1; fi
 export ENGINE GX_EXE
+export VLINT_ENGINE="$ENGINE"   # saved in each scene's record: a scene made by the other engine is re-rendered (vlint stale)
+# Cores this render may use: the job manager's share when it runs under one ($JOB_THREADS), else the machine's.
+# Every parallel step below is sized from it; steps sized from ncpu took a shared machine's every core.
+BUDGET="${JOB_THREADS:-$(ncpu)}"; [ "$BUDGET" -ge 1 ] 2>/dev/null || BUDGET=1
 echo "== engine: $ENGINE"
 case "$QUALITY" in
   -qh) RES=1080p60; GX_RES="-r 1920x1080 --fps 60" ;; -qm) RES=720p30; GX_RES="-r 1280x720 --fps 30" ;;
@@ -76,11 +81,12 @@ todo="$(for s in $todo; do t=$(grep -o "rendered in [0-9.]*" "m_$s.log" 2>/dev/n
 if [ -n "$todo" ]; then
   n_todo=$(echo $todo | wc -w)
   mem_gb=$(mem_gb)
-  jobs=$(( $(ncpu) - 2 )); [ $(( mem_gb * 10 / 12 )) -lt $jobs ] && jobs=$(( mem_gb * 10 / 12 ))
+  jobs=$(( BUDGET - 2 )); [ $(( mem_gb * 10 / 12 )) -lt $jobs ] && jobs=$(( mem_gb * 10 / 12 ))
   [ "$n_todo" -lt "$jobs" ] && jobs=$n_todo; [ "$jobs" -lt 1 ] && jobs=1
   [ "$ENGINE" = gx ] && [ $jobs -gt 8 ] && jobs=8
   jobs="${JOBS:-$jobs}"
-  export STEM GX_RES SCRIPT
+  ENC_T=$(( BUDGET / jobs )); [ "$ENC_T" -ge 1 ] || ENC_T=1   # threads for each scene's own x264 pass (ManimGX)
+  export STEM GX_RES SCRIPT ENC_T
   echo "== voicing and rendering ($jobs at once):" $todo
   echo $todo | tr ' ' '\n' | xargs -P "$jobs" -n 1 sh -c \
     'while [ ! -f "m_$1/voiceovers/.ready" ] && kill -0 $VPID 2>/dev/null; do sleep 2; done
@@ -96,7 +102,7 @@ if [ -n "$todo" ]; then
          > "m_$1.log" 2>&1 || { echo "FAILED $1 (see m_$1.log)"; kill $ck 2>/dev/null; exit 1; }
        # ManimGX stores each pause as one frame lasting the whole pause (variable frame rate, ~18 fps on
        # average); players stutter when motion resumes after such a frame, so re-encode to a constant rate
-       pixi run ffmpeg -nostdin -loglevel error -y -i "$d/$1.mp4" -c:v libx264 -crf 14 -preset slow -fps_mode cfr \
+       pixi run ffmpeg -nostdin -loglevel error -y -i "$d/$1.mp4" -c:v libx264 -threads "$ENC_T" -crf 14 -preset slow -fps_mode cfr \
          -r '"${RES##*p}"' -c:a copy "$d/$1.cfr.mp4" && mv "$d/$1.cfr.mp4" "$d/$1.mp4" \
          || { echo "FAILED $1: constant-rate re-encode"; kill $ck 2>/dev/null; exit 1; }
        wait $ck || { echo "FAILED $1: CE skip-mode check (see m_$1.check.log)"; exit 1; }
@@ -114,8 +120,8 @@ grep "^== narration" voice.log || true
 recheck="$(pixi run $VLINT recheck . --script "$SCRIPT" --res "$RES" $SCENES | tr -d '\r')"
 if [ -n "$recheck" ]; then
   echo "== re-checking with the current rules:" $recheck
-  echo $recheck | tr ' ' '\n' | xargs -P "$(ncpu)" -n 1 sh -c \
-    'ENGINE=ce VLINT_RECHECK=1 VLINT_OUT="m_$1/videos/'"$STEM/$RES"'" pixi run manim -ql -s --disable_caching --progress_bar none \
+  echo $recheck | tr ' ' '\n' | xargs -P "${JOBS:-$BUDGET}" -n 1 sh -c \
+    'ENGINE=ce VLINT_RECHECK=1 VLINT_KEEP_ENGINE=1 VLINT_OUT="m_$1/videos/'"$STEM/$RES"'" pixi run manim -ql -s --disable_caching --progress_bar none \
        --media_dir "m_$1" "'"$SCRIPT"'" "$1" > "m_$1.check.log" 2>&1 || echo "re-check FAILED $1 (see m_$1.check.log)"' _
 fi
 
@@ -167,7 +173,7 @@ if [ "$RES" = 1080p60 ]; then
   # background while AFTER_JOIN (run_v.sh: the review sheets) runs. Three at a time, splitting the thread budget
   # between them: one per scene with x264's own thread count ran 12 encodes of 77 threads and 1.4 GB each on a
   # shared machine (sbs_theory, 16 GB and every core).
-  SMALL_P=3; SMALL_T=$(( ${JOB_THREADS:-$(ncpu)} / SMALL_P )); [ "$SMALL_T" -ge 1 ] || SMALL_T=1
+  SMALL_P=3; SMALL_T=$(( BUDGET / SMALL_P )); [ "$SMALL_T" -ge 1 ] || SMALL_T=1
   ( echo $SCENES | tr ' ' '\n' | RES=$RES SMALL_T=$SMALL_T xargs -P "$SMALL_P" -n 1 sh -c \
       'f="m_$1/videos/$STEM/$RES/$1.mp4"; s="m_$1/small.mp4"; [ -f "$s" ] && [ "$s" -nt "$f" ] && exit 0
        pixi run ffmpeg -nostdin -loglevel error -threads "$SMALL_T" -y -i "$f" -an -c:v libx264 -crf 26 -preset slow \

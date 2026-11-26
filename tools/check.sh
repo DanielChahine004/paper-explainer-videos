@@ -45,7 +45,7 @@ pixi run python ../tools/voice_prepass.py "$SCRIPT" $scenes || { echo "  voice p
 rm -rf chk && mkdir -p chk
 echo "== $V: scenes (skip mode):" $scenes
 start=$(date +%s)
-echo $scenes | tr ' ' '\n' | xargs -P "${JOBS:-$(ncpu)}" -n 1 sh -c \
+echo $scenes | tr ' ' '\n' | xargs -P "${JOBS:-${JOB_THREADS:-$(ncpu)}}" -n 1 sh -c \
   'ENGINE=ce VLINT_OUT=chk pixi run manim -ql -s --disable_caching --progress_bar none --media_dir "m_$1" "'"$SCRIPT"'" "$1" \
      > "chk/$1.log" 2>&1 || { echo "  CRASHED $1:"; grep -E "Error|error:" "chk/$1.log" | tail -3 | sed "s/^/    /"; }' _
 # findings this video is already recorded as making are held back and counted (vlint/baseline.py); errors

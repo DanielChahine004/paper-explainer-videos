@@ -1,6 +1,7 @@
 """How long each video takes to make, phase by phase: <video>/timelog.json.
 
-A phase runs from its mark to the next mark; "sent" closes the first version, "done" closes feedback rounds.
+A phase is marked when it ends, so it runs from the mark before it to its own; "sent" closes the first version,
+"done" closes feedback rounds.
 Phases in order: received (the paper is in src/), figures (page renders, crops), script, check (vlint until clean),
 render (1080p and frame review), sent, feedback (a round of notes), done. Renders log themselves (render_lib.sh
 writes render_start / render_end events), so the report also shows how many renders a video took and their time.
@@ -76,19 +77,31 @@ def report(videos):
         if not ms:
             continue
         print(f"== {v}")
+        # each interval belongs to the mark that ends it (the report used to name it after the mark that starts it,
+        # so the 25 minutes of writing read as "figures" and the checking as "script")
+        print(f"  {ms[0]['phase']:<10} {'':6}       {ms[0]['t'][11:16]}{'  ' + ms[0]['note'] if 'note' in ms[0] else ''}")
         for a, b in zip(ms, ms[1:]):
-            print(f"  {a['phase']:<10} {_mins(a['t'], b['t']):6.1f} min   {a['t'][11:16]}{'  ' + a['note'] if 'note' in a else ''}")
+            print(f"  {b['phase']:<10} {_mins(a['t'], b['t']):6.1f} min   {b['t'][11:16]}{'  ' + b['note'] if 'note' in b else ''}")
         sent = next((m["t"] for m in ms if m["phase"] == "sent"), None)
         if sent:
             print(f"  {'to first send':<10} {_mins(ms[0]['t'], sent):6.1f} min")
         if ms[-1]["phase"] == "done":
             print(f"  {'total':<10} {_mins(ms[0]['t'], ms[-1]['t']):6.1f} min")
         ev = log["events"]
-        starts = [e["t"] for e in ev if e["event"].startswith("render_start")]
-        ends = [e["t"] for e in ev if e["event"] == "render_end"]
-        if starts:
-            spent = sum(_mins(a, b) for a, b in zip(starts, ends))
-            print(f"  renders    {len(starts)} run(s), {spent:.1f} min rendering")
+        # a render that was stopped or failed logs no end: pair each start with the end that follows it, if one
+        # does before the next start (pairing by position counted the wait between runs as rendering)
+        ev = sorted(ev, key=lambda e: e["t"])
+        runs, spent, cut = 0, 0.0, 0
+        for i, e in enumerate(ev):
+            if e["event"].startswith("render_start"):
+                runs += 1
+                nxt = ev[i + 1] if i + 1 < len(ev) else None
+                if nxt and nxt["event"] == "render_end":
+                    spent += _mins(e["t"], nxt["t"])
+                else:
+                    cut += 1
+        if runs:
+            print(f"  renders    {runs} run(s), {spent:.1f} min rendering" + (f" ({cut} stopped or failed, not timed)" if cut else ""))
 
 
 def main():

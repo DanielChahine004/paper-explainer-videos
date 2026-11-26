@@ -2,6 +2,7 @@
 there, fresh, and clean at runtime?); mode "final" runs on the joined file (resolution, sync, length). Each rule
 gets an OutputCtx and yields (where, message), where is a scene name or a file name."""
 import json
+import os
 import re
 import shutil
 import struct
@@ -109,6 +110,12 @@ class OutputCtx:
             return "rendered without a vlint record, so its source is unknown"
         if rec.get("fingerprint") != self.fp(scene):
             return "its code, shared helpers or assets changed since it was rendered"
+        # One look per video: ManimGX and Manim CE draw strokes, shading and 3D differently, so a scene fixed on the
+        # CPU while the GPU was busy must not sit among GPU scenes. Records from before the engine was saved are
+        # reused as they are; MIX_ENGINES=1 allows a mix on purpose.
+        cur = os.environ.get("VLINT_ENGINE")
+        if cur and rec.get("engine") and rec["engine"] != cur and not os.environ.get("MIX_ENGINES"):
+            return f"it was rendered with {rec['engine']} and this render uses {cur} (MIX_ENGINES=1 keeps it)"
         recf = p.with_name(p.stem + ".vlint.json")
         if not rec.get("rechecked") and p.stat().st_mtime + 2 < recf.stat().st_mtime:
             return "its last render did not finish writing the video"

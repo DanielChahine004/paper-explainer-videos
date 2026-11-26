@@ -7,6 +7,7 @@ In a scene:  vlint_ok(mob, "text-overlap")         this mobject (and its childre
 VLINT=0 turns the monitor off. VLINT_OUT=<dir> saves the record there even when no video is written (skip mode,
 `manim -s`: every play() jumps to its end state, so a whole scene checks in seconds). The record also lists the
 review moments (the end of each narration block, each animated ValueTracker's time window) for tools/review.sh."""
+import json
 import os
 import sys
 from contextlib import contextmanager
@@ -114,9 +115,21 @@ class Monitor:
         rec = {"scene": self.name, "script": self.script.name, "fingerprint": fingerprint(self.script, self.name),
                "rules": rules_hash(self.script), "monitor": self.enabled, "findings": dump(self.findings),
                "review": self.review}
+        out = os.environ.get("VLINT_OUT")
+        if os.environ.get("VLINT_ENGINE"):
+            rec["engine"] = os.environ["VLINT_ENGINE"]   # the engine that drew the video (render_lib.sh), not this check's
         if os.environ.get("VLINT_RECHECK"):
             rec["rechecked"] = True       # findings refreshed in skip mode; the video beside it is older on purpose
-        out = os.environ.get("VLINT_OUT")
+        if os.environ.get("VLINT_KEEP_ENGINE"):
+            # a re-check of an older video (render_lib.sh), not the check beside a ManimGX render: the video's engine
+            # is what its record said (nothing, for a render from before the engine was saved)
+            rec.pop("engine", None)
+            try:
+                old = json.loads((Path(out) / f"{self.name}.vlint.json").read_text(encoding="utf-8")) if out else {}
+            except (OSError, ValueError):
+                old = {}
+            if old.get("engine"):
+                rec["engine"] = old["engine"]
         if out:
             write_json(Path(out) / f"{self.name}.vlint.json", rec)
             return

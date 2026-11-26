@@ -46,6 +46,7 @@ AUTH = "https://paperstore-auth.daniel-chahine004.workers.dev"   # the paperstor
 MEDIA = "https://explainers-media.daniel-chahine004.workers.dev"   # site/media/worker.js, in front of the release files
 LIMIT = 2 * 1024 ** 3 - 1      # GitHub's limit for one release file
 MARK = re.compile(r"<!--\s*note\s+(\{.*?\})\s*-->", re.S)
+APP_FILES = ["manifest.webmanifest", "icon-192.png", "icon-512.png", "icon-maskable-512.png", "apple-touch-icon.png"]
 OLD_FILES = ["app.js", "style.css"]   # the first hand-made site's files, removed from the repo
 
 
@@ -290,7 +291,10 @@ def page(html, ver):
     """One of the catalogue's pages, with the site's adapter loaded before its own script."""
     inject = (f'<script src="config.js?v={ver}"></script><script src="site.js?v={ver}"></script>'
               f'<script src="live.js?v={ver}" defer></script>'
-              '<link rel="alternate" type="application/rss+xml" title="Explainers" href="feed.xml">')
+              '<link rel="alternate" type="application/rss+xml" title="Explainers" href="feed.xml">'
+              # installable on a phone's home screen (Chrome: menu > Add to Home screen)
+              '<link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="apple-touch-icon.png">'
+              '<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">')
     return html.replace("<head>", "<head>" + inject, 1).encode("utf-8")
 
 
@@ -445,6 +449,7 @@ def main():
         "reels.json": json.dumps([accounts[v["id"]] for v in videos if v["id"] in accounts], ensure_ascii=False).encode(),
         "notes.json": json.dumps({v["id"]: public_notes(v["id"]) for v in videos}, ensure_ascii=False).encode(),
         "feed.xml": feed(videos, dest.site).encode("utf-8"),
+        **{f: (PUBLIC / f).read_bytes() for f in APP_FILES},   # home-screen install: manifest and icons
     }
     sent = [k for k, data in out.items() if dest.write(k, data, f"{k}: {what}")]
     for f in OLD_FILES:

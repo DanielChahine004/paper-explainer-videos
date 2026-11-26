@@ -75,7 +75,8 @@ Adding a rule: [`tools/vlint/README.md`](tools/vlint/README.md).
 | `tools/prep.sh`, `brief.sh`, `writers.py` | inputs, agent prompt, per-scene writers |
 | `tools/check.sh`, `run_v.sh`, `watch.sh`, `review.sh` | check, render, sample, review sheets |
 | `tools/vlint/` | the checks and their tests |
-| `tools/catalog.py`, `reels.py`, `timelog.py` | home-network player with feedback notes; build timings |
+| `tools/catalog.py`, `reels.py` | the catalogue and reels pages: `publish.py` builds the site from them, and `catalog.py` alone serves them on the home network |
+| `tools/timelog.py` | build timings |
 | `laser_rt/`, `calib/` | worked examples (scripts; videos on the release) |
 | `private/` | your own videos, a git repository of their own (ignored here) |
 

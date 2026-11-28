@@ -1083,7 +1083,7 @@ and knows where to look for information". It is laid out like this:
    hundred" for 12 800 both came back as findings, so the silence over the real script meant something. All
    three `narration heard wrong` lines were Whisper's spelling ('here'/'hear', 'metres'/'meters', 'mev' for
    "M E V") and went to `heard_ok.txt`.
-   **Measure the pace of the voice you are using.** 1464 words came to 8:23, 0.34 s a word and not 0.37, so a
+   **Measure the pace of the voice you are using.** Count the words against the length before staging: a cut after the split costs every writer (`diff_optics_engine` planned 1731 words for 8 minutes). 1464 words came to 8:23, 0.34 s a word and not 0.37, so a
    plan aimed at nine minutes for a brief that said "8 to 12" landed a third of a minute from being short.
    Short declarative sentences with few numbers run faster than a paper's; when the brief gives a floor, aim
    the word count at the middle of the range, not at its low end.
